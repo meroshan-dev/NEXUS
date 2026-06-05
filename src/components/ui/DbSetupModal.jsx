@@ -18,6 +18,10 @@ CREATE TABLE IF NOT EXISTS public.profiles (
     bio TEXT
 );
 
+-- Safe migrations for profiles table
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS location TEXT;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS bio TEXT;
+
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Public profiles are viewable by everyone" ON public.profiles;
@@ -321,11 +325,15 @@ CREATE POLICY "notifications_delete" ON public.notifications FOR DELETE TO authe
 CREATE TABLE IF NOT EXISTS public.activity_feed (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     workspace_id UUID NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
-    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
     action TEXT NOT NULL,
     details TEXT NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+-- Ensure activity_feed user_id references public.profiles(id) for relationship joins
+ALTER TABLE public.activity_feed DROP CONSTRAINT IF EXISTS activity_feed_user_id_fkey;
+ALTER TABLE public.activity_feed ADD CONSTRAINT activity_feed_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id) ON DELETE CASCADE;
 ALTER TABLE public.activity_feed ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "activity_select" ON public.activity_feed;

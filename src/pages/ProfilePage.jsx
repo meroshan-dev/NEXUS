@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Camera, Mail, Briefcase, MapPin, Bell, Monitor,
@@ -135,8 +135,8 @@ export default function ProfilePage() {
     );
   };
 
-  const settingRow = ({ icon: Icon, label, desc, action }) => (
-    <div className="flex items-center gap-4 py-1">
+  const settingRow = ({ key, icon: Icon, label, desc, action }) => (
+    <div key={key} className="flex items-center gap-4 py-1">
       <div
         className="w-10 h-10 rounded-[var(--radius-md)] flex items-center justify-center shrink-0"
         style={{ background: 'var(--bg-subtle)', border: '1px solid var(--border-light)', color: 'var(--text-secondary)' }}
@@ -305,6 +305,7 @@ export default function ProfilePage() {
                 { key: 'digest', icon: Bell, label: 'Weekly digest', desc: 'Summary every Monday' },
               ].map(({ key, icon, label, desc }) =>
                 settingRow({
+                  key,
                   icon,
                   label,
                   desc,

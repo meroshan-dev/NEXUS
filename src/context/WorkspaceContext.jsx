@@ -15,6 +15,13 @@ export function WorkspaceProvider({ children }) {
   
   const [loading, setLoading] = useState(true);
   const [dbError, setDbError] = useState(false);
+  const [prevUserId, setPrevUserId] = useState(user?.id || null);
+
+  const currentUserId = user?.id || null;
+  if (currentUserId !== prevUserId) {
+    setPrevUserId(currentUserId);
+    setLoading(true);
+  }
 
   // Upgraded states
   const [activeWorkspaceId, setActiveWorkspaceId] = useState(null);
@@ -216,7 +223,7 @@ export function WorkspaceProvider({ children }) {
                       name: p?.name || 'Unknown',
                       email: p?.email || '',
                       avatar: p?.avatar || null,
-                      initials: p?.name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || 'U',
+                      initials: (p?.name || '').split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || 'U',
                       role: m.role || 'Member',
                       status: p?.status || 'offline',
                       location: p?.location || null,
@@ -507,15 +514,29 @@ export function WorkspaceProvider({ children }) {
       }
 
       // Clean up any existing realtime subscription channel first
-      if (activeWorkspaceChannelRef.current) {
-        console.log('[Realtime Sync] Cleaning up existing channel:', activeWorkspaceChannelRef.current.topic);
-        supabase.removeChannel(activeWorkspaceChannelRef.current);
-        activeWorkspaceChannelRef.current = null;
-      }
-      if (activePresenceChannelRef.current) {
-        console.log('[Realtime Sync] Cleaning up existing presence channel:', activePresenceChannelRef.current.topic);
-        supabase.removeChannel(activePresenceChannelRef.current);
-        activePresenceChannelRef.current = null;
+      try {
+        const syncChannelName = `workspace_sync:${workspaceId}`;
+        const presChannelName = `workspace_presence:${workspaceId}`;
+
+        const existingSync = supabase.channel(syncChannelName);
+        if (existingSync) {
+          await supabase.removeChannel(existingSync);
+        }
+        if (activeWorkspaceChannelRef.current) {
+          await supabase.removeChannel(activeWorkspaceChannelRef.current);
+          activeWorkspaceChannelRef.current = null;
+        }
+
+        const existingPres = supabase.channel(presChannelName);
+        if (existingPres) {
+          await supabase.removeChannel(existingPres);
+        }
+        if (activePresenceChannelRef.current) {
+          await supabase.removeChannel(activePresenceChannelRef.current);
+          activePresenceChannelRef.current = null;
+        }
+      } catch (cleanErr) {
+        console.warn('[Realtime Sync] Warning during channel cleanup:', cleanErr);
       }
 
       try {
@@ -901,7 +922,7 @@ export function WorkspaceProvider({ children }) {
               name: p?.name || 'Unknown',
               email: p?.email || '',
               avatar: p?.avatar || null,
-              initials: p?.name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || 'U',
+              initials: (p?.name || '').split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || 'U',
               role: m.role || 'Member',
               status: p?.status || 'offline',
               color: '#6366f1'
