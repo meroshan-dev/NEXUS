@@ -1,0 +1,1960 @@
+import React, { createContext, useState, useContext, useEffect, useRef } from 'react';
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
+import { useAuth } from './AuthContext';
+
+const WorkspaceContext = createContext();
+
+export function WorkspaceProvider({ children }) {
+  const { user } = useAuth();
+  const [workspaces, setWorkspaces] = useState([]);
+  const [tasks, setTasks] = useState({});
+  const [chatMessages, setChatMessages] = useState({});
+  const [files, setFiles] = useState({});
+  const [workspaceMembers, setWorkspaceMembers] = useState({});
+  const activeWorkspaceChannelRef = useRef(null);
+  
+  const [loading, setLoading] = useState(true);
+  const [dbError, setDbError] = useState(false);
+
+  // Upgraded states
+  const [activeWorkspaceId, setActiveWorkspaceId] = useState(null);
+  const [taskComments, setTaskComments] = useState({});
+  const [notifications, setNotifications] = useState([]);
+  const [activityFeed, setActivityFeed] = useState({});
+  const [userPresence, setUserPresence] = useState({});
+  const activePresenceChannelRef = useRef(null);
+  const userNotificationsChannelRef = useRef(null);
+
+  const refetchTasks = async (wsId) => {
+    if (!isSupabaseConfigured) return;
+    try {
+      const { data, error } = await supabase
+        .from('tasks')
+        .select('*')
+        .eq('workspace_id', wsId);
+      if (!error && data) {
+        const cols = { todo: [], inProgress: [], done: [] };
+        data.forEach(t => {
+          const statusKey = t.status === 'in_progress' ? 'inProgress' : t.status;
+          if (cols[statusKey]) {
+            cols[statusKey].push({
+              id: t.id,
+              title: t.title,
+              description: t.description,
+              assignee: t.assignee,
+              priority: t.priority,
+              dueDate: t.due_date,
+              labels: t.labels || []
+            });
+          }
+        });
+        setTasks(prev => ({ ...prev, [wsId]: cols }));
+      }
+    } catch (err) {
+      console.error('Error refetching tasks:', err);
+    }
+  };
+
+  const refetchComments = async (wsId) => {
+    if (!isSupabaseConfigured) return;
+    try {
+      const { data: tasksData } = await supabase
+        .from('tasks')
+        .select('id')
+        .eq('workspace_id', wsId);
+      
+      if (tasksData && tasksData.length > 0) {
+        const taskIds = tasksData.map(t => t.id);
+        const { data: commentData, error } = await supabase
+          .from('task_comments')
+          .select('*')
+          .in('task_id', taskIds)
+          .order('created_at', { ascending: true });
+        
+        if (!error && commentData) {
+          const commentsMap = {};
+          taskIds.forEach(id => { commentsMap[id] = []; });
+          commentData.forEach(c => {
+            if (!commentsMap[c.task_id]) commentsMap[c.task_id] = [];
+            commentsMap[c.task_id].push({
+              id: c.id,
+              taskId: c.task_id,
+              userId: c.user_id,
+              text: c.text,
+              createdAt: c.created_at
+            });
+          });
+          setTaskComments(prev => ({ ...prev, ...commentsMap }));
+        }
+      } else {
+        setTaskComments(prev => ({ ...prev }));
+      }
+    } catch (err) {
+      console.error('Error refetching comments:', err);
+    }
+  };
+
+  const loadNotifications = async () => {
+    if (!user?.id) return;
+    if (isSupabaseConfigured) {
+      try {
+        const { data, error } = await supabase
+          .from('notifications')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false });
+        if (!error && data) {
+          setNotifications(data);
+        }
+      } catch (err) {
+        console.error('Error loading notifications:', err);
+      }
+    } else {
+      const stored = localStorage.getItem(`nexus_notifications_${user.id}`);
+      setNotifications(stored ? JSON.parse(stored) : []);
+    }
+  };
+
+  const loadActivitiesForAllWorkspaces = async (wsIds) => {
+    if (!wsIds || wsIds.length === 0) return;
+    try {
+      const { data, error } = await supabase
+        .from('activity_feed')
+        .select('*, profiles(name, avatar)')
+        .in('workspace_id', wsIds)
+        .order('created_at', { ascending: false });
+      
+      if (!error && data) {
+        const grouped = {};
+        wsIds.forEach(id => { grouped[id] = []; });
+        data.forEach(act => {
+          if (!grouped[act.workspace_id]) grouped[act.workspace_id] = [];
+          grouped[act.workspace_id].push(act);
+        });
+        setActivityFeed(grouped);
+      }
+    } catch (err) {
+      console.error('Error loading activities:', err);
+    }
+  };
+
+  const loadWorkspaces = async () => {
+    if (!user?.id) {
+      setWorkspaces([]);
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    setDbError(false);
+
+    if (isSupabaseConfigured) {
+      try {
+        const { data, error } = await supabase
+          .from('workspace_members')
+          .select('role, workspace:workspaces(*)')
+          .eq('user_id', user.id);
+
+        if (error) {
+          const isSchemaError = error.code === '42P01' || error.code === 'PGRST205' || error.code === '42P17' || error.code === 'PGRST204' || error.code?.startsWith('42') || error.code?.startsWith('PGRST');
+          if (isSchemaError) {
+            setDbError(true);
+          } else {
+            console.error('Error fetching workspaces:', error);
+          }
+          setWorkspaces([]);
+        } else {
+          const mappedWorkspaces = data
+            .map(item => item.workspace)
+            .filter(Boolean)
+            .map(ws => ({
+              id: ws.id,
+              name: ws.name,
+              description: ws.description,
+              color: ws.color,
+              icon: ws.icon,
+              tasksCount: ws.tasks_count || 0,
+              filesCount: ws.files_count || 0,
+              lastActivity: ws.last_activity || 'Just now',
+              unread: ws.unread || 0,
+              ownerId: ws.owner_id,
+              inviteCode: ws.invite_code
+            }));
+          setWorkspaces(mappedWorkspaces);
+          
+          const wsIds = mappedWorkspaces.map(w => w.id);
+          if (wsIds.length > 0) {
+            loadActivitiesForAllWorkspaces(wsIds);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to load workspaces:', err);
+      } finally {
+        setLoading(false);
+      }
+    } else {
+      const stored = localStorage.getItem(`nexus_workspaces_${user.id}`);
+      if (stored) {
+        setWorkspaces(JSON.parse(stored));
+      } else {
+        setWorkspaces([]);
+      }
+      setLoading(false);
+    }
+  };
+
+  // Load workspaces when authenticated user changes
+  useEffect(() => {
+    console.log('[Realtime Sync] loadWorkspaces useEffect triggered with user.id:', user?.id);
+    loadWorkspaces();
+    
+    // Clean up channels on logout or user change
+    if (!user?.id) {
+      if (activeWorkspaceChannelRef.current) {
+        supabase.removeChannel(activeWorkspaceChannelRef.current);
+        activeWorkspaceChannelRef.current = null;
+      }
+      if (activePresenceChannelRef.current) {
+        supabase.removeChannel(activePresenceChannelRef.current);
+        activePresenceChannelRef.current = null;
+      }
+      if (userNotificationsChannelRef.current) {
+        supabase.removeChannel(userNotificationsChannelRef.current);
+        userNotificationsChannelRef.current = null;
+      }
+      setNotifications([]);
+      setActiveWorkspaceId(null);
+      return;
+    }
+
+    // Load user notifications and setup realtime listener
+    loadNotifications();
+
+    if (isSupabaseConfigured) {
+      console.log(`[Realtime Sync] Creating global notifications channel for user ${user.id}`);
+      const channel = supabase
+        .channel(`user_notifications:${user.id}`)
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'notifications',
+            filter: `user_id=eq.${user.id}`
+          },
+          (payload) => {
+            console.log('[Realtime Sync] Incoming Notification Event:', payload.eventType, payload);
+            if (payload.eventType === 'INSERT') {
+              setNotifications(prev => {
+                if (prev.some(n => n.id === payload.new.id)) return prev;
+                return [payload.new, ...prev];
+              });
+            } else if (payload.eventType === 'UPDATE') {
+              setNotifications(prev => prev.map(n => n.id === payload.new.id ? payload.new : n));
+            } else if (payload.eventType === 'DELETE') {
+              setNotifications(prev => prev.filter(n => n.id !== payload.old.id));
+            }
+          }
+        )
+        .subscribe();
+
+      userNotificationsChannelRef.current = channel;
+    }
+
+    return () => {
+      if (userNotificationsChannelRef.current) {
+        supabase.removeChannel(userNotificationsChannelRef.current);
+        userNotificationsChannelRef.current = null;
+      }
+    };
+  }, [user?.id]);
+
+  // Clean up all subscription channels on unmount
+  useEffect(() => {
+    return () => {
+      if (activeWorkspaceChannelRef.current) {
+        supabase.removeChannel(activeWorkspaceChannelRef.current);
+      }
+      if (activePresenceChannelRef.current) {
+        supabase.removeChannel(activePresenceChannelRef.current);
+      }
+      if (userNotificationsChannelRef.current) {
+        supabase.removeChannel(userNotificationsChannelRef.current);
+      }
+    };
+  }, []);
+
+  // Handle presence focus and blur status tracking
+  useEffect(() => {
+    if (!user?.id || !activeWorkspaceId || !isSupabaseConfigured) return;
+
+    const handleFocus = async () => {
+      const nowStr = new Date().toISOString();
+      if (activePresenceChannelRef.current) {
+        await activePresenceChannelRef.current.track({
+          status: 'online',
+          last_seen: nowStr
+        });
+      }
+      await supabase.from('user_presence').upsert({
+        user_id: user.id,
+        workspace_id: activeWorkspaceId,
+        status: 'online',
+        last_seen: nowStr
+      });
+    };
+
+    const handleBlur = async () => {
+      const nowStr = new Date().toISOString();
+      if (activePresenceChannelRef.current) {
+        await activePresenceChannelRef.current.track({
+          status: 'away',
+          last_seen: nowStr
+        });
+      }
+      await supabase.from('user_presence').upsert({
+        user_id: user.id,
+        workspace_id: activeWorkspaceId,
+        status: 'away',
+        last_seen: nowStr
+      });
+    };
+
+    window.addEventListener('focus', handleFocus);
+    window.addEventListener('blur', handleBlur);
+
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+      window.removeEventListener('blur', handleBlur);
+    };
+  }, [user?.id, activeWorkspaceId]);
+
+  // Helper to log activities
+  const logActivity = async (workspaceId, action, details) => {
+    if (!workspaceId || !user?.id) return;
+    if (isSupabaseConfigured) {
+      try {
+        const { error } = await supabase
+          .from('activity_feed')
+          .insert({
+            workspace_id: workspaceId,
+            user_id: user.id,
+            action,
+            details
+          });
+        if (error) throw error;
+      } catch (err) {
+        console.error('Error logging activity:', err);
+      }
+    } else {
+      const newAct = {
+        id: `act_${Date.now()}`,
+        workspace_id: workspaceId,
+        user_id: user.id,
+        action,
+        details,
+        created_at: new Date().toISOString()
+      };
+      setActivityFeed(prev => {
+        const current = prev[workspaceId] || [];
+        const updated = [newAct, ...current];
+        localStorage.setItem(`nexus_activity_${workspaceId}`, JSON.stringify(updated));
+        return { ...prev, [workspaceId]: updated };
+      });
+    }
+  };
+
+  // Helper to create notifications
+  const createNotification = async (targetUserId, title, text, wsId) => {
+    if (!targetUserId || !wsId) return;
+    if (targetUserId === user?.id) return; // don't notify oneself
+
+    if (isSupabaseConfigured) {
+      try {
+        const { error } = await supabase
+          .from('notifications')
+          .insert({
+            user_id: targetUserId,
+            workspace_id: wsId,
+            title,
+            text,
+            read: false
+          });
+        if (error) throw error;
+      } catch (err) {
+        console.error('Error creating notification:', err);
+      }
+    } else {
+      const newNotif = {
+        id: `notif_${Date.now()}`,
+        user_id: targetUserId,
+        workspace_id: wsId,
+        title,
+        text,
+        read: false,
+        created_at: new Date().toISOString()
+      };
+      // Send to target user storage mock
+      const stored = localStorage.getItem(`nexus_notifications_${targetUserId}`);
+      const updated = [newNotif, ...(stored ? JSON.parse(stored) : [])];
+      localStorage.setItem(`nexus_notifications_${targetUserId}`, JSON.stringify(updated));
+      if (targetUserId === user.id) {
+        setNotifications(updated);
+      }
+    }
+  };
+
+  const markNotificationAsRead = async (id) => {
+    if (isSupabaseConfigured) {
+      await supabase
+        .from('notifications')
+        .update({ read: true })
+        .eq('id', id);
+    } else {
+      setNotifications(prev => {
+        const updated = prev.map(n => n.id === id ? { ...n, read: true } : n);
+        localStorage.setItem(`nexus_notifications_${user.id}`, JSON.stringify(updated));
+        return updated;
+      });
+    }
+  };
+
+  const markAllNotificationsAsRead = async () => {
+    if (!user?.id) return;
+    if (isSupabaseConfigured) {
+      await supabase
+        .from('notifications')
+        .update({ read: true })
+        .eq('user_id', user.id);
+    } else {
+      setNotifications(prev => {
+        const updated = prev.map(n => ({ ...n, read: true }));
+        localStorage.setItem(`nexus_notifications_${user.id}`, JSON.stringify(updated));
+        return updated;
+      });
+    }
+  };
+
+  // Load details (tasks, chat, files, members, activities, comments, presence) for a specific workspace on demand
+  const fetchWorkspaceDetails = async (workspaceId) => {
+    if (!workspaceId || !user?.id) return;
+
+    // Save previous active workspace ID for offline database marking
+    const prevWsId = activeWorkspaceId;
+    setActiveWorkspaceId(workspaceId);
+
+    if (isSupabaseConfigured) {
+      // Mark offline for previous workspace in database
+      if (prevWsId && prevWsId !== workspaceId) {
+        supabase
+          .from('user_presence')
+          .upsert({
+            user_id: user.id,
+            workspace_id: prevWsId,
+            status: 'offline',
+            last_seen: new Date().toISOString()
+          })
+          .then(() => {});
+      }
+
+      // Clean up any existing realtime subscription channel first
+      if (activeWorkspaceChannelRef.current) {
+        console.log('[Realtime Sync] Cleaning up existing channel:', activeWorkspaceChannelRef.current.topic);
+        supabase.removeChannel(activeWorkspaceChannelRef.current);
+        activeWorkspaceChannelRef.current = null;
+      }
+      if (activePresenceChannelRef.current) {
+        console.log('[Realtime Sync] Cleaning up existing presence channel:', activePresenceChannelRef.current.topic);
+        supabase.removeChannel(activePresenceChannelRef.current);
+        activePresenceChannelRef.current = null;
+      }
+
+      try {
+        // 1. Fetch Tasks
+        await refetchTasks(workspaceId);
+
+        // 2. Fetch Chat Messages
+        const { data: chatData, error: chatErr } = await supabase
+          .from('chat_messages')
+          .select('*')
+          .eq('workspace_id', workspaceId)
+          .order('created_at', { ascending: true });
+
+        if (!chatErr && chatData) {
+          const msgs = chatData.map(m => ({
+            id: m.id,
+            userId: m.user_id,
+            text: m.text,
+            timestamp: m.timestamp,
+            reactions: m.reactions || []
+          }));
+          setChatMessages(prev => ({ ...prev, [workspaceId]: msgs }));
+        }
+
+        // 3. Fetch Files
+        const { data: fileData, error: fileErr } = await supabase
+          .from('files')
+          .select('*')
+          .eq('workspace_id', workspaceId)
+          .order('created_at', { descending: true });
+
+        if (!fileErr && fileData) {
+          const fls = fileData.map(f => ({
+            id: f.id,
+            name: f.name,
+            type: f.type,
+            size: f.size,
+            uploadedBy: f.uploaded_by,
+            uploadedAt: f.uploaded_at,
+            icon: f.icon,
+            storagePath: f.storage_path
+          }));
+          setFiles(prev => ({ ...prev, [workspaceId]: fls }));
+        }
+
+        // 4. Fetch Task Comments
+        await refetchComments(workspaceId);
+
+        // 5. Fetch Activity Feed
+        const { data: activityData, error: actErr } = await supabase
+          .from('activity_feed')
+          .select('*')
+          .eq('workspace_id', workspaceId)
+          .order('created_at', { ascending: false });
+
+        if (!actErr && activityData) {
+          setActivityFeed(prev => ({ ...prev, [workspaceId]: activityData }));
+        }
+
+        // 6. Fetch User Presence baseline
+        const { data: presenceData, error: presErr } = await supabase
+          .from('user_presence')
+          .select('*')
+          .eq('workspace_id', workspaceId);
+
+        const dbPresMap = {};
+        if (!presErr && presenceData) {
+          presenceData.forEach(p => {
+            dbPresMap[p.user_id] = {
+              status: p.status,
+              lastSeen: p.last_seen
+            };
+          });
+          setUserPresence(prev => ({ ...prev, ...dbPresMap }));
+        }
+
+        // Set up realtime channel for this workspace's updates
+        console.log(`[Realtime Sync] Creating subscription channel for workspace ${workspaceId}`);
+        const channel = supabase
+          .channel(`workspace_sync:${workspaceId}`)
+          .on(
+            'postgres_changes',
+            {
+              event: '*',
+              schema: 'public',
+              table: 'chat_messages',
+              filter: `workspace_id=eq.${workspaceId}`
+            },
+            (payload) => {
+              console.log('[Realtime Sync] Incoming Chat Message Event:', payload.eventType, payload);
+              if (payload.eventType === 'INSERT') {
+                const newMsg = payload.new;
+                const formattedMsg = {
+                  id: newMsg.id,
+                  userId: newMsg.user_id,
+                  text: newMsg.text,
+                  timestamp: newMsg.timestamp,
+                  reactions: newMsg.reactions || []
+                };
+                setChatMessages(prev => {
+                  const currentMsgs = prev[workspaceId] || [];
+                  if (currentMsgs.some(m => m.id === formattedMsg.id)) return prev;
+                  return {
+                    ...prev,
+                    [workspaceId]: [...currentMsgs, formattedMsg]
+                  };
+                });
+              } else if (payload.eventType === 'UPDATE') {
+                const updatedMsg = payload.new;
+                const formattedMsg = {
+                  id: updatedMsg.id,
+                  userId: updatedMsg.user_id,
+                  text: updatedMsg.text,
+                  timestamp: updatedMsg.timestamp,
+                  reactions: updatedMsg.reactions || []
+                };
+                setChatMessages(prev => {
+                  const currentMsgs = prev[workspaceId] || [];
+                  return {
+                    ...prev,
+                    [workspaceId]: currentMsgs.map(m => m.id === formattedMsg.id ? formattedMsg : m)
+                  };
+                });
+              } else if (payload.eventType === 'DELETE') {
+                const deletedId = payload.old.id;
+                setChatMessages(prev => {
+                  const currentMsgs = prev[workspaceId] || [];
+                  return {
+                    ...prev,
+                    [workspaceId]: currentMsgs.filter(m => m.id !== deletedId)
+                  };
+                });
+              }
+            }
+          )
+          .on(
+            'postgres_changes',
+            {
+              event: '*',
+              schema: 'public',
+              table: 'files',
+              filter: `workspace_id=eq.${workspaceId}`
+            },
+            (payload) => {
+              console.log('[Realtime Sync] Incoming Files Event:', payload.eventType, payload);
+              if (payload.eventType === 'INSERT') {
+                const newFile = payload.new;
+                const formattedFile = {
+                  id: newFile.id,
+                  name: newFile.name,
+                  type: newFile.type,
+                  size: newFile.size,
+                  uploadedBy: newFile.uploaded_by,
+                  uploadedAt: newFile.uploaded_at,
+                  icon: newFile.icon,
+                  storagePath: newFile.storage_path
+                };
+                setFiles(prev => {
+                  const currentFiles = prev[workspaceId] || [];
+                  if (currentFiles.some(f => f.id === formattedFile.id)) return prev;
+                  return {
+                    ...prev,
+                    [workspaceId]: [formattedFile, ...currentFiles]
+                  };
+                });
+              } else if (payload.eventType === 'UPDATE') {
+                const updatedFile = payload.new;
+                const formattedFile = {
+                  id: updatedFile.id,
+                  name: updatedFile.name,
+                  type: updatedFile.type,
+                  size: updatedFile.size,
+                  uploadedBy: updatedFile.uploaded_by,
+                  uploadedAt: updatedFile.uploaded_at,
+                  icon: updatedFile.icon,
+                  storagePath: updatedFile.storage_path
+                };
+                setFiles(prev => {
+                  const currentFiles = prev[workspaceId] || [];
+                  return {
+                    ...prev,
+                    [workspaceId]: currentFiles.map(f => f.id === formattedFile.id ? formattedFile : f)
+                  };
+                });
+              } else if (payload.eventType === 'DELETE') {
+                const deletedId = payload.old.id;
+                setFiles(prev => {
+                  const currentFiles = prev[workspaceId] || [];
+                  return {
+                    ...prev,
+                    [workspaceId]: currentFiles.filter(f => f.id !== deletedId)
+                  };
+                });
+              }
+            }
+          )
+          .on(
+            'postgres_changes',
+            {
+              event: '*',
+              schema: 'public',
+              table: 'tasks',
+              filter: `workspace_id=eq.${workspaceId}`
+            },
+            (payload) => {
+              console.log('[Realtime Sync] Incoming Tasks Event:', payload.eventType, payload);
+              refetchTasks(workspaceId);
+            }
+          )
+          .on(
+            'postgres_changes',
+            {
+              event: '*',
+              schema: 'public',
+              table: 'task_comments'
+            },
+            (payload) => {
+              console.log('[Realtime Sync] Incoming Comments Event:', payload.eventType, payload);
+              refetchComments(workspaceId);
+            }
+          )
+          .on(
+            'postgres_changes',
+            {
+              event: 'INSERT',
+              schema: 'public',
+              table: 'activity_feed',
+              filter: `workspace_id=eq.${workspaceId}`
+            },
+            (payload) => {
+              console.log('[Realtime Sync] Incoming Activity Event:', payload);
+              setActivityFeed(prev => {
+                const current = prev[workspaceId] || [];
+                if (current.some(a => a.id === payload.new.id)) return prev;
+                return {
+                  ...prev,
+                  [workspaceId]: [payload.new, ...current]
+                };
+              });
+            }
+          )
+          .on(
+            'postgres_changes',
+            {
+              event: '*',
+              schema: 'public',
+              table: 'user_presence',
+              filter: `workspace_id=eq.${workspaceId}`
+            },
+            (payload) => {
+              console.log('[Realtime Sync] Incoming Database Presence Event:', payload.eventType, payload);
+              if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
+                const presenceRow = payload.new;
+                setUserPresence(prev => {
+                  const current = prev[presenceRow.user_id] || {};
+                  return {
+                    ...prev,
+                    [presenceRow.user_id]: {
+                      status: current.status === 'online' && presenceRow.status !== 'offline' ? 'online' : presenceRow.status,
+                      lastSeen: presenceRow.last_seen
+                    }
+                  };
+                });
+              }
+            }
+          )
+          .subscribe((status, err) => {
+            console.log(`[Realtime Sync] Channel status changed for ${workspaceId}: ${status}`);
+            if (err) {
+              console.error(`[Realtime Sync] Subscription error for ${workspaceId}:`, err);
+            }
+          });
+
+        activeWorkspaceChannelRef.current = channel;
+
+        // Set up Presence channel
+        console.log(`[Realtime Sync] Creating presence channel for workspace ${workspaceId}`);
+        const presenceChannel = supabase.channel(`workspace_presence:${workspaceId}`, {
+          config: {
+            presence: {
+              key: user.id
+            }
+          }
+        });
+
+        presenceChannel
+          .on('presence', { event: 'sync' }, () => {
+            const state = presenceChannel.presenceState();
+            const onlineMap = {};
+            Object.keys(state).forEach(userId => {
+              const userPresences = state[userId];
+              if (userPresences && userPresences.length > 0) {
+                onlineMap[userId] = {
+                  status: userPresences[0].status || 'online',
+                  lastSeen: userPresences[0].last_seen || new Date().toISOString()
+                };
+              }
+            });
+
+            setUserPresence(prev => {
+              const merged = { ...prev };
+              Object.keys(merged).forEach(uid => {
+                if (onlineMap[uid]) {
+                  merged[uid] = onlineMap[uid];
+                } else {
+                  merged[uid] = {
+                    ...merged[uid],
+                    status: 'offline'
+                  };
+                }
+              });
+              Object.keys(onlineMap).forEach(uid => {
+                merged[uid] = onlineMap[uid];
+              });
+              return merged;
+            });
+          })
+          .subscribe(async (status) => {
+            if (status === 'SUBSCRIBED') {
+              const nowStr = new Date().toISOString();
+              await presenceChannel.track({
+                status: 'online',
+                last_seen: nowStr
+              });
+              await supabase.from('user_presence').upsert({
+                user_id: user.id,
+                workspace_id: workspaceId,
+                status: 'online',
+                last_seen: nowStr
+              });
+            }
+          });
+
+        activePresenceChannelRef.current = presenceChannel;
+
+        // 9. Fetch Workspace Members (two-step: members then profiles)
+        const { data: memberData, error: memberErr } = await supabase
+          .from('workspace_members')
+          .select('user_id, role')
+          .eq('workspace_id', workspaceId);
+
+        if (!memberErr && memberData && memberData.length > 0) {
+          const userIds = memberData.map(m => m.user_id);
+          const { data: profileData, error: profileErr } = await supabase
+            .from('profiles')
+            .select('id, name, email, avatar, status, role')
+            .in('id', userIds);
+
+          const profileMap = {};
+          if (!profileErr && profileData) {
+            profileData.forEach(p => { profileMap[p.id] = p; });
+          }
+
+          const mappedMembers = memberData.map(m => {
+            const p = profileMap[m.user_id];
+            return {
+              id: m.user_id,
+              name: p?.name || 'Unknown',
+              email: p?.email || '',
+              avatar: p?.avatar || null,
+              initials: p?.name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || 'U',
+              role: m.role || 'Member',
+              status: p?.status || 'offline',
+              color: '#6366f1'
+            };
+          }).filter(m => m.id);
+          setWorkspaceMembers(prev => ({ ...prev, [workspaceId]: mappedMembers }));
+        }
+      } catch (err) {
+        console.error('Error fetching workspace details:', err);
+      }
+    } else {
+      // Local fallback
+      const localTasks = localStorage.getItem(`nexus_tasks_${workspaceId}`);
+      const localChats = localStorage.getItem(`nexus_chats_${workspaceId}`);
+      const localFiles = localStorage.getItem(`nexus_files_${workspaceId}`);
+      const localMembers = localStorage.getItem(`nexus_members_${workspaceId}`);
+      const localComments = localStorage.getItem(`nexus_comments_all_${workspaceId}`);
+      const localActivity = localStorage.getItem(`nexus_activity_${workspaceId}`);
+
+      setTasks(prev => ({
+        ...prev,
+        [workspaceId]: localTasks ? JSON.parse(localTasks) : { todo: [], inProgress: [], done: [] }
+      }));
+      setChatMessages(prev => ({
+        ...prev,
+        [workspaceId]: localChats ? JSON.parse(localChats) : [
+          {
+            id: `msg_welcome_${workspaceId}`,
+            userId: 'usr_002',
+            text: `Welcome to the workspace! Start collaborating here.`,
+            timestamp: 'Just now',
+            reactions: []
+          }
+        ]
+      }));
+      setFiles(prev => ({
+        ...prev,
+        [workspaceId]: localFiles ? JSON.parse(localFiles) : []
+      }));
+      setTaskComments(prev => ({
+        ...prev,
+        ...(localComments ? JSON.parse(localComments) : {})
+      }));
+      setActivityFeed(prev => ({
+        ...prev,
+        [workspaceId]: localActivity ? JSON.parse(localActivity) : []
+      }));
+
+      if (localMembers) {
+        setWorkspaceMembers(prev => ({ ...prev, [workspaceId]: JSON.parse(localMembers) }));
+      } else {
+        const defaultMembers = [
+          {
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            avatar: null,
+            initials: user.initials || 'U',
+            role: 'Owner',
+            status: 'online',
+            color: '#6366f1'
+          }
+        ];
+        localStorage.setItem(`nexus_members_${workspaceId}`, JSON.stringify(defaultMembers));
+        setWorkspaceMembers(prev => ({ ...prev, [workspaceId]: defaultMembers }));
+      }
+    }
+  };
+
+  // Action: Create a Workspace
+  const createWorkspace = async (name, description, color, icon = '💼') => {
+    if (!user?.id) return null;
+    const inviteCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+
+    if (isSupabaseConfigured) {
+      try {
+        const { data, error } = await supabase
+          .from('workspaces')
+          .insert({
+            name,
+            description,
+            color,
+            icon,
+            owner_id: user.id,
+            invite_code: inviteCode,
+            tasks_count: 0,
+            files_count: 0,
+            last_activity: 'Just now',
+            unread: 0
+          })
+          .select()
+          .single();
+
+        if (error) throw error;
+
+        await supabase
+          .from('workspace_members')
+          .insert({
+            workspace_id: data.id,
+            user_id: user.id,
+            role: 'Owner'
+          });
+
+        const newWs = {
+          id: data.id,
+          name: data.name,
+          description: data.description,
+          color: data.color,
+          icon: data.icon,
+          tasksCount: 0,
+          filesCount: 0,
+          lastActivity: 'Just now',
+          unread: 0,
+          ownerId: data.owner_id,
+          inviteCode: data.invite_code
+        };
+
+        const creatorMember = {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          avatar: user.avatar || null,
+          initials: user.initials || 'U',
+          role: 'Owner',
+          status: 'online',
+          color: '#6366f1'
+        };
+
+        setWorkspaces(prev => [...prev, newWs]);
+        setTasks(prev => ({ ...prev, [data.id]: { todo: [], inProgress: [], done: [] } }));
+        setChatMessages(prev => ({
+          ...prev,
+          [data.id]: [
+            {
+              id: `msg_welcome_${data.id}`,
+              userId: 'usr_002',
+              text: `Welcome to the #${name} workspace! The workspace has been set up successfully.`,
+              timestamp: 'Just now',
+              reactions: []
+            }
+          ]
+        }));
+        setFiles(prev => ({ ...prev, [data.id]: [] }));
+        setWorkspaceMembers(prev => ({ ...prev, [data.id]: [creatorMember] }));
+
+        await logActivity(data.id, 'created_workspace', `created workspace "${name}"`);
+
+        return newWs;
+      } catch (err) {
+        console.error('Error creating workspace:', err);
+        const isSchemaError = err.code === '42P01' || err.code === 'PGRST205' || err.code === '42P17' || err.code === 'PGRST204' || err.code?.startsWith('42') || err.code?.startsWith('PGRST');
+        if (isSchemaError) {
+          setDbError(true);
+        }
+        return null;
+      }
+    } else {
+      const newId = `ws_${Date.now()}`;
+      const newWs = {
+        id: newId,
+        name,
+        description,
+        color,
+        icon,
+        tasksCount: 0,
+        filesCount: 0,
+        lastActivity: 'Just now',
+        unread: 0,
+        ownerId: user.id,
+        inviteCode
+      };
+
+      const updatedWorkspaces = [...workspaces, newWs];
+      setWorkspaces(updatedWorkspaces);
+      localStorage.setItem(`nexus_workspaces_${user.id}`, JSON.stringify(updatedWorkspaces));
+
+      const globalMockStored = localStorage.getItem(`nexus_all_workspaces_mock`);
+      const globalMock = globalMockStored ? JSON.parse(globalMockStored) : [];
+      localStorage.setItem(`nexus_all_workspaces_mock`, JSON.stringify([...globalMock, newWs]));
+
+      setTasks(prev => {
+        const updated = { ...prev, [newId]: { todo: [], inProgress: [], done: [] } };
+        localStorage.setItem(`nexus_tasks_${newId}`, JSON.stringify(updated[newId]));
+        return updated;
+      });
+
+      const welcomeChats = [
+        {
+          id: `msg_welcome_${newId}`,
+          userId: 'usr_002',
+          text: `Welcome to the #${name} workspace! The workspace has been set up successfully.`,
+          timestamp: 'Just now',
+          reactions: []
+        }
+      ];
+      setChatMessages(prev => {
+        const updated = { ...prev, [newId]: welcomeChats };
+        localStorage.setItem(`nexus_chats_${newId}`, JSON.stringify(welcomeChats));
+        return updated;
+      });
+
+      setFiles(prev => {
+        const updated = { ...prev, [newId]: [] };
+        localStorage.setItem(`nexus_files_${newId}`, JSON.stringify([]));
+        return updated;
+      });
+
+      const defaultMembers = [{
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        avatar: null,
+        initials: user.initials || 'U',
+        role: 'Owner',
+        status: 'online',
+        color: '#6366f1'
+      }];
+      setWorkspaceMembers(prev => ({ ...prev, [newId]: defaultMembers }));
+      localStorage.setItem(`nexus_members_${newId}`, JSON.stringify(defaultMembers));
+
+      await logActivity(newId, 'created_workspace', `created workspace "${name}"`);
+
+      return newWs;
+    }
+  };
+
+  // Action: Join Workspace by Invite Code
+  const joinWorkspaceByCode = async (inviteCode) => {
+    if (!inviteCode || !user?.id) return { success: false, error: 'Authentication required' };
+
+    const cleanCode = inviteCode.trim().toUpperCase();
+
+    if (isSupabaseConfigured) {
+      try {
+        const { data: ws, error: wsErr } = await supabase
+          .from('workspaces')
+          .select('*')
+          .eq('invite_code', cleanCode)
+          .maybeSingle();
+
+        if (wsErr) throw wsErr;
+        if (!ws) {
+          return { success: false, error: 'Invalid invite code. Workspace not found.' };
+        }
+
+        const { data: existingMember, error: memErr } = await supabase
+          .from('workspace_members')
+          .select('*')
+          .eq('workspace_id', ws.id)
+          .eq('user_id', user.id)
+          .maybeSingle();
+
+        if (memErr) throw memErr;
+        if (existingMember) {
+          return { success: false, error: 'You are already a member of this workspace.', workspaceId: ws.id };
+        }
+
+        const { error: joinErr } = await supabase
+          .from('workspace_members')
+          .insert({
+            workspace_id: ws.id,
+            user_id: user.id,
+            role: 'Member'
+          });
+
+        if (joinErr) throw joinErr;
+
+        await logActivity(ws.id, 'joined_workspace', `joined the workspace`);
+
+        await loadWorkspaces();
+
+        return { success: true, workspaceId: ws.id };
+      } catch (err) {
+        console.error('Error joining workspace:', err);
+        return { success: false, error: err.message || 'Failed to join workspace' };
+      }
+    } else {
+      const stored = localStorage.getItem(`nexus_all_workspaces_mock`);
+      let allMockWorkspaces = [];
+      if (stored) {
+        allMockWorkspaces = JSON.parse(stored);
+      } else {
+        allMockWorkspaces = [...workspaces];
+      }
+
+      const ws = allMockWorkspaces.find(w => w.inviteCode === cleanCode);
+      if (!ws) {
+        return { success: false, error: 'Invalid invite code. Workspace not found.' };
+      }
+
+      if (workspaces.some(w => w.id === ws.id)) {
+        return { success: false, error: 'You are already a member of this workspace.', workspaceId: ws.id };
+      }
+
+      const updatedWorkspaces = [...workspaces, ws];
+      setWorkspaces(updatedWorkspaces);
+      localStorage.setItem(`nexus_workspaces_${user.id}`, JSON.stringify(updatedWorkspaces));
+
+      const defaultMembers = [
+        {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          avatar: null,
+          initials: user.initials || 'U',
+          role: 'Member',
+          status: 'online',
+          color: '#6366f1'
+        }
+      ];
+      localStorage.setItem(`nexus_members_${ws.id}`, JSON.stringify(defaultMembers));
+
+      await logActivity(ws.id, 'joined_workspace', `joined the workspace`);
+
+      return { success: true, workspaceId: ws.id };
+    }
+  };
+
+  // Action: Invite/Add Member to Workspace
+  const inviteMemberToWorkspace = async (workspaceId, email) => {
+    if (!workspaceId || !user?.id) return { success: false, error: 'Authentication required' };
+
+    if (isSupabaseConfigured) {
+      try {
+        const { data: profile, error: profErr } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('email', email)
+          .maybeSingle();
+
+        if (profErr || !profile) {
+          return { success: false, error: 'User email not registered. Invite them to register in Nexus first!' };
+        }
+
+        const { error: insertErr } = await supabase
+          .from('workspace_members')
+          .insert({
+            workspace_id: workspaceId,
+            user_id: profile.id,
+            role: 'Member'
+          });
+
+        if (insertErr) {
+          if (insertErr.code === '23505') {
+            return { success: false, error: 'User is already a member of this workspace.' };
+          }
+          throw insertErr;
+        }
+
+        await logActivity(workspaceId, 'invited_member', `added member ${profile.name} (${email}) to the workspace`);
+        await createNotification(
+          profile.id,
+          'Workspace Invitation',
+          `${user.name} added you to their workspace`,
+          workspaceId
+        );
+
+        await fetchWorkspaceDetails(workspaceId);
+        return { success: true };
+      } catch (err) {
+        console.error('Error inviting member:', err);
+        return { success: false, error: err.message || 'Invitation failed' };
+      }
+    } else {
+      const mockName = email.split('@')[0];
+      const newMember = {
+        id: `usr_${Date.now()}`,
+        name: mockName.charAt(0).toUpperCase() + mockName.slice(1),
+        email,
+        avatar: null,
+        initials: mockName.slice(0, 2).toUpperCase(),
+        role: 'Member',
+        status: 'online',
+        color: '#3b82f6'
+      };
+
+      const currentList = workspaceMembers[workspaceId] || [];
+      if (currentList.some(m => m.email === email)) {
+        return { success: false, error: 'User is already a member.' };
+      }
+
+      const updatedList = [...currentList, newMember];
+      setWorkspaceMembers(prev => ({ ...prev, [workspaceId]: updatedList }));
+      localStorage.setItem(`nexus_members_${workspaceId}`, JSON.stringify(updatedList));
+
+      await logActivity(workspaceId, 'invited_member', `added member ${newMember.name} to the workspace`);
+
+      return { success: true };
+    }
+  };
+
+  // Action: Add a task
+  const addTask = async (workspaceId, task) => {
+    if (!user?.id || !workspaceId) return;
+
+    const newTaskObj = {
+      title: task.title,
+      description: task.description,
+      assignee: task.assignee || null,
+      priority: task.priority || 'medium',
+      dueDate: task.dueDate || '',
+      labels: task.labels || ['feature']
+    };
+
+    if (isSupabaseConfigured) {
+      try {
+        const { data, error } = await supabase
+          .from('tasks')
+          .insert({
+            workspace_id: workspaceId,
+            owner_id: user.id,
+            title: newTaskObj.title,
+            description: newTaskObj.description,
+            assignee: newTaskObj.assignee,
+            priority: newTaskObj.priority,
+            due_date: newTaskObj.dueDate || null,
+            labels: newTaskObj.labels,
+            status: 'todo'
+          })
+          .select()
+          .single();
+
+        if (error) throw error;
+
+        const formattedTask = {
+          id: data.id,
+          title: data.title,
+          description: data.description,
+          assignee: data.assignee,
+          priority: data.priority,
+          dueDate: data.due_date,
+          labels: data.labels || []
+        };
+
+        setTasks(prev => {
+          const wsTasks = prev[workspaceId] || { todo: [], inProgress: [], done: [] };
+          return {
+            ...prev,
+            [workspaceId]: {
+              ...wsTasks,
+              todo: [formattedTask, ...wsTasks.todo]
+            }
+          };
+        });
+
+        // Log task activity
+        await logActivity(workspaceId, 'created_task', `created task "${data.title}"`);
+
+        if (data.assignee) {
+          const assigneeProfile = workspaceMembers[workspaceId]?.find(m => m.id === data.assignee);
+          await logActivity(workspaceId, 'assigned', `assigned task "${data.title}" to ${assigneeProfile?.name || 'a member'}`);
+          await createNotification(
+            data.assignee,
+            'Task Assigned',
+            `${user.name} assigned task "${data.title}" to you`,
+            workspaceId
+          );
+        }
+
+        setWorkspaces(prev =>
+          prev.map(ws => (ws.id === workspaceId ? { ...ws, tasksCount: (ws.tasksCount || 0) + 1 } : ws))
+        );
+
+        const { count, error: countErr } = await supabase
+          .from('tasks')
+          .select('*', { count: 'exact', head: true })
+          .eq('workspace_id', workspaceId);
+        
+        if (!countErr && count !== null) {
+          await supabase
+            .from('workspaces')
+            .update({ tasks_count: count })
+            .eq('id', workspaceId);
+        }
+      } catch (err) {
+        console.error('Error adding task:', err);
+      }
+    } else {
+      const newId = `task_${Date.now()}`;
+      const localTask = { id: newId, ...newTaskObj };
+
+      setTasks(prev => {
+        const wsTasks = prev[workspaceId] || { todo: [], inProgress: [], done: [] };
+        const updated = {
+          ...prev,
+          [workspaceId]: {
+            ...wsTasks,
+            todo: [localTask, ...wsTasks.todo]
+          }
+        };
+        localStorage.setItem(`nexus_tasks_${workspaceId}`, JSON.stringify(updated[workspaceId]));
+        return updated;
+      });
+
+      await logActivity(workspaceId, 'created_task', `created task "${localTask.title}"`);
+
+      setWorkspaces(prev => {
+        const updated = prev.map(ws => (ws.id === workspaceId ? { ...ws, tasksCount: (ws.tasksCount || 0) + 1 } : ws));
+        localStorage.setItem(`nexus_workspaces_${user.id}`, JSON.stringify(updated));
+        return updated;
+      });
+    }
+  };
+
+  // Action: Update tasks board (drag & drop movement)
+  const updateTasks = async (workspaceId, newTasksData) => {
+    if (!workspaceId || !user?.id) return;
+
+    const previousWorkspaceTasks = tasks[workspaceId] || { todo: [], inProgress: [], done: [] };
+
+    setTasks(prev => ({
+      ...prev,
+      [workspaceId]: newTasksData
+    }));
+
+    // Find which task moved status to log correctly
+    let movedTask = null;
+    let newStatus = '';
+    
+    newTasksData.todo?.forEach(t => {
+      const wasInTodo = previousWorkspaceTasks.todo?.some(pt => pt.id === t.id);
+      if (!wasInTodo && (previousWorkspaceTasks.inProgress?.some(pt => pt.id === t.id) || previousWorkspaceTasks.done?.some(pt => pt.id === t.id))) {
+        movedTask = t;
+        newStatus = 'todo';
+      }
+    });
+    newTasksData.inProgress?.forEach(t => {
+      const wasInInProgress = previousWorkspaceTasks.inProgress?.some(pt => pt.id === t.id);
+      if (!wasInInProgress && (previousWorkspaceTasks.todo?.some(pt => pt.id === t.id) || previousWorkspaceTasks.done?.some(pt => pt.id === t.id))) {
+        movedTask = t;
+        newStatus = 'inProgress';
+      }
+    });
+    newTasksData.done?.forEach(t => {
+      const wasInDone = previousWorkspaceTasks.done?.some(pt => pt.id === t.id);
+      if (!wasInDone && (previousWorkspaceTasks.todo?.some(pt => pt.id === t.id) || previousWorkspaceTasks.inProgress?.some(pt => pt.id === t.id))) {
+        movedTask = t;
+        newStatus = 'done';
+      }
+    });
+
+    if (movedTask) {
+      if (newStatus === 'done') {
+        await logActivity(workspaceId, 'completed_task', `completed task "${movedTask.title}"`);
+      } else if (newStatus === 'inProgress') {
+        await logActivity(workspaceId, 'started_task', `started task "${movedTask.title}"`);
+      } else {
+        await logActivity(workspaceId, 'moved_task', `moved task "${movedTask.title}" to To Do`);
+      }
+    }
+
+    if (isSupabaseConfigured) {
+      try {
+        const promises = [];
+        const updateListStatus = (taskList, dbStatus) => {
+          taskList.forEach(t => {
+            promises.push(
+              supabase
+                .from('tasks')
+                .update({ status: dbStatus })
+                .eq('id', t.id)
+                .eq('workspace_id', workspaceId)
+            );
+          });
+        };
+
+        updateListStatus(newTasksData.todo || [], 'todo');
+        updateListStatus(newTasksData.inProgress || [], 'in_progress');
+        updateListStatus(newTasksData.done || [], 'done');
+
+        await Promise.all(promises);
+      } catch (err) {
+        console.error('Error updating tasks on server:', err);
+      }
+    } else {
+      localStorage.setItem(`nexus_tasks_${workspaceId}`, JSON.stringify(newTasksData));
+    }
+  };
+
+  // Action: Add Chat Message
+  const addChatMessage = async (workspaceId, text) => {
+    if (!workspaceId || !user?.id) return;
+
+    const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+    if (isSupabaseConfigured) {
+      try {
+        const { data, error } = await supabase
+          .from('chat_messages')
+          .insert({
+            workspace_id: workspaceId,
+            owner_id: user.id,
+            user_id: user.id,
+            text,
+            timestamp
+          })
+          .select()
+          .single();
+
+        if (error) throw error;
+
+        const formattedMsg = {
+          id: data.id,
+          userId: data.user_id,
+          text: data.text,
+          timestamp: data.timestamp,
+          reactions: data.reactions || []
+        };
+
+        setChatMessages(prev => ({
+          ...prev,
+          [workspaceId]: [...(prev[workspaceId] || []), formattedMsg]
+        }));
+
+        // Parse @mentions
+        const members = workspaceMembers[workspaceId] || [];
+        members.forEach(member => {
+          if (member.id !== user.id) {
+            const nameTag = `@${member.name}`;
+            const firstNameTag = `@${member.name.split(' ')[0]}`;
+            const emailTag = `@${member.email.split('@')[0]}`;
+            
+            const containsMention = 
+              text.toLowerCase().includes(nameTag.toLowerCase()) ||
+              text.toLowerCase().includes(firstNameTag.toLowerCase()) ||
+              text.toLowerCase().includes(emailTag.toLowerCase());
+
+            if (containsMention) {
+              createNotification(
+                member.id,
+                'Chat Mention',
+                `${user.name} mentioned you in #${workspaces.find(w => w.id === workspaceId)?.name || 'workspace'}`,
+                workspaceId
+              );
+            }
+          }
+        });
+
+        setWorkspaces(prev =>
+          prev.map(ws => (ws.id === workspaceId ? { ...ws, lastActivity: '1 min ago' } : ws))
+        );
+
+        await supabase
+          .from('workspaces')
+          .update({ last_activity: '1 min ago' })
+          .eq('id', workspaceId);
+
+      } catch (err) {
+        console.error('Error adding chat message:', err);
+      }
+    } else {
+      const newMsg = {
+        id: `msg_${Date.now()}`,
+        userId: user.id,
+        text,
+        timestamp,
+        reactions: []
+      };
+
+      setChatMessages(prev => {
+        const updated = {
+          ...prev,
+          [workspaceId]: [...(prev[workspaceId] || []), newMsg]
+        };
+        localStorage.setItem(`nexus_chats_${workspaceId}`, JSON.stringify(updated[workspaceId]));
+        return updated;
+      });
+
+      // Local mock @mention parser
+      const members = workspaceMembers[workspaceId] || [];
+      members.forEach(member => {
+        if (member.id !== user.id) {
+          const nameTag = `@${member.name}`;
+          const containsMention = text.toLowerCase().includes(nameTag.toLowerCase());
+          if (containsMention) {
+            createNotification(
+              member.id,
+              'Chat Mention',
+              `${user.name} mentioned you in workspace`,
+              workspaceId
+            );
+          }
+        }
+      });
+
+      setWorkspaces(prev => {
+        const updated = prev.map(ws => (ws.id === workspaceId ? { ...ws, lastActivity: '1 min ago' } : ws));
+        localStorage.setItem(`nexus_workspaces_${user.id}`, JSON.stringify(updated));
+        return updated;
+      });
+    }
+  };
+
+  // Action: Add File (Supabase Storage & Metadata)
+  const uploadFile = async (workspaceId, fileMeta, file) => {
+    if (!user?.id || !workspaceId) return;
+
+    if (isSupabaseConfigured && file) {
+      try {
+        const cleanFileName = file.name.replace(/[^\x00-\x7F]/g, '');
+        const storagePath = `${workspaceId}/${Date.now()}_${cleanFileName}`;
+
+        const { data: uploadData, error: uploadErr } = await supabase.storage
+          .from('files')
+          .upload(storagePath, file, {
+            cacheControl: '3600',
+            upsert: false
+          });
+
+        if (uploadErr) throw uploadErr;
+
+        const { data, error } = await supabase
+          .from('files')
+          .insert({
+            workspace_id: workspaceId,
+            owner_id: user.id,
+            name: file.name,
+            type: fileMeta.type || 'document',
+            size: fileMeta.size || `${(file.size / 1024).toFixed(0)} KB`,
+            uploaded_by: user.id,
+            uploaded_at: 'Just now',
+            icon: fileMeta.icon || '📄',
+            storage_path: storagePath
+          })
+          .select()
+          .single();
+
+        if (error) throw error;
+
+        const formattedFile = {
+          id: data.id,
+          name: data.name,
+          type: data.type,
+          size: data.size,
+          uploadedBy: data.uploaded_by,
+          uploadedAt: data.uploaded_at,
+          icon: data.icon,
+          storagePath: data.storage_path
+        };
+
+        setFiles(prev => ({
+          ...prev,
+          [workspaceId]: [formattedFile, ...(prev[workspaceId] || [])]
+        }));
+
+        await logActivity(workspaceId, 'uploaded_file', `uploaded file "${data.name}"`);
+
+        setWorkspaces(prev =>
+          prev.map(ws => (ws.id === workspaceId ? { ...ws, filesCount: (ws.filesCount || 0) + 1 } : ws))
+        );
+
+        const { count, error: countErr } = await supabase
+          .from('files')
+          .select('*', { count: 'exact', head: true })
+          .eq('workspace_id', workspaceId);
+
+        if (!countErr && count !== null) {
+          await supabase
+            .from('workspaces')
+            .update({ files_count: count })
+            .eq('id', workspaceId);
+        }
+      } catch (err) {
+        console.error('Error uploading file to storage:', err);
+      }
+    } else {
+      const newId = `file_${Date.now()}`;
+      const localFile = {
+        id: newId,
+        name: fileMeta.name || file?.name || 'document.pdf',
+        type: fileMeta.type || 'document',
+        size: fileMeta.size || (file ? `${(file.size / 1024).toFixed(0)} KB` : '124 KB'),
+        uploadedBy: user.id,
+        uploadedAt: 'Just now',
+        icon: fileMeta.icon || '📄',
+        storagePath: `mock/${newId}`
+      };
+
+      setFiles(prev => {
+        const updated = {
+          ...prev,
+          [workspaceId]: [localFile, ...(prev[workspaceId] || [])]
+        };
+        localStorage.setItem(`nexus_files_${workspaceId}`, JSON.stringify(updated[workspaceId]));
+        return updated;
+      });
+
+      await logActivity(workspaceId, 'uploaded_file', `uploaded file "${localFile.name}"`);
+
+      setWorkspaces(prev => {
+        const updated = prev.map(ws => (ws.id === workspaceId ? { ...ws, filesCount: (ws.filesCount || 0) + 1 } : ws));
+        localStorage.setItem(`nexus_workspaces_${user.id}`, JSON.stringify(updated));
+        return updated;
+      });
+    }
+  };
+
+  // Action: Add Task Comment
+  const addTaskComment = async (taskId, text) => {
+    if (!taskId || !text.trim() || !user?.id) return;
+
+    if (isSupabaseConfigured) {
+      try {
+        const { data, error } = await supabase
+          .from('task_comments')
+          .insert({
+            task_id: taskId,
+            user_id: user.id,
+            text: text.trim()
+          })
+          .select()
+          .single();
+
+        if (error) throw error;
+        
+        const { data: taskData } = await supabase
+          .from('tasks')
+          .select('title, assignee, owner_id, workspace_id')
+          .eq('id', taskId)
+          .single();
+
+        if (taskData) {
+          await logActivity(taskData.workspace_id, 'commented', `commented on task "${taskData.title}"`);
+          
+          if (taskData.assignee && taskData.assignee !== user.id) {
+            await createNotification(
+              taskData.assignee,
+              'New Task Comment',
+              `${user.name} commented on task "${taskData.title}"`,
+              taskData.workspace_id
+            );
+          }
+          if (taskData.owner_id && taskData.owner_id !== user.id && taskData.owner_id !== taskData.assignee) {
+            await createNotification(
+              taskData.owner_id,
+              'New Task Comment',
+              `${user.name} commented on task "${taskData.title}"`,
+              taskData.workspace_id
+            );
+          }
+        }
+
+        await refetchComments(taskData?.workspace_id || activeWorkspaceId);
+      } catch (err) {
+        console.error('Error adding comment:', err);
+      }
+    } else {
+      const newComment = {
+        id: `comment_${Date.now()}`,
+        taskId,
+        userId: user.id,
+        text: text.trim(),
+        createdAt: new Date().toISOString()
+      };
+      setTaskComments(prev => {
+        const current = prev[taskId] || [];
+        const updated = [...current, newComment];
+        if (activeWorkspaceId) {
+          localStorage.setItem(`nexus_comments_all_${activeWorkspaceId}`, JSON.stringify({ ...prev, [taskId]: updated }));
+        }
+        return { ...prev, [taskId]: updated };
+      });
+      if (activeWorkspaceId) {
+        await logActivity(activeWorkspaceId, 'commented', `commented on a task`);
+      }
+    }
+  };
+
+  // Action: Delete Task
+  const deleteTask = async (workspaceId, taskId) => {
+    if (!workspaceId || !taskId) return;
+    if (isSupabaseConfigured) {
+      try {
+        const { data: taskData } = await supabase
+          .from('tasks')
+          .select('title')
+          .eq('id', taskId)
+          .single();
+        const taskTitle = taskData?.title || 'Unknown Task';
+
+        const { error } = await supabase
+          .from('tasks')
+          .delete()
+          .eq('id', taskId)
+          .eq('workspace_id', workspaceId);
+
+        if (error) throw error;
+
+        await logActivity(workspaceId, 'deleted_task', `deleted task "${taskTitle}"`);
+
+        const { count, error: countErr } = await supabase
+          .from('tasks')
+          .select('*', { count: 'exact', head: true })
+          .eq('workspace_id', workspaceId);
+        
+        if (!countErr && count !== null) {
+          await supabase
+            .from('workspaces')
+            .update({ tasks_count: count })
+            .eq('id', workspaceId);
+          
+          setWorkspaces(prev =>
+            prev.map(ws => (ws.id === workspaceId ? { ...ws, tasksCount: count } : ws))
+          );
+        }
+      } catch (err) {
+        console.error('Error deleting task:', err);
+      }
+    } else {
+      setTasks(prev => {
+        const wsTasks = prev[workspaceId] || { todo: [], inProgress: [], done: [] };
+        const updated = {
+          ...prev,
+          [workspaceId]: {
+            todo: wsTasks.todo.filter(t => t.id !== taskId),
+            inProgress: wsTasks.inProgress.filter(t => t.id !== taskId),
+            done: wsTasks.done.filter(t => t.id !== taskId)
+          }
+        };
+        localStorage.setItem(`nexus_tasks_${workspaceId}`, JSON.stringify(updated[workspaceId]));
+        return updated;
+      });
+      setWorkspaces(prev => {
+        const updated = prev.map(ws => (ws.id === workspaceId ? { ...ws, tasksCount: Math.max(0, (ws.tasksCount || 0) - 1) } : ws));
+        localStorage.setItem(`nexus_workspaces_${user.id}`, JSON.stringify(updated));
+        return updated;
+      });
+    }
+  };
+
+  // Action: Update Task Details
+  const updateTaskDetails = async (workspaceId, taskId, updatedFields) => {
+    if (!workspaceId || !taskId) return;
+    
+    const dbFields = {};
+    if (updatedFields.title !== undefined) dbFields.title = updatedFields.title;
+    if (updatedFields.description !== undefined) dbFields.description = updatedFields.description;
+    if (updatedFields.assignee !== undefined) dbFields.assignee = updatedFields.assignee || null;
+    if (updatedFields.priority !== undefined) dbFields.priority = updatedFields.priority;
+    if (updatedFields.dueDate !== undefined) dbFields.due_date = updatedFields.dueDate || null;
+    if (updatedFields.labels !== undefined) dbFields.labels = updatedFields.labels;
+    if (updatedFields.status !== undefined) dbFields.status = updatedFields.status;
+
+    if (isSupabaseConfigured) {
+      try {
+        const { error } = await supabase
+          .from('tasks')
+          .update(dbFields)
+          .eq('id', taskId)
+          .eq('workspace_id', workspaceId);
+
+        if (error) throw error;
+
+        if (updatedFields.title !== undefined) {
+          await logActivity(workspaceId, 'edited_task', `updated task "${updatedFields.title}"`);
+        }
+        if (updatedFields.assignee) {
+          const assigneeProfile = workspaceMembers[workspaceId]?.find(m => m.id === updatedFields.assignee);
+          await logActivity(workspaceId, 'assigned', `assigned task "${updatedFields.title || 'task'}" to ${assigneeProfile?.name || 'a member'}`);
+          await createNotification(
+            updatedFields.assignee,
+            'Task Assigned',
+            `${user.name} assigned task "${updatedFields.title || 'task'}" to you`,
+            workspaceId
+          );
+        }
+      } catch (err) {
+        console.error('Error updating task details:', err);
+      }
+    } else {
+      setTasks(prev => {
+        const wsTasks = prev[workspaceId] || { todo: [], inProgress: [], done: [] };
+        const mapList = list => list.map(t => t.id === taskId ? { ...t, ...updatedFields } : t);
+        const updated = {
+          ...prev,
+          [workspaceId]: {
+            todo: mapList(wsTasks.todo),
+            inProgress: mapList(wsTasks.inProgress),
+            done: mapList(wsTasks.done)
+          }
+        };
+        localStorage.setItem(`nexus_tasks_${workspaceId}`, JSON.stringify(updated[workspaceId]));
+        return updated;
+      });
+    }
+  };
+
+  // Action: Delete File
+  const deleteFile = async (workspaceId, fileId) => {
+    if (!workspaceId || !fileId) return;
+    const currentFiles = files[workspaceId] || [];
+    const targetFile = currentFiles.find(f => f.id === fileId);
+    if (!targetFile) return;
+
+    if (isSupabaseConfigured) {
+      try {
+        if (targetFile.storagePath) {
+          const { error: storageErr } = await supabase.storage
+            .from('files')
+            .remove([targetFile.storagePath]);
+          if (storageErr) console.warn('Could not delete file from storage:', storageErr);
+        }
+
+        const { error: dbErr } = await supabase
+          .from('files')
+          .delete()
+          .eq('id', fileId)
+          .eq('workspace_id', workspaceId);
+
+        if (dbErr) throw dbErr;
+
+        await logActivity(workspaceId, 'deleted_file', `deleted file "${targetFile.name}"`);
+
+        const { count, error: countErr } = await supabase
+          .from('files')
+          .select('*', { count: 'exact', head: true })
+          .eq('workspace_id', workspaceId);
+
+        if (!countErr && count !== null) {
+          await supabase
+            .from('workspaces')
+            .update({ files_count: count })
+            .eq('id', workspaceId);
+
+          setWorkspaces(prev =>
+            prev.map(ws => (ws.id === workspaceId ? { ...ws, filesCount: count } : ws))
+          );
+        }
+      } catch (err) {
+        console.error('Error deleting file:', err);
+      }
+    } else {
+      setFiles(prev => {
+        const current = prev[workspaceId] || [];
+        const updated = {
+          ...prev,
+          [workspaceId]: current.filter(f => f.id !== fileId)
+        };
+        localStorage.setItem(`nexus_files_${workspaceId}`, JSON.stringify(updated[workspaceId]));
+        return updated;
+      });
+      setWorkspaces(prev => {
+        const updated = prev.map(ws => (ws.id === workspaceId ? { ...ws, filesCount: Math.max(0, (ws.filesCount || 0) - 1) } : ws));
+        localStorage.setItem(`nexus_workspaces_${user.id}`, JSON.stringify(updated));
+        return updated;
+      });
+    }
+  };
+
+  // Action: Download File from Storage
+  const downloadFile = async (fileObj) => {
+    if (!fileObj) return;
+
+    if (isSupabaseConfigured && fileObj.storagePath) {
+      try {
+        const { data, error } = await supabase.storage
+          .from('files')
+          .download(fileObj.storagePath);
+
+        if (error) throw error;
+
+        const url = URL.createObjectURL(data);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileObj.name;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      } catch (err) {
+        console.error('Error downloading file:', err);
+        alert('Could not download file. Make sure it exists in storage.');
+      }
+    } else {
+      const blob = new Blob([`Nexus Demo File Content for ${fileObj.name}`], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileObj.name.endsWith('.txt') || fileObj.name.includes('.') ? fileObj.name : `${fileObj.name}.txt`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+  };
+
+  return (
+    <WorkspaceContext.Provider
+      value={{
+        workspaces,
+        tasks,
+        chatMessages,
+        files,
+        workspaceMembers,
+        loading,
+        dbError,
+        fetchWorkspaceDetails,
+        createWorkspace,
+        inviteMemberToWorkspace,
+        joinWorkspaceByCode,
+        addTask,
+        updateTasks,
+        addChatMessage,
+        uploadFile,
+        downloadFile,
+
+        // Upgraded features
+        taskComments,
+        notifications,
+        activityFeed,
+        userPresence,
+        addTaskComment,
+        deleteFile,
+        deleteTask,
+        updateTaskDetails,
+        markNotificationAsRead,
+        markAllNotificationsAsRead
+      }}
+    >
+      {children}
+    </WorkspaceContext.Provider>
+  );
+}
+
+export function useWorkspace() {
+  const context = useContext(WorkspaceContext);
+  if (!context) {
+    throw new Error('useWorkspace must be used within a WorkspaceProvider');
+  }
+  return context;
+}
