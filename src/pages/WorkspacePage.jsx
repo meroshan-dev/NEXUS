@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   MessageSquare, Activity, Send, Smile, Paperclip, Hash,
   UserPlus, MoreHorizontal, Settings, Check, Copy, BarChart3,
-  TrendingUp, Clock, FileText, CheckSquare, Users
+  TrendingUp, Clock, FileText, CheckSquare, Users, MapPin
 } from 'lucide-react';
 import Avatar from '../components/ui/Avatar';
 import Card from '../components/ui/Card';
@@ -64,7 +64,8 @@ export default function WorkspacePage() {
     tasks,
     files,
     typingUsers,
-    sendTypingIndicator
+    sendTypingIndicator,
+    deleteWorkspace
   } = useWorkspace();
   const { user } = useAuth();
 
@@ -78,6 +79,11 @@ export default function WorkspacePage() {
   const [inviteError, setInviteError] = useState('');
   const [inviteSuccess, setInviteSuccess] = useState(false);
   const [copiedCode, setCopiedCode] = useState(false);
+
+  // Deletion modal states
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteConfirmName, setDeleteConfirmName] = useState('');
+  const [deleteError, setDeleteError] = useState('');
 
   const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
   const isKeyboardVisible = useKeyboardVisible();
@@ -143,6 +149,7 @@ export default function WorkspacePage() {
   ];
   if (isOwner) {
     workspaceTabs.push({ id: 'analytics', icon: BarChart3, label: 'Analytics' });
+    workspaceTabs.push({ id: 'settings', icon: Settings, label: 'Settings' });
   }
   if (isMobile) {
     workspaceTabs.push({ id: 'members', icon: Users, label: 'Members' });
@@ -167,6 +174,43 @@ export default function WorkspacePage() {
     if (!message.trim()) return;
     addChatMessage(workspace.id, message);
     setMessage('');
+  };
+
+  const handleDeleteWorkspace = async () => {
+    if (deleteConfirmName !== workspace.name) {
+      setDeleteError('Workspace name does not match.');
+      return;
+    }
+    setDeleteError('');
+    try {
+      const res = await deleteWorkspace(workspace.id);
+      if (res?.success) {
+        setShowDeleteModal(false);
+        navigate('/dashboard');
+      } else {
+        setDeleteError(res?.error || 'Failed to delete workspace.');
+      }
+    } catch (err) {
+      console.error(err);
+      setDeleteError('An unexpected error occurred.');
+    }
+  };
+
+  const formatMessageTime = (msg) => {
+    if (!msg.createdAt) return msg.timestamp || '';
+    const date = new Date(msg.createdAt);
+    if (isNaN(date.getTime())) return msg.timestamp || '';
+    
+    const now = new Date();
+    const isToday = now.toDateString() === date.toDateString();
+    
+    const timeStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    if (isToday) {
+      return timeStr;
+    } else {
+      const dateStr = date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+      return `${dateStr} at ${timeStr}`;
+    }
   };
 
   const handleInviteSubmit = async (e) => {
@@ -286,7 +330,14 @@ export default function WorkspacePage() {
           >
             Invite
           </Button>
-          <Button variant="ghost" icon={Settings} aria-label="Settings" />
+          {isOwner && (
+            <Button
+              variant="ghost"
+              icon={Settings}
+              aria-label="Settings"
+              onClick={() => setActiveTab('settings')}
+            />
+          )}
         </div>
       </header>
 
@@ -385,7 +436,7 @@ export default function WorkspacePage() {
                                       {sender?.name}
                                     </span>
                                     <span className="text-[11px] shrink-0" style={{ color: 'var(--text-tertiary)' }}>
-                                      {msg.timestamp}
+                                      {formatMessageTime(msg)}
                                     </span>
                                   </div>
                                 )}
@@ -548,7 +599,14 @@ export default function WorkspacePage() {
                                 <p className="text-xs font-semibold flex items-center gap-1.5" style={{ color: 'var(--text-primary)' }}>
                                   {m.name} {m.id === workspace.ownerId && <span className="text-[8px] font-bold text-amber-500 bg-amber-500/10 px-1 border border-amber-500/20 rounded uppercase">Owner</span>}
                                 </p>
-                                <p className="text-[10px] text-[var(--text-tertiary)]">{m.role}</p>
+                                <p className="text-[10px] text-[var(--text-tertiary)] flex items-center gap-1 mt-0.5">
+                                  <span>{m.role}</span>
+                                  {m.location && (
+                                    <span className="flex items-center gap-0.5 ml-1.5 shrink-0 text-zinc-500">
+                                      <MapPin size={9} /> {m.location.split(',')[0]}
+                                    </span>
+                                  )}
+                                </p>
                               </div>
                             </div>
                           ))}
@@ -567,7 +625,14 @@ export default function WorkspacePage() {
                                 <p className="text-xs font-semibold flex items-center gap-1.5" style={{ color: 'var(--text-primary)' }}>
                                   {m.name} {m.id === workspace.ownerId && <span className="text-[8px] font-bold text-amber-500 bg-amber-500/10 px-1 border border-amber-500/20 rounded uppercase">Owner</span>}
                                 </p>
-                                <p className="text-[10px] text-[var(--text-tertiary)]">{m.role}</p>
+                                <p className="text-[10px] text-[var(--text-tertiary)] flex items-center gap-1 mt-0.5">
+                                  <span>{m.role}</span>
+                                  {m.location && (
+                                    <span className="flex items-center gap-0.5 ml-1.5 shrink-0 text-zinc-500">
+                                      <MapPin size={9} /> {m.location.split(',')[0]}
+                                    </span>
+                                  )}
+                                </p>
                               </div>
                             </div>
                           ))}
@@ -586,7 +651,14 @@ export default function WorkspacePage() {
                                 <p className="text-xs font-semibold flex items-center gap-1.5" style={{ color: 'var(--text-primary)' }}>
                                   {m.name} {m.id === workspace.ownerId && <span className="text-[8px] font-bold text-amber-500 bg-amber-500/10 px-1 border border-amber-500/20 rounded uppercase">Owner</span>}
                                 </p>
-                                <p className="text-[10px] text-[var(--text-tertiary)]">{formatLastSeen(m.lastSeen)}</p>
+                                <p className="text-[10px] text-[var(--text-tertiary)] flex flex-wrap items-center gap-1 mt-0.5">
+                                  <span>{formatLastSeen(m.lastSeen)}</span>
+                                  {m.location && (
+                                    <span className="flex items-center gap-0.5 ml-1.5 shrink-0 text-zinc-500">
+                                      <MapPin size={9} /> {m.location.split(',')[0]}
+                                    </span>
+                                  )}
+                                </p>
                               </div>
                             </div>
                           ))}
@@ -706,6 +778,33 @@ export default function WorkspacePage() {
                 </div>
               </motion.div>
             )}
+
+            {activeTab === 'settings' && isOwner && (
+              <motion.div key="settings" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                <Card className="space-y-6">
+                  <div>
+                    <h3 className="text-h3" style={{ color: 'var(--text-primary)' }}>Workspace Settings</h3>
+                    <p className="text-body-sm mt-1" style={{ color: 'var(--text-secondary)' }}>
+                      Manage preferences and administrative configurations for this workspace.
+                    </p>
+                  </div>
+                  
+                  <div className="pt-6 border-t border-[var(--border-color)]">
+                    <h4 className="text-sm font-semibold text-danger mb-2">Danger Zone</h4>
+                    <p className="text-body-sm mb-4" style={{ color: 'var(--text-secondary)' }}>
+                      Deleting this workspace is permanent and will delete all messages, tasks, task comments, notifications, files, activity feeds, and remove all members.
+                    </p>
+                    <Button variant="danger" onClick={() => {
+                      setShowDeleteModal(true);
+                      setDeleteConfirmName('');
+                      setDeleteError('');
+                    }}>
+                      Delete Workspace
+                    </Button>
+                  </div>
+                </Card>
+              </motion.div>
+            )}
           </AnimatePresence>
         </div>
 
@@ -788,8 +887,13 @@ export default function WorkspacePage() {
                                 </span>
                               )}
                             </p>
-                            <p className="text-[11px] truncate" style={{ color: 'var(--text-tertiary)' }}>
-                              {member.role}
+                            <p className="text-[11px] truncate flex items-center gap-1 mt-0.5" style={{ color: 'var(--text-tertiary)' }}>
+                              <span>{member.role}</span>
+                              {member.location && (
+                                <span className="flex items-center gap-0.5 ml-1.5 shrink-0 text-zinc-500" title={`Location: ${member.location}`}>
+                                  <MapPin size={10} /> {member.location.split(',')[0]}
+                                </span>
+                              )}
                             </p>
                           </div>
                         </div>
@@ -835,8 +939,13 @@ export default function WorkspacePage() {
                                 </span>
                               )}
                             </p>
-                            <p className="text-[11px] truncate" style={{ color: 'var(--text-tertiary)' }}>
-                              {member.role}
+                            <p className="text-[11px] truncate flex items-center gap-1 mt-0.5" style={{ color: 'var(--text-tertiary)' }}>
+                              <span>{member.role}</span>
+                              {member.location && (
+                                <span className="flex items-center gap-0.5 ml-1.5 shrink-0 text-zinc-500" title={`Location: ${member.location}`}>
+                                  <MapPin size={10} /> {member.location.split(',')[0]}
+                                </span>
+                              )}
                             </p>
                           </div>
                         </div>
@@ -886,8 +995,13 @@ export default function WorkspacePage() {
                                 </span>
                               )}
                             </p>
-                            <p className="text-[10px] truncate" style={{ color: 'var(--text-tertiary)' }}>
-                              {formatLastSeen(member.lastSeen)}
+                            <p className="text-[10px] truncate flex flex-wrap items-center gap-1 mt-0.5" style={{ color: 'var(--text-tertiary)' }}>
+                              <span>{formatLastSeen(member.lastSeen)}</span>
+                              {member.location && (
+                                <span className="flex items-center gap-0.5 ml-1.5 shrink-0 text-zinc-500" title={`Location: ${member.location}`}>
+                                  <MapPin size={10} /> {member.location.split(',')[0]}
+                                </span>
+                              )}
                             </p>
                           </div>
                         </div>
@@ -952,6 +1066,57 @@ export default function WorkspacePage() {
             </Button>
           </div>
         </form>
+      </Modal>
+
+      {/* Delete Workspace Confirmation Modal */}
+      <Modal
+        isOpen={showDeleteModal}
+        onClose={() => {
+          setShowDeleteModal(false);
+          setDeleteConfirmName('');
+          setDeleteError('');
+        }}
+        title="Delete Workspace"
+        size="md"
+      >
+        <div className="space-y-5">
+          <p className="text-body-sm" style={{ color: 'var(--text-secondary)' }}>
+            This action is permanent and cannot be undone. All data associated with the workspace <strong>{workspace?.name}</strong> will be permanently deleted.
+          </p>
+          <p className="text-body-sm" style={{ color: 'var(--text-secondary)' }}>
+            Please type <strong>{workspace?.name}</strong> to confirm:
+          </p>
+          <Input
+            value={deleteConfirmName}
+            onChange={(e) => setDeleteConfirmName(e.target.value)}
+            placeholder="Type workspace name here"
+            className="w-full"
+          />
+          {deleteError && (
+            <p className="text-xs text-danger">{deleteError}</p>
+          )}
+          <div className="flex gap-3 pt-3">
+            <Button
+              variant="secondary"
+              className="flex-1"
+              onClick={() => {
+                setShowDeleteModal(false);
+                setDeleteConfirmName('');
+                setDeleteError('');
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="danger"
+              className="flex-1"
+              disabled={deleteConfirmName !== workspace?.name}
+              onClick={handleDeleteWorkspace}
+            >
+              Delete Workspace
+            </Button>
+          </div>
+        </div>
       </Modal>
     </div>
   );

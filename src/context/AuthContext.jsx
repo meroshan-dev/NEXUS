@@ -13,14 +13,34 @@ export function AuthProvider({ children }) {
     const syncProfile = async (u) => {
       if (!u || !isSupabaseConfigured) return;
       try {
-        await supabase.from('profiles').upsert({
-          id: u.id,
-          name: u.name,
-          email: u.email,
-          avatar: u.avatar,
-          status: 'online',
-          role: 'Member'
-        });
+        const { data: existing, error: fetchErr } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', u.id)
+          .maybeSingle();
+
+        if (fetchErr) throw fetchErr;
+
+        let mergedUser = { ...u };
+
+        if (!existing) {
+          await supabase.from('profiles').upsert({
+            id: u.id,
+            name: u.name,
+            email: u.email,
+            avatar: u.avatar,
+            status: 'online',
+            role: 'Member'
+          });
+        } else {
+          mergedUser.name = existing.name || u.name;
+          mergedUser.role = existing.role || u.role || 'Member';
+          mergedUser.bio = existing.bio || '';
+          mergedUser.location = existing.location || '';
+          if (existing.avatar) mergedUser.avatar = existing.avatar;
+        }
+
+        setUser(mergedUser);
       } catch (err) {
         console.error('Failed to sync profile:', err);
       }
@@ -155,6 +175,40 @@ export function AuthProvider({ children }) {
     }
   };
 
+  const updateProfile = async (updates) => {
+    if (!user?.id) return { success: false, error: 'Not authenticated' };
+
+    if (isSupabaseConfigured) {
+      try {
+        const { error } = await supabase
+          .from('profiles')
+          .update({
+            name: updates.name,
+            role: updates.role,
+            bio: updates.bio,
+            location: updates.location
+          })
+          .eq('id', user.id);
+
+        if (error) throw error;
+
+        setUser(prev => ({
+          ...prev,
+          ...updates
+        }));
+        return { success: true };
+      } catch (err) {
+        console.error('Error updating profile:', err);
+        return { success: false, error: err.message };
+      }
+    } else {
+      const updatedUser = { ...user, ...updates };
+      setUser(updatedUser);
+      localStorage.setItem('nexus_demo_session', JSON.stringify(updatedUser));
+      return { success: true };
+    }
+  };
+
   const signOut = async () => {
     if (isSupabaseConfigured && user?.id) {
       try {
@@ -177,6 +231,7 @@ export function AuthProvider({ children }) {
     signUpWithEmail,
     signInWithGoogle,
     signOut,
+    updateProfile,
     isDemo: !isSupabaseConfigured,
   };
 

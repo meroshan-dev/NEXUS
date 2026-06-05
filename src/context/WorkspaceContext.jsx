@@ -197,7 +197,7 @@ export function WorkspaceProvider({ children }) {
                 const uniqueUserIds = [...new Set(allMembersData.map(m => m.user_id))];
                 const { data: profilesData } = await supabase
                   .from('profiles')
-                  .select('id, name, email, avatar, status, role')
+                  .select('id, name, email, avatar, status, role, location')
                   .in('id', uniqueUserIds);
                 
                 const profileMap = {};
@@ -219,6 +219,7 @@ export function WorkspaceProvider({ children }) {
                       initials: p?.name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || 'U',
                       role: m.role || 'Member',
                       status: p?.status || 'offline',
+                      location: p?.location || null,
                       color: '#6366f1'
                     });
                   }
@@ -534,7 +535,8 @@ export function WorkspaceProvider({ children }) {
             userId: m.user_id,
             text: m.text,
             timestamp: m.timestamp,
-            reactions: m.reactions || []
+            reactions: m.reactions || [],
+            createdAt: m.created_at
           }));
           setChatMessages(prev => ({ ...prev, [workspaceId]: msgs }));
         }
@@ -632,7 +634,8 @@ export function WorkspaceProvider({ children }) {
                   userId: newMsg.user_id,
                   text: newMsg.text,
                   timestamp: newMsg.timestamp,
-                  reactions: newMsg.reactions || []
+                  reactions: newMsg.reactions || [],
+                  createdAt: newMsg.created_at
                 };
                 setChatMessages(prev => {
                   const currentMsgs = prev[workspaceId] || [];
@@ -649,7 +652,8 @@ export function WorkspaceProvider({ children }) {
                   userId: updatedMsg.user_id,
                   text: updatedMsg.text,
                   timestamp: updatedMsg.timestamp,
-                  reactions: updatedMsg.reactions || []
+                  reactions: updatedMsg.reactions || [],
+                  createdAt: updatedMsg.created_at
                 };
                 setChatMessages(prev => {
                   const currentMsgs = prev[workspaceId] || [];
@@ -1216,6 +1220,76 @@ export function WorkspaceProvider({ children }) {
     }
   };
 
+  // Action: Delete Workspace
+  const deleteWorkspace = async (workspaceId) => {
+    if (!user?.id || !workspaceId) return { success: false, error: 'Authentication required' };
+
+    if (isSupabaseConfigured) {
+      try {
+        const { data: ws, error: wsErr } = await supabase
+          .from('workspaces')
+          .select('owner_id, name')
+          .eq('id', workspaceId)
+          .single();
+
+        if (wsErr || !ws) {
+          return { success: false, error: 'Workspace not found' };
+        }
+
+        if (ws.owner_id !== user.id) {
+          return { success: false, error: 'Only the workspace owner can delete it.' };
+        }
+
+        // Clean up Supabase Storage files
+        const { data: wsFiles, error: filesErr } = await supabase
+          .from('files')
+          .select('storage_path')
+          .eq('workspace_id', workspaceId);
+
+        if (!filesErr && wsFiles && wsFiles.length > 0) {
+          const paths = wsFiles.map(f => f.storage_path).filter(Boolean);
+          if (paths.length > 0) {
+            await supabase.storage.from('files').remove(paths);
+          }
+        }
+
+        // Delete workspace from workspaces table (DB cascades handle delete from other tables)
+        const { error: deleteErr } = await supabase
+          .from('workspaces')
+          .delete()
+          .eq('id', workspaceId);
+
+        if (deleteErr) throw deleteErr;
+
+        setWorkspaces(prev => prev.filter(w => w.id !== workspaceId));
+        return { success: true };
+      } catch (err) {
+        console.error('Error deleting workspace:', err);
+        return { success: false, error: err.message || 'Failed to delete workspace' };
+      }
+    } else {
+      const stored = localStorage.getItem(`nexus_workspaces_${user.id}`);
+      let localWsList = stored ? JSON.parse(stored) : [];
+      
+      const ws = localWsList.find(w => w.id === workspaceId);
+      if (!ws) return { success: false, error: 'Workspace not found' };
+      if (ws.ownerId !== user.id) return { success: false, error: 'Only the workspace owner can delete it.' };
+
+      const updated = localWsList.filter(w => w.id !== workspaceId);
+      setWorkspaces(updated);
+      localStorage.setItem(`nexus_workspaces_${user.id}`, JSON.stringify(updated));
+
+      // Clean up mock tables from localstorage
+      localStorage.removeItem(`nexus_tasks_${workspaceId}`);
+      localStorage.removeItem(`nexus_chats_${workspaceId}`);
+      localStorage.removeItem(`nexus_files_${workspaceId}`);
+      localStorage.removeItem(`nexus_members_${workspaceId}`);
+      localStorage.removeItem(`nexus_comments_all_${workspaceId}`);
+
+      return { success: true };
+    }
+  };
+
   // Action: Invite/Add Member to Workspace
   const inviteMemberToWorkspace = async (workspaceId, email) => {
     if (!workspaceId || !user?.id) return { success: false, error: 'Authentication required' };
@@ -1504,7 +1578,8 @@ export function WorkspaceProvider({ children }) {
           userId: data.user_id,
           text: data.text,
           timestamp: data.timestamp,
-          reactions: data.reactions || []
+          reactions: data.reactions || [],
+          createdAt: data.created_at
         };
 
         setChatMessages(prev => ({
@@ -1556,7 +1631,8 @@ export function WorkspaceProvider({ children }) {
         userId: user.id,
         text,
         timestamp,
-        reactions: []
+        reactions: [],
+        createdAt: new Date().toISOString()
       };
 
       setChatMessages(prev => {
@@ -2057,7 +2133,8 @@ export function WorkspaceProvider({ children }) {
         updateTaskDetails,
         markNotificationAsRead,
         markAllNotificationsAsRead,
-        sendTypingIndicator
+        sendTypingIndicator,
+        deleteWorkspace
       }}
     >
       {children}

@@ -9,7 +9,9 @@ CREATE TABLE IF NOT EXISTS public.profiles (
     avatar TEXT,
     status TEXT NOT NULL DEFAULT 'offline',
     role TEXT NOT NULL DEFAULT 'Member',
-    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    location TEXT,
+    bio TEXT
 );
 
 -- Enable RLS for profiles
@@ -122,12 +124,24 @@ CREATE POLICY "workspace_members_select"
 CREATE POLICY "workspace_members_insert"
     ON public.workspace_members FOR INSERT
     TO authenticated
-    WITH CHECK (auth.uid() = user_id);
+    WITH CHECK (
+        auth.uid() = user_id
+        OR EXISTS (
+            SELECT 1 FROM public.workspaces w
+            WHERE w.id = workspace_id AND w.owner_id = auth.uid()
+        )
+    );
 
 CREATE POLICY "workspace_members_delete"
     ON public.workspace_members FOR DELETE
     TO authenticated
-    USING (auth.uid() = user_id);
+    USING (
+        auth.uid() = user_id
+        OR EXISTS (
+            SELECT 1 FROM public.workspaces w
+            WHERE w.id = workspace_id AND w.owner_id = auth.uid()
+        )
+    );
 
 
 -- 4. Create Tasks Table

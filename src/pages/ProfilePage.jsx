@@ -54,24 +54,85 @@ function SettingsCard({ title, description, children, delay = 0, danger }) {
 }
 
 export default function ProfilePage() {
-  const { user, signOut } = useAuth();
+  const { user, signOut, updateProfile } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const [editing, setEditing] = useState(false);
   const [saved, setSaved] = useState(false);
   const [profile, setProfile] = useState({
-    name: user?.name || 'Alex Morgan',
-    email: user?.email || 'alex.morgan@nexus.io',
-    role: 'Product Lead',
-    bio: 'Passionate about building products that make a difference.',
-    location: 'San Francisco, CA',
+    name: '',
+    email: '',
+    role: 'Member',
+    bio: '',
+    location: '',
   });
+
+  useEffect(() => {
+    if (user) {
+      setProfile({
+        name: user.name || '',
+        email: user.email || '',
+        role: user.role || 'Member',
+        bio: user.bio || '',
+        location: user.location || '',
+      });
+    }
+  }, [user]);
+
   const [notifs, setNotifs] = useState({ email: true, push: true, desktop: false, digest: true });
 
-  const save = () => {
-    setEditing(false);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2800);
+  const save = async () => {
+    if (updateProfile) {
+      const res = await updateProfile({
+        name: profile.name,
+        role: profile.role,
+        bio: profile.bio,
+        location: profile.location
+      });
+      if (res?.success) {
+        setEditing(false);
+        setSaved(true);
+        setTimeout(() => setSaved(false), 2800);
+      } else {
+        alert(res?.error || 'Failed to save profile');
+      }
+    } else {
+      setEditing(false);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2800);
+    }
+  };
+
+  const detectLocation = () => {
+    if (!navigator.geolocation) {
+      alert("Geolocation is not supported by your browser.");
+      return;
+    }
+    
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const { latitude: lat, longitude: lon } = position.coords;
+        try {
+          const res = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=en`);
+          const data = await res.json();
+          const city = data.city || data.locality || '';
+          const country = data.countryName || '';
+          const locStr = city && country ? `${city}, ${country}` : city || country || 'Unknown';
+          
+          setProfile(p => ({
+            ...p,
+            location: locStr
+          }));
+        } catch (err) {
+          console.error("Geocoding failed:", err);
+          alert("Could not determine city-level location from coordinates.");
+        }
+      },
+      (err) => {
+        console.warn("Location permission denied or unavailable:", err);
+        alert("Location access denied or unavailable.");
+      }
+    );
   };
 
   const settingRow = ({ icon: Icon, label, desc, action }) => (
@@ -199,13 +260,24 @@ export default function ProfilePage() {
                   icon={Briefcase}
                   onChange={(e) => setProfile({ ...profile, role: e.target.value })}
                 />
-                <Input
-                  label="Location"
-                  value={profile.location}
-                  disabled={!editing}
-                  icon={MapPin}
-                  onChange={(e) => setProfile({ ...profile, location: e.target.value })}
-                />
+                <div className="relative">
+                  <Input
+                    label="Location"
+                    value={profile.location}
+                    disabled={!editing}
+                    icon={MapPin}
+                    onChange={(e) => setProfile({ ...profile, location: e.target.value })}
+                  />
+                  {editing && (
+                    <button
+                      type="button"
+                      onClick={detectLocation}
+                      className="absolute right-3 bottom-2.5 text-xs text-[var(--text-brand)] hover:underline font-semibold cursor-pointer"
+                    >
+                      Auto-detect
+                    </button>
+                  )}
+                </div>
                 <div className="md:col-span-2 space-y-2">
                   <label className="block text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>
                     Bio
