@@ -28,7 +28,7 @@ const greet = () => {
 export default function DashboardPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const { workspaces, createWorkspace, joinWorkspaceByCode, loading, dbError, activityFeed } = useWorkspace();
+  const { workspaces, createWorkspace, joinWorkspaceByCode, loading, dbError, activityFeed, workspaceMembers } = useWorkspace();
   const [showCreate, setShowCreate] = useState(false);
   const [newWs, setNewWs] = useState({ name: '', description: '', color: '#5e6ad2' });
   const [showJoin, setShowJoin] = useState(false);
@@ -94,11 +94,23 @@ export default function DashboardPage() {
   const totalTasks = workspaces.reduce((sum, ws) => sum + (ws.tasksCount || 0), 0);
   const totalFiles = workspaces.reduce((sum, ws) => sum + (ws.filesCount || 0), 0);
   const totalUnread = workspaces.reduce((sum, ws) => sum + (ws.unread || 0), 0);
+
+  // Compute unique team members across all user workspaces
+  const uniqueMemberIds = new Set();
+  Object.values(workspaceMembers || {}).forEach(membersList => {
+    if (Array.isArray(membersList)) {
+      membersList.forEach(m => {
+        if (m && m.id) uniqueMemberIds.add(m.id);
+      });
+    }
+  });
+  const totalUniqueMembers = workspaces.length > 0 ? Math.max(1, uniqueMemberIds.size) : 0;
+
   const statsData = {
     tasksDueToday: totalTasks,
     unreadMessages: totalUnread,
     filesShared: totalFiles,
-    activeMembers: workspaces.length > 0 ? 3 : 0,
+    activeMembers: totalUniqueMembers,
   };
 
   return (

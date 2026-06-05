@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Outlet, NavLink, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import Sidebar from './Sidebar';
@@ -8,10 +8,52 @@ import { X, LayoutDashboard, FolderKanban, CheckSquare, FileText, User, Sparkles
 const SIDEBAR_FULL = 280;
 const SIDEBAR_MINI = 76;
 
+function useKeyboardVisible() {
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    const handleFocusIn = (e) => {
+      const tagName = e.target.tagName;
+      const isInput = tagName === 'INPUT' || tagName === 'TEXTAREA' || e.target.isContentEditable;
+      if (isInput) {
+        setVisible(true);
+      }
+    };
+
+    const handleFocusOut = (e) => {
+      setVisible(false);
+    };
+
+    const handleResize = () => {
+      if (window.visualViewport) {
+        const isKeyboard = window.innerHeight - window.visualViewport.height > 150;
+        setVisible(isKeyboard);
+      }
+    };
+
+    document.addEventListener('focusin', handleFocusIn);
+    document.addEventListener('focusout', handleFocusOut);
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', handleResize);
+    }
+
+    return () => {
+      document.removeEventListener('focusin', handleFocusIn);
+      document.removeEventListener('focusout', handleFocusOut);
+      if (window.visualViewport) {
+        window.visualViewport.removeEventListener('resize', handleResize);
+      }
+    };
+  }, []);
+
+  return visible;
+}
+
 export default function AppLayout() {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const location = useLocation();
+  const isKeyboardVisible = useKeyboardVisible();
 
   const match = location.pathname.match(/^\/workspace\/([^/]+)/);
   const activeWorkspaceId = match ? match[1] : 'ws_001';
@@ -118,10 +160,12 @@ export default function AppLayout() {
       >
         <TopBar onMobileMenuToggle={() => setMobileOpen(true)} />
         <main
-          className="flex-1 overflow-y-auto overflow-x-hidden pb-24 min-w-0"
+          className="flex-1 overflow-y-auto overflow-x-hidden min-w-0"
           style={{
             background: 'var(--bg-app)',
-            padding: 'var(--page-padding-y) var(--page-padding-x)',
+            padding: isKeyboardVisible
+              ? 'var(--page-padding-y) var(--page-padding-x) 12px var(--page-padding-x)'
+              : 'var(--page-padding-y) var(--page-padding-x) 76px var(--page-padding-x)',
           }}
         >
           <motion.div
@@ -134,10 +178,12 @@ export default function AppLayout() {
           </motion.div>
         </main>
         <nav
-          className="fixed bottom-0 left-0 right-0 z-30 flex items-center justify-around h-[68px] px-2 glass-strong"
+          className="fixed bottom-0 left-0 right-0 z-30 flex items-center justify-around px-4 glass-strong transition-all duration-200"
           style={{
+            height: '52px',
             borderTop: '1px solid var(--border-color)',
             paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+            display: isKeyboardVisible ? 'none' : 'flex',
           }}
         >
           {mobileNavItems.map((item) => {
@@ -150,11 +196,16 @@ export default function AppLayout() {
               <NavLink
                 key={item.to}
                 to={item.to}
-                className="flex flex-col items-center gap-1 px-3 py-2 rounded-[var(--radius-md)] transition-colors cursor-pointer min-w-[56px]"
-                style={{ color: active ? 'var(--text-brand)' : 'var(--text-tertiary)' }}
+                className="flex items-center justify-center rounded-[var(--radius-md)] transition-all cursor-pointer"
+                style={{
+                  width: '44px',
+                  height: '44px',
+                  color: active ? 'var(--text-brand)' : 'var(--text-tertiary)',
+                  background: active ? 'var(--bg-active)' : 'transparent',
+                }}
+                title={item.label}
               >
-                <item.icon size={20} strokeWidth={active ? 2 : 1.75} />
-                <span className="text-[10px] font-medium">{item.label}</span>
+                <item.icon size={20} strokeWidth={active ? 2.2 : 1.75} />
               </NavLink>
             );
           })}

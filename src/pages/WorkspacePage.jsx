@@ -16,6 +16,38 @@ import EmptyState from '../components/ui/EmptyState';
 import { useWorkspace } from '../context/WorkspaceContext';
 import { useAuth } from '../context/AuthContext';
 
+function useKeyboardVisible() {
+  const [visible, setVisible] = useState(false);
+  useEffect(() => {
+    const handleFocusIn = (e) => {
+      const tagName = e.target.tagName;
+      const isInput = tagName === 'INPUT' || tagName === 'TEXTAREA' || e.target.isContentEditable;
+      if (isInput) {
+        setVisible(true);
+      }
+    };
+    const handleFocusOut = () => setVisible(false);
+    const handleResize = () => {
+      if (window.visualViewport) {
+        setVisible(window.innerHeight - window.visualViewport.height > 150);
+      }
+    };
+    document.addEventListener('focusin', handleFocusIn);
+    document.addEventListener('focusout', handleFocusOut);
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', handleResize);
+    }
+    return () => {
+      document.removeEventListener('focusin', handleFocusIn);
+      document.removeEventListener('focusout', handleFocusOut);
+      if (window.visualViewport) {
+        window.visualViewport.removeEventListener('resize', handleResize);
+      }
+    };
+  }, []);
+  return visible;
+}
+
 export default function WorkspacePage() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -30,19 +62,47 @@ export default function WorkspacePage() {
     userPresence,
     activityFeed,
     tasks,
-    files
+    files,
+    typingUsers,
+    sendTypingIndicator
   } = useWorkspace();
   const { user } = useAuth();
 
   const [activeTab, setActiveTab] = useState('chat');
   const [message, setMessage] = useState('');
   const chatEndRef = useRef(null);
+  const textareaRef = useRef(null);
 
   const [showInvite, setShowInvite] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteError, setInviteError] = useState('');
   const [inviteSuccess, setInviteSuccess] = useState(false);
   const [copiedCode, setCopiedCode] = useState(false);
+
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
+  const isKeyboardVisible = useKeyboardVisible();
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 1024);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  const typingTimeoutRef = useRef(null);
+
+  useEffect(() => {
+    if (!id) return;
+    if (message.trim()) {
+      sendTypingIndicator(id, true);
+      
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+      typingTimeoutRef.current = setTimeout(() => {
+        sendTypingIndicator(id, false);
+      }, 3000);
+    } else {
+      sendTypingIndicator(id, false);
+    }
+  }, [message, id]);
 
   useEffect(() => {
     if (id) fetchWorkspaceDetails(id);
@@ -59,7 +119,21 @@ export default function WorkspacePage() {
     if (messages.length) chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  if (loading || !workspace) return <LoadingState label="Loading workspace…" />;
+  if (loading) return <LoadingState label="Loading workspace…" />;
+
+  if (!workspace) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
+        <EmptyState
+          icon={Users}
+          title="Workspace not found"
+          description="The workspace you are trying to access does not exist or you don't have access to it."
+          actionLabel="Go to Dashboard"
+          onAction={() => navigate('/dashboard')}
+        />
+      </div>
+    );
+  }
 
   const isOwner = workspace.ownerId === user?.id;
 
@@ -69,6 +143,9 @@ export default function WorkspacePage() {
   ];
   if (isOwner) {
     workspaceTabs.push({ id: 'analytics', icon: BarChart3, label: 'Analytics' });
+  }
+  if (isMobile) {
+    workspaceTabs.push({ id: 'members', icon: Users, label: 'Members' });
   }
 
   // Load presence-enriched members list
@@ -80,6 +157,10 @@ export default function WorkspacePage() {
       lastSeen: pres.lastSeen
     };
   });
+
+  const activeTyping = Object.keys(typingUsers || {})
+    .filter(uid => uid !== user?.id && Date.now() - typingUsers[uid].timestamp < 6000)
+    .map(uid => typingUsers[uid].name);
 
   const send = (e) => {
     e.preventDefault();
@@ -220,7 +301,7 @@ export default function WorkspacePage() {
             <button
               key={t.id}
               onClick={() => setActiveTab(t.id)}
-              className="flex items-center gap-2 px-4 py-2 rounded-[var(--radius-sm)] text-sm font-medium transition-all cursor-pointer"
+              className={`flex items-center gap-2 px-4 py-2 rounded-[var(--radius-sm)] text-sm font-medium transition-all cursor-pointer ${t.id === 'members' ? 'xl:hidden' : ''}`}
               style={{
                 background: active ? 'var(--bg-elevated)' : 'transparent',
                 color: active ? 'var(--text-brand)' : 'var(--text-secondary)',
@@ -242,7 +323,12 @@ export default function WorkspacePage() {
                 <Card
                   padding={false}
                   className="flex flex-col min-w-0"
-                  style={{ height: 'clamp(420px, calc(100vh - 280px), 720px)', minHeight: '400px' }}
+                  style={{
+                    height: isMobile
+                      ? (isKeyboardVisible ? 'calc(100dvh - 130px)' : 'calc(100dvh - 200px)')
+                      : 'clamp(420px, calc(100vh - 220px), 720px)',
+                    minHeight: isMobile ? '280px' : '400px'
+                  }}
                 >
                   <div
                     className="flex items-center gap-3 px-5 sm:px-6 py-4"
@@ -315,13 +401,26 @@ export default function WorkspacePage() {
                     <div ref={chatEndRef} />
                   </div>
 
+                  {activeTyping.length > 0 && (
+                    <div className="px-5 sm:px-6 py-1 text-xs flex items-center gap-1.5" style={{ color: 'var(--text-secondary)' }}>
+                      <div className="flex gap-1 items-center shrink-0">
+                        <span className="w-1.5 h-1.5 rounded-full bg-[var(--text-brand)] animate-bounce" style={{ animationDelay: '0ms' }} />
+                        <span className="w-1.5 h-1.5 rounded-full bg-[var(--text-brand)] animate-bounce" style={{ animationDelay: '150ms' }} />
+                        <span className="w-1.5 h-1.5 rounded-full bg-[var(--text-brand)] animate-bounce" style={{ animationDelay: '300ms' }} />
+                      </div>
+                      <span className="font-medium">
+                        {activeTyping.join(', ')} {activeTyping.length === 1 ? 'is' : 'are'} typing…
+                      </span>
+                    </div>
+                  )}
+
                   <form
                     onSubmit={send}
                     className="px-4 sm:px-6 py-4"
                     style={{ borderTop: '1px solid var(--border-color)' }}
                   >
                     <div
-                      className="flex items-center gap-2 sm:gap-3 px-4 py-3 rounded-[var(--radius-md)] border transition-all"
+                      className="flex items-end gap-2 sm:gap-3 px-4 py-3 rounded-[var(--radius-md)] border transition-all"
                       style={{
                         background: 'var(--bg-primary)',
                         borderColor: 'var(--border-color)',
@@ -335,18 +434,25 @@ export default function WorkspacePage() {
                         e.currentTarget.style.boxShadow = 'none';
                       }}
                     >
-                      <button type="button" className="p-1.5 rounded-[var(--radius-sm)] cursor-pointer" style={{ color: 'var(--text-tertiary)' }}>
+                      <button type="button" className="p-1.5 rounded-[var(--radius-sm)] cursor-pointer mb-0.5" style={{ color: 'var(--text-tertiary)' }}>
                         <Paperclip size={16} strokeWidth={1.75} />
                       </button>
-                      <input
-                        type="text"
+                      <textarea
+                        ref={textareaRef}
+                        rows={1}
                         value={message}
                         onChange={(e) => setMessage(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && !e.shiftKey) {
+                            e.preventDefault();
+                            send(e);
+                          }
+                        }}
                         placeholder="Message #general…"
-                        className="flex-1 bg-transparent text-sm outline-none min-w-0"
-                        style={{ color: 'var(--text-primary)' }}
+                        className="flex-1 bg-transparent text-sm outline-none min-w-0 resize-none py-1 max-h-32"
+                        style={{ color: 'var(--text-primary)', height: 'auto' }}
                       />
-                      <button type="button" className="p-1.5 rounded-[var(--radius-sm)] cursor-pointer hidden sm:block" style={{ color: 'var(--text-tertiary)' }}>
+                      <button type="button" className="p-1.5 rounded-[var(--radius-sm)] cursor-pointer mb-0.5 hidden sm:block" style={{ color: 'var(--text-tertiary)' }}>
                         <Smile size={16} strokeWidth={1.75} />
                       </button>
                       <button
@@ -402,6 +508,92 @@ export default function WorkspacePage() {
                       })}
                     </div>
                   )}
+                </Card>
+              </motion.div>
+            )}
+            {activeTab === 'members' && isMobile && (
+              <motion.div key="members" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                <Card padding={false}>
+                  <div className="flex items-center justify-between px-5 py-4 border-b" style={{ borderColor: 'var(--border-color)' }}>
+                    <div>
+                      <p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
+                        Workspace Members
+                      </p>
+                      <p className="text-caption mt-0.5">{members.length} in workspace</p>
+                    </div>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      icon={UserPlus}
+                      onClick={() => {
+                        setShowInvite(true);
+                        setInviteError('');
+                        setInviteSuccess(false);
+                        setInviteEmail('');
+                      }}
+                    >
+                      Invite
+                    </Button>
+                  </div>
+                  
+                  <div className="p-4 space-y-4">
+                    {onlineMembers.length > 0 && (
+                      <div>
+                        <p className="text-xs font-semibold text-emerald-500 mb-2">Online — {onlineMembers.length}</p>
+                        <div className="space-y-1">
+                          {onlineMembers.map(m => (
+                            <div key={m.id} className="flex items-center gap-3 p-2 rounded-lg bg-[var(--bg-subtle)]">
+                              <Avatar name={m.name} initials={m.initials} color={m.color} size="xs" status="online" />
+                              <div className="min-w-0 flex-1">
+                                <p className="text-xs font-semibold flex items-center gap-1.5" style={{ color: 'var(--text-primary)' }}>
+                                  {m.name} {m.id === workspace.ownerId && <span className="text-[8px] font-bold text-amber-500 bg-amber-500/10 px-1 border border-amber-500/20 rounded uppercase">Owner</span>}
+                                </p>
+                                <p className="text-[10px] text-[var(--text-tertiary)]">{m.role}</p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {awayMembers.length > 0 && (
+                      <div>
+                        <p className="text-xs font-semibold text-amber-500 mb-2">Away — {awayMembers.length}</p>
+                        <div className="space-y-1">
+                          {awayMembers.map(m => (
+                            <div key={m.id} className="flex items-center gap-3 p-2 rounded-lg bg-[var(--bg-subtle)]">
+                              <Avatar name={m.name} initials={m.initials} color={m.color} size="xs" status="away" />
+                              <div className="min-w-0 flex-1">
+                                <p className="text-xs font-semibold flex items-center gap-1.5" style={{ color: 'var(--text-primary)' }}>
+                                  {m.name} {m.id === workspace.ownerId && <span className="text-[8px] font-bold text-amber-500 bg-amber-500/10 px-1 border border-amber-500/20 rounded uppercase">Owner</span>}
+                                </p>
+                                <p className="text-[10px] text-[var(--text-tertiary)]">{m.role}</p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {offlineMembers.length > 0 && (
+                      <div>
+                        <p className="text-xs font-semibold text-zinc-500 mb-2">Offline — {offlineMembers.length}</p>
+                        <div className="space-y-1">
+                          {offlineMembers.map(m => (
+                            <div key={m.id} className="flex items-center gap-3 p-2 rounded-lg bg-[var(--bg-subtle)] opacity-75">
+                              <Avatar name={m.name} initials={m.initials} color={m.color} size="xs" status="offline" />
+                              <div className="min-w-0 flex-1">
+                                <p className="text-xs font-semibold flex items-center gap-1.5" style={{ color: 'var(--text-primary)' }}>
+                                  {m.name} {m.id === workspace.ownerId && <span className="text-[8px] font-bold text-amber-500 bg-amber-500/10 px-1 border border-amber-500/20 rounded uppercase">Owner</span>}
+                                </p>
+                                <p className="text-[10px] text-[var(--text-tertiary)]">{formatLastSeen(m.lastSeen)}</p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </Card>
               </motion.div>
             )}

@@ -22,6 +22,7 @@ export function WorkspaceProvider({ children }) {
   const [notifications, setNotifications] = useState([]);
   const [activityFeed, setActivityFeed] = useState({});
   const [userPresence, setUserPresence] = useState({});
+  const [typingUsers, setTypingUsers] = useState({});
   const activePresenceChannelRef = useRef(null);
   const userNotificationsChannelRef = useRef(null);
 
@@ -184,6 +185,49 @@ export function WorkspaceProvider({ children }) {
           const wsIds = mappedWorkspaces.map(w => w.id);
           if (wsIds.length > 0) {
             loadActivitiesForAllWorkspaces(wsIds);
+            
+            // Pre-fetch members for all workspaces to allow analytics and fast loading
+            try {
+              const { data: allMembersData, error: membersErr } = await supabase
+                .from('workspace_members')
+                .select('workspace_id, user_id, role')
+                .in('workspace_id', wsIds);
+              
+              if (!membersErr && allMembersData) {
+                const uniqueUserIds = [...new Set(allMembersData.map(m => m.user_id))];
+                const { data: profilesData } = await supabase
+                  .from('profiles')
+                  .select('id, name, email, avatar, status, role')
+                  .in('id', uniqueUserIds);
+                
+                const profileMap = {};
+                if (profilesData) {
+                  profilesData.forEach(p => { profileMap[p.id] = p; });
+                }
+
+                const groupedMembers = {};
+                wsIds.forEach(id => { groupedMembers[id] = []; });
+
+                allMembersData.forEach(m => {
+                  const p = profileMap[m.user_id];
+                  if (groupedMembers[m.workspace_id]) {
+                    groupedMembers[m.workspace_id].push({
+                      id: m.user_id,
+                      name: p?.name || 'Unknown',
+                      email: p?.email || '',
+                      avatar: p?.avatar || null,
+                      initials: p?.name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || 'U',
+                      role: m.role || 'Member',
+                      status: p?.status || 'offline',
+                      color: '#6366f1'
+                    });
+                  }
+                });
+                setWorkspaceMembers(prev => ({ ...prev, ...groupedMembers }));
+              }
+            } catch (membersErr) {
+              console.error('Error pre-fetching workspace members:', membersErr);
+            }
           }
         }
       } catch (err) {
@@ -205,6 +249,11 @@ export function WorkspaceProvider({ children }) {
   // Load workspaces when authenticated user changes
   useEffect(() => {
     console.log('[Realtime Sync] loadWorkspaces useEffect triggered with user.id:', user?.id);
+    if (user?.id) {
+      setLoading(true);
+    } else {
+      setLoading(false);
+    }
     loadWorkspaces();
     
     // Clean up channels on logout or user change
@@ -506,7 +555,8 @@ export function WorkspaceProvider({ children }) {
             uploadedBy: f.uploaded_by,
             uploadedAt: f.uploaded_at,
             icon: f.icon,
-            storagePath: f.storage_path
+            storagePath: f.storage_path,
+            workspaceId: f.workspace_id
           }));
           setFiles(prev => ({ ...prev, [workspaceId]: fls }));
         }
@@ -546,6 +596,25 @@ export function WorkspaceProvider({ children }) {
         console.log(`[Realtime Sync] Creating subscription channel for workspace ${workspaceId}`);
         const channel = supabase
           .channel(`workspace_sync:${workspaceId}`)
+          .on(
+            'broadcast',
+            { event: 'typing' },
+            (payload) => {
+              console.log('[Realtime Sync] Typing broadcast payload:', payload);
+              const data = payload.payload;
+              if (data && data.userId !== user?.id) {
+                setTypingUsers(prev => {
+                  const updated = { ...prev };
+                  if (data.isTyping) {
+                    updated[data.userId] = { name: data.userName, timestamp: Date.now() };
+                  } else {
+                    delete updated[data.userId];
+                  }
+                  return updated;
+                });
+              }
+            }
+          )
           .on(
             'postgres_changes',
             {
@@ -621,7 +690,8 @@ export function WorkspaceProvider({ children }) {
                   uploadedBy: newFile.uploaded_by,
                   uploadedAt: newFile.uploaded_at,
                   icon: newFile.icon,
-                  storagePath: newFile.storage_path
+                  storagePath: newFile.storage_path,
+                  workspaceId: newFile.workspace_id
                 };
                 setFiles(prev => {
                   const currentFiles = prev[workspaceId] || [];
@@ -641,7 +711,8 @@ export function WorkspaceProvider({ children }) {
                   uploadedBy: updatedFile.uploaded_by,
                   uploadedAt: updatedFile.uploaded_at,
                   icon: updatedFile.icon,
-                  storagePath: updatedFile.storage_path
+                  storagePath: updatedFile.storage_path,
+                  workspaceId: updatedFile.workspace_id
                 };
                 setFiles(prev => {
                   const currentFiles = prev[workspaceId] || [];
@@ -1469,6 +1540,8 @@ export function WorkspaceProvider({ children }) {
           prev.map(ws => (ws.id === workspaceId ? { ...ws, lastActivity: '1 min ago' } : ws))
         );
 
+        await logActivity(workspaceId, 'message_sent', 'sent a message in #general');
+
         await supabase
           .from('workspaces')
           .update({ last_activity: '1 min ago' })
@@ -1512,6 +1585,8 @@ export function WorkspaceProvider({ children }) {
         }
       });
 
+      await logActivity(workspaceId, 'message_sent', 'sent a message');
+
       setWorkspaces(prev => {
         const updated = prev.map(ws => (ws.id === workspaceId ? { ...ws, lastActivity: '1 min ago' } : ws));
         localStorage.setItem(`nexus_workspaces_${user.id}`, JSON.stringify(updated));
@@ -1521,7 +1596,7 @@ export function WorkspaceProvider({ children }) {
   };
 
   // Action: Add File (Supabase Storage & Metadata)
-  const uploadFile = async (workspaceId, fileMeta, file) => {
+  const uploadFile = async (workspaceId, fileMeta, file, onProgress) => {
     if (!user?.id || !workspaceId) return;
 
     if (isSupabaseConfigured && file) {
@@ -1533,7 +1608,13 @@ export function WorkspaceProvider({ children }) {
           .from('files')
           .upload(storagePath, file, {
             cacheControl: '3600',
-            upsert: false
+            upsert: false,
+            onUploadProgress: (progress) => {
+              if (onProgress) {
+                const percent = Math.round((progress.loaded / progress.total) * 100);
+                onProgress(percent);
+              }
+            }
           });
 
         if (uploadErr) throw uploadErr;
@@ -1564,7 +1645,8 @@ export function WorkspaceProvider({ children }) {
           uploadedBy: data.uploaded_by,
           uploadedAt: data.uploaded_at,
           icon: data.icon,
-          storagePath: data.storage_path
+          storagePath: data.storage_path,
+          workspaceId: data.workspace_id
         };
 
         setFiles(prev => ({
@@ -1593,6 +1675,12 @@ export function WorkspaceProvider({ children }) {
         console.error('Error uploading file to storage:', err);
       }
     } else {
+      if (onProgress) {
+        onProgress(30);
+        setTimeout(() => onProgress(70), 150);
+        setTimeout(() => onProgress(100), 300);
+      }
+
       const newId = `file_${Date.now()}`;
       const localFile = {
         id: newId,
@@ -1602,7 +1690,8 @@ export function WorkspaceProvider({ children }) {
         uploadedBy: user.id,
         uploadedAt: 'Just now',
         icon: fileMeta.icon || '📄',
-        storagePath: `mock/${newId}`
+        storagePath: `mock/${newId}`,
+        workspaceId: workspaceId
       };
 
       setFiles(prev => {
@@ -1896,6 +1985,10 @@ export function WorkspaceProvider({ children }) {
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
+
+        if (fileObj.workspaceId) {
+          await logActivity(fileObj.workspaceId, 'downloaded_file', `downloaded file "${fileObj.name}"`);
+        }
       } catch (err) {
         console.error('Error downloading file:', err);
         alert('Could not download file. Make sure it exists in storage.');
@@ -1910,6 +2003,25 @@ export function WorkspaceProvider({ children }) {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
+
+      if (fileObj.workspaceId) {
+        await logActivity(fileObj.workspaceId, 'downloaded_file', `downloaded file "${fileObj.name}"`);
+      }
+    }
+  };
+
+  const sendTypingIndicator = (workspaceId, isTyping) => {
+    const channel = activeWorkspaceChannelRef.current;
+    if (channel && user?.id) {
+      channel.send({
+        type: 'broadcast',
+        event: 'typing',
+        payload: {
+          userId: user.id,
+          userName: user.name || 'Someone',
+          isTyping
+        }
+      });
     }
   };
 
@@ -1938,12 +2050,14 @@ export function WorkspaceProvider({ children }) {
         notifications,
         activityFeed,
         userPresence,
+        typingUsers,
         addTaskComment,
         deleteFile,
         deleteTask,
         updateTaskDetails,
         markNotificationAsRead,
-        markAllNotificationsAsRead
+        markAllNotificationsAsRead,
+        sendTypingIndicator
       }}
     >
       {children}

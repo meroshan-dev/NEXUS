@@ -1,14 +1,15 @@
 import { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
-import { Plus, Calendar, Trash2, Check } from 'lucide-react';
+import { Plus, Calendar, Trash2, Check, Clock } from 'lucide-react';
 import Button from '../components/ui/Button';
 import Avatar from '../components/ui/Avatar';
 import Badge, { PriorityBadge } from '../components/ui/Badge';
 import Modal from '../components/ui/Modal';
 import Input from '../components/ui/Input';
 import EmptyState from '../components/ui/EmptyState';
+import LoadingState from '../components/ui/LoadingState';
 import { useWorkspace } from '../context/WorkspaceContext';
 import { useAuth } from '../context/AuthContext';
 
@@ -20,6 +21,7 @@ const COLS = {
 
 export default function TasksPage() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const workspaceId = id;
   const {
     tasks,
@@ -31,7 +33,9 @@ export default function TasksPage() {
     deleteTask,
     updateTaskDetails,
     taskComments,
-    addTaskComment
+    addTaskComment,
+    loading,
+    activityFeed
   } = useWorkspace();
   const { user } = useAuth();
 
@@ -54,6 +58,23 @@ export default function TasksPage() {
   }, [workspaceId]);
 
   const workspace = workspaces.find((w) => w.id === workspaceId);
+
+  if (loading) return <LoadingState label="Loading tasks…" />;
+
+  if (!workspace) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
+        <EmptyState
+          icon={CheckSquare}
+          title="Workspace not found"
+          description="The workspace you are trying to access does not exist or you don't have access to it."
+          actionLabel="Go to Dashboard"
+          onAction={() => navigate('/dashboard')}
+        />
+      </div>
+    );
+  }
+
   const isOwner = workspace?.ownerId === user?.id;
 
   const members = workspaceMembers[workspaceId] || [];
@@ -448,7 +469,13 @@ export default function TasksPage() {
               </div>
             </div>
 
-            {isOwner && (
+            {!isOwner ? (
+              <div className="flex gap-2 justify-end pt-2">
+                <Button variant="secondary" type="button" onClick={() => setSelectedTask(null)}>
+                  Close
+                </Button>
+              </div>
+            ) : (
               <div className="flex gap-2 justify-end pt-2">
                 <Button variant="secondary" type="button" onClick={() => setSelectedTask(null)}>
                   Cancel
@@ -506,6 +533,41 @@ export default function TasksPage() {
                       </div>
                     );
                   })
+                )}
+              </div>
+            </div>
+
+            {/* Task History Section */}
+            <div className="border-t pt-6" style={{ borderColor: 'var(--border-color)' }}>
+              <h4 className="text-sm font-semibold mb-4 flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
+                <Clock size={14} /> Task History
+              </h4>
+              <div className="space-y-3 max-h-40 overflow-y-auto pr-1">
+                {(!activityFeed[workspaceId] || activityFeed[workspaceId].length === 0) ? (
+                  <p className="text-xs text-center py-4" style={{ color: 'var(--text-tertiary)' }}>No history logs recorded.</p>
+                ) : (
+                  (() => {
+                    const taskHistory = (activityFeed[workspaceId] || []).filter(act => 
+                      act.details?.toLowerCase().includes(selectedTask.title.toLowerCase())
+                    );
+                    if (taskHistory.length === 0) {
+                      return <p className="text-xs text-center py-4" style={{ color: 'var(--text-tertiary)' }}>No history logs recorded for this task.</p>;
+                    }
+                    return taskHistory.map((act, index) => {
+                      const actorName = act.user_id === user?.id ? 'You' : (members.find(m => m.id === act.user_id)?.name || 'Someone');
+                      return (
+                        <div key={act.id || index} className="text-[11px] flex items-center justify-between gap-4 py-1.5 border-b border-[var(--border-light)] last:border-b-0">
+                          <span style={{ color: 'var(--text-secondary)' }}>
+                            <span className="font-semibold" style={{ color: 'var(--text-primary)' }}>{actorName}</span>{' '}
+                            {act.details}
+                          </span>
+                          <span className="text-[10px] shrink-0" style={{ color: 'var(--text-tertiary)' }}>
+                            {new Date(act.created_at).toLocaleDateString()} {new Date(act.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                        </div>
+                      );
+                    });
+                  })()
                 )}
               </div>
             </div>

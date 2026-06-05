@@ -1,17 +1,20 @@
 import { useState, useRef, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Upload, Search, Download, Grid, List, File,
   FileText, Image, Table, Archive, Palette,
-  CloudUpload, Trash2, Eye, X, FolderOpen,
+  CloudUpload, Trash2, Eye, X, FolderOpen, Loader2, Check
 } from 'lucide-react';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import Avatar from '../components/ui/Avatar';
 import Badge from '../components/ui/Badge';
 import EmptyState from '../components/ui/EmptyState';
+import LoadingState from '../components/ui/LoadingState';
+import Modal from '../components/ui/Modal';
 import { useWorkspace } from '../context/WorkspaceContext';
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
 
 const typeConfig = {
   pdf: { icon: FileText, color: '#ef4444', bg: 'rgba(239,68,68,0.1)', label: 'PDF' },
@@ -25,14 +28,32 @@ const typeConfig = {
 
 export default function FilesPage() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const workspaceId = id;
-  const { files: allFiles, uploadFile, downloadFile, fetchWorkspaceDetails, workspaceMembers, deleteFile } =
-    useWorkspace();
+  const { 
+    files: allFiles, 
+    uploadFile, 
+    downloadFile, 
+    fetchWorkspaceDetails, 
+    workspaceMembers, 
+    deleteFile,
+    workspaces,
+    loading
+  } = useWorkspace();
   const [query, setQuery] = useState('');
   const [view, setView] = useState('list');
   const [drag, setDrag] = useState(false);
   const [selected, setSelected] = useState([]);
   const inputRef = useRef(null);
+
+  // Active uploads tracking for the toaster progress card
+  const [uploads, setUploads] = useState({});
+
+  // File preview states
+  const [previewFile, setPreviewFile] = useState(null);
+  const [previewContent, setPreviewContent] = useState(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const objectUrlRef = useRef(null);
 
   const handleBulkDelete = () => {
     selected.forEach(fileId => {
@@ -45,46 +66,172 @@ export default function FilesPage() {
     if (workspaceId) fetchWorkspaceDetails(workspaceId);
   }, [workspaceId]);
 
+  // Preview loader hook
+  useEffect(() => {
+    if (!previewFile) {
+      setPreviewContent(null);
+      return;
+    }
+
+    let active = true;
+    const loadPreview = async () => {
+      setPreviewLoading(true);
+      setPreviewContent(null);
+
+      if (objectUrlRef.current) {
+        URL.revokeObjectURL(objectUrlRef.current);
+        objectUrlRef.current = null;
+      }
+
+      try {
+        if (isSupabaseConfigured && previewFile.storagePath) {
+          const { data, error } = await supabase.storage
+            .from('files')
+            .download(previewFile.storagePath);
+          
+          if (error) throw error;
+          if (!active) return;
+
+          if (previewFile.type === 'image') {
+            const url = URL.createObjectURL(data);
+            objectUrlRef.current = url;
+            setPreviewContent({ url });
+          } else if (previewFile.type === 'pdf') {
+            const url = URL.createObjectURL(data);
+            objectUrlRef.current = url;
+            setPreviewContent({ url });
+          } else {
+            const text = await data.text();
+            setPreviewContent({ text });
+          }
+        } else {
+          // Local storage mock previews
+          if (previewFile.type === 'image') {
+            setPreviewContent({ url: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800&auto=format&fit=crop&q=80' });
+          } else if (previewFile.type === 'pdf') {
+            setPreviewContent({ url: 'https://pdfobject.com/pdf/sample.pdf' });
+          } else {
+            setPreviewContent({ text: `Mock preview content for file: ${previewFile.name}\nSize: ${previewFile.size}\nUploaded: ${previewFile.uploadedAt}` });
+          }
+        }
+      } catch (err) {
+        console.error('Failed to load preview:', err);
+        if (active) {
+          setPreviewContent({ error: 'Failed to load preview. Please download the file to view it.' });
+        }
+      } finally {
+        if (active) setPreviewLoading(false);
+      }
+    };
+
+    loadPreview();
+
+    return () => {
+      active = false;
+      if (objectUrlRef.current) {
+        URL.revokeObjectURL(objectUrlRef.current);
+        objectUrlRef.current = null;
+      }
+    };
+  }, [previewFile]);
+
+  const workspace = workspaces.find((w) => w.id === workspaceId);
+
+  if (loading) return <LoadingState label="Loading files…" />;
+
+  if (!workspace) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
+        <EmptyState
+          icon={FolderOpen}
+          title="Workspace not found"
+          description="The workspace you are trying to access does not exist or you don't have access to it."
+          actionLabel="Go to Dashboard"
+          onAction={() => navigate('/dashboard')}
+        />
+      </div>
+    );
+  }
+
   const files = allFiles[workspaceId] || [];
   const members = workspaceMembers[workspaceId] || [];
   const filtered = files.filter((f) => f.name.toLowerCase().includes(query.toLowerCase()));
+
+  const handleUpload = (f) => {
+    if (!f) return;
+    const uploadId = `${f.name}-${Date.now()}`;
+    setUploads(prev => ({
+      ...prev,
+      [uploadId]: { name: f.name, progress: 0, status: 'uploading' }
+    }));
+
+    uploadFile(
+      workspaceId,
+      {
+        name: f.name,
+        type: f.type.startsWith('image/') ? 'image' : f.name.endsWith('.pdf') ? 'pdf' : 'document',
+        size: `${(f.size / 1024).toFixed(0)} KB`,
+        icon: f.type.startsWith('image/') ? '🖼️' : '📄',
+      },
+      f,
+      (progress) => {
+        setUploads(prev => {
+          if (!prev[uploadId]) return prev;
+          return {
+            ...prev,
+            [uploadId]: { ...prev[uploadId], progress }
+          };
+        });
+      }
+    ).then(() => {
+      setUploads(prev => {
+        if (!prev[uploadId]) return prev;
+        return {
+          ...prev,
+          [uploadId]: { ...prev[uploadId], progress: 100, status: 'completed' }
+        };
+      });
+      setTimeout(() => {
+        setUploads(prev => {
+          const next = { ...prev };
+          delete next[uploadId];
+          return next;
+        });
+      }, 3000);
+    }).catch((err) => {
+      setUploads(prev => {
+        if (!prev[uploadId]) return prev;
+        return {
+          ...prev,
+          [uploadId]: { ...prev[uploadId], status: 'failed', error: err.message || 'Upload failed' }
+        };
+      });
+      setTimeout(() => {
+        setUploads(prev => {
+          const next = { ...prev };
+          delete next[uploadId];
+          return next;
+        });
+      }, 5000);
+    });
+  };
 
   const onDrag = (e) => {
     e.preventDefault();
     if (e.type === 'dragenter' || e.type === 'dragover') setDrag(true);
     else setDrag(false);
   };
+
   const onDrop = (e) => {
     e.preventDefault();
     setDrag(false);
     const droppedFiles = Array.from(e.dataTransfer?.files || []);
-    droppedFiles.forEach((f) => {
-      uploadFile(
-        workspaceId,
-        {
-          name: f.name,
-          type: f.type.startsWith('image/') ? 'image' : f.name.endsWith('.pdf') ? 'pdf' : 'document',
-          size: `${(f.size / 1024).toFixed(0)} KB`,
-          icon: f.type.startsWith('image/') ? '🖼️' : '📄',
-        },
-        f
-      );
-    });
+    droppedFiles.forEach(handleUpload);
   };
+
   const handleFileChange = (e) => {
     const selectedFiles = Array.from(e.target.files || []);
-    selectedFiles.forEach((f) => {
-      uploadFile(
-        workspaceId,
-        {
-          name: f.name,
-          type: f.type.startsWith('image/') ? 'image' : f.name.endsWith('.pdf') ? 'pdf' : 'document',
-          size: `${(f.size / 1024).toFixed(0)} KB`,
-          icon: f.type.startsWith('image/') ? '🖼️' : '📄',
-        },
-        f
-      );
-    });
+    selectedFiles.forEach(handleUpload);
   };
   const toggle = (fileId) =>
     setSelected((p) => (p.includes(fileId) ? p.filter((x) => x !== fileId) : [...p, fileId]));
@@ -290,9 +437,18 @@ export default function FilesPage() {
                             {file.uploadedAt}
                           </span>
                           <button
+                            onClick={() => setPreviewFile(file)}
+                            className="w-9 h-9 rounded-[var(--radius-sm)] flex items-center justify-center cursor-pointer shrink-0"
+                            style={{ color: 'var(--text-tertiary)', background: 'var(--bg-tertiary)' }}
+                            title="Preview file"
+                          >
+                            <Eye size={15} strokeWidth={1.75} />
+                          </button>
+                          <button
                             onClick={() => downloadFile(file)}
                             className="w-9 h-9 rounded-[var(--radius-sm)] flex items-center justify-center cursor-pointer shrink-0"
                             style={{ color: 'var(--text-tertiary)', background: 'var(--bg-tertiary)' }}
+                            title="Download file"
                           >
                             <Download size={15} strokeWidth={1.75} />
                           </button>
@@ -308,9 +464,18 @@ export default function FilesPage() {
 
                         <div className="flex gap-2 sm:hidden self-end">
                           <button
+                            onClick={() => setPreviewFile(file)}
+                            className="w-9 h-9 rounded-[var(--radius-sm)] flex items-center justify-center cursor-pointer"
+                            style={{ color: 'var(--text-tertiary)', background: 'var(--bg-tertiary)' }}
+                            title="Preview file"
+                          >
+                            <Eye size={15} strokeWidth={1.75} />
+                          </button>
+                          <button
                             onClick={() => downloadFile(file)}
                             className="w-9 h-9 rounded-[var(--radius-sm)] flex items-center justify-center cursor-pointer"
                             style={{ color: 'var(--text-tertiary)', background: 'var(--bg-tertiary)' }}
+                            title="Download file"
                           >
                             <Download size={15} strokeWidth={1.75} />
                           </button>
@@ -318,6 +483,7 @@ export default function FilesPage() {
                             onClick={() => deleteFile(workspaceId, file.id)}
                             className="w-9 h-9 rounded-[var(--radius-sm)] flex items-center justify-center cursor-pointer"
                             style={{ color: 'var(--color-danger)', background: 'var(--bg-tertiary)' }}
+                            title="Delete file"
                           >
                             <Trash2 size={15} strokeWidth={1.75} />
                           </button>
@@ -365,7 +531,8 @@ export default function FilesPage() {
                           <button
                             key={j}
                             onClick={() => {
-                              if (Ico === Download) downloadFile(file);
+                              if (Ico === Eye) setPreviewFile(file);
+                              else if (Ico === Download) downloadFile(file);
                               else if (Ico === Trash2) deleteFile(workspaceId, file.id);
                             }}
                             className="w-9 h-9 rounded-[var(--radius-sm)] flex items-center justify-center transition-colors cursor-pointer"
@@ -374,7 +541,7 @@ export default function FilesPage() {
                             }}
                             onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--bg-hover)')}
                             onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
-                            title={Ico === Download ? 'Download' : Ico === Trash2 ? 'Delete' : 'View'}
+                            title={Ico === Download ? 'Download' : Ico === Trash2 ? 'Delete' : 'Preview'}
                           >
                             <Ico size={14} strokeWidth={1.75} />
                           </button>
@@ -388,6 +555,103 @@ export default function FilesPage() {
           )}
         </AnimatePresence>
       )}
+
+      {/* File Preview Modal */}
+      <Modal isOpen={!!previewFile} onClose={() => setPreviewFile(null)} title={previewFile?.name || 'File Preview'} size="xl">
+        <div className="flex flex-col items-center justify-center min-h-[300px] max-h-[70vh] overflow-auto">
+          {previewLoading ? (
+            <div className="flex flex-col items-center gap-3">
+              <Loader2 className="animate-spin text-[var(--color-brand)]" size={32} />
+              <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>Loading preview…</span>
+            </div>
+          ) : previewContent?.error ? (
+            <div className="text-center p-6 space-y-4">
+              <p className="text-sm text-danger">{previewContent.error}</p>
+              <Button onClick={() => downloadFile(previewFile)} icon={Download}>
+                Download File
+              </Button>
+            </div>
+          ) : previewFile?.type === 'image' && previewContent?.url ? (
+            <div className="relative w-full flex justify-center">
+              <img
+                src={previewContent.url}
+                alt={previewFile.name}
+                className="max-h-[60vh] object-contain rounded-[var(--radius-md)]"
+              />
+            </div>
+          ) : previewFile?.type === 'pdf' && previewContent?.url ? (
+            <iframe
+              src={previewContent.url}
+              title={previewFile.name}
+              className="w-full h-[60vh] border-0 rounded-[var(--radius-md)]"
+            />
+          ) : previewContent?.text !== undefined ? (
+            <pre
+              className="w-full h-[60vh] p-4 font-mono text-xs overflow-auto rounded-[var(--radius-md)] text-left"
+              style={{
+                background: 'var(--bg-subtle)',
+                color: 'var(--text-primary)',
+                border: '1px solid var(--border-color)',
+                whiteSpace: 'pre-wrap',
+                wordBreak: 'break-all',
+              }}
+            >
+              {previewContent.text}
+            </pre>
+          ) : (
+            <div className="text-center p-6 space-y-4">
+              <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+                No preview available for this file type ({previewFile?.type || 'unknown'}).
+              </p>
+              <Button onClick={() => downloadFile(previewFile)} icon={Download}>
+                Download File
+              </Button>
+            </div>
+          )}
+        </div>
+      </Modal>
+
+      {/* Upload Progress Toaster */}
+      <div className="fixed bottom-6 right-6 z-50 flex flex-col gap-2 max-w-sm w-full px-4 sm:px-0">
+        <AnimatePresence>
+          {Object.entries(uploads).map(([id, upload]) => (
+            <motion.div
+              key={id}
+              initial={{ opacity: 0, y: 50, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              className="surface-panel p-4 flex flex-col gap-2 shadow-lg border border-[var(--border-color)] rounded-[var(--radius-lg)]"
+              style={{ background: 'var(--bg-elevated)', minWidth: '280px' }}
+            >
+              <div className="flex items-center justify-between gap-3 min-w-0">
+                <div className="flex items-center gap-2 min-w-0 flex-1">
+                  {upload.status === 'completed' ? (
+                    <Check className="text-success shrink-0" size={16} />
+                  ) : upload.status === 'failed' ? (
+                    <X className="text-danger shrink-0" size={16} />
+                  ) : (
+                    <Loader2 className="animate-spin text-brand shrink-0" size={16} />
+                  )}
+                  <span className="text-sm font-medium text-ellipsis overflow-hidden whitespace-nowrap" style={{ color: 'var(--text-primary)' }}>
+                    {upload.name}
+                  </span>
+                </div>
+                <span className="text-xs font-semibold shrink-0" style={{ color: 'var(--text-secondary)' }}>
+                  {upload.status === 'completed' ? 'Done' : upload.status === 'failed' ? 'Failed' : `${upload.progress}%`}
+                </span>
+              </div>
+              {upload.status === 'uploading' && (
+                <div className="w-full bg-[var(--bg-tertiary)] rounded-full h-1.5 overflow-hidden">
+                  <div
+                    className="h-full transition-all duration-150"
+                    style={{ width: `${upload.progress}%`, background: 'var(--gradient-brand)' }}
+                  />
+                </div>
+              )}
+            </motion.div>
+          ))}
+        </AnimatePresence>
+      </div>
     </div>
   );
 }
