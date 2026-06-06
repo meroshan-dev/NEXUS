@@ -3,10 +3,10 @@ import { Outlet, NavLink, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import Sidebar from './Sidebar';
 import TopBar from './TopBar';
-import { X, LayoutDashboard, FolderKanban, CheckSquare, FileText, User, Sparkles } from 'lucide-react';
+import { X, LayoutDashboard, FolderKanban, User, Sparkles, PhoneCall, PhoneOff } from 'lucide-react';
+import { useWorkspace } from '../../context/WorkspaceContext';
 
 const SIDEBAR_FULL = 280;
-const SIDEBAR_MINI = 76;
 
 function useKeyboardVisible() {
   const [visible, setVisible] = useState(false);
@@ -20,7 +20,7 @@ function useKeyboardVisible() {
       }
     };
 
-    const handleFocusOut = (e) => {
+    const handleFocusOut = () => {
       setVisible(false);
     };
 
@@ -54,15 +54,14 @@ export default function AppLayout() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const location = useLocation();
   const isKeyboardVisible = useKeyboardVisible();
+  const { incomingCall, joinCall, declineCall, activeCall, leaveCall } = useWorkspace();
 
   const match = location.pathname.match(/^\/workspace\/([^/]+)/);
   const activeWorkspaceId = match ? match[1] : 'ws_001';
 
   const mobileNavItems = [
     { to: '/dashboard', icon: LayoutDashboard, label: 'Home' },
-    { to: `/workspace/${activeWorkspaceId}`, icon: FolderKanban, label: 'Chat' },
-    { to: `/workspace/${activeWorkspaceId}/tasks`, icon: CheckSquare, label: 'Tasks' },
-    { to: `/workspace/${activeWorkspaceId}/files`, icon: FileText, label: 'Files' },
+    { to: `/workspace/${activeWorkspaceId}`, icon: FolderKanban, label: 'Workspace' },
     { to: '/profile', icon: User, label: 'Profile' },
   ];
 
@@ -79,7 +78,7 @@ export default function AppLayout() {
   });
 
   return (
-    <div className="flex h-screen overflow-hidden min-w-0" style={{ background: 'var(--bg-app)' }}>
+    <div className="flex h-screen overflow-hidden min-w-0 relative" style={{ background: 'var(--bg-app)' }}>
       <Sidebar collapsed={collapsed} onToggle={() => setCollapsed((c) => !c)} />
 
       <AnimatePresence>
@@ -236,6 +235,67 @@ export default function AppLayout() {
           </div>
         </main>
       </div>
+
+      {/* Global Real-time Incoming Call Modal Overlay */}
+      <AnimatePresence>
+        {incomingCall && (
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="w-full max-w-sm rounded-2xl p-6 border shadow-2xl text-center flex flex-col items-center gap-4 bg-[var(--bg-elevated)] border-[var(--border-color)]"
+            >
+              <div className="w-16 h-16 rounded-full bg-[var(--accent)]/10 flex items-center justify-center text-[var(--accent)]">
+                <PhoneCall size={28} className="animate-bounce" />
+              </div>
+              <div>
+                <h3 className="text-[10px] font-semibold text-[var(--text-tertiary)] uppercase tracking-wider">Incoming call</h3>
+                <p className="text-lg font-bold text-[var(--text-primary)] mt-1">{incomingCall.callerName}</p>
+                <p className="text-xs text-[var(--text-secondary)] mt-0.5">is calling in {incomingCall.workspaceName}</p>
+              </div>
+              <div className="flex gap-3 w-full mt-2">
+                <button
+                  onClick={declineCall}
+                  className="flex-1 py-2.5 rounded-xl text-xs font-semibold border cursor-pointer transition-colors bg-red-500/10 hover:bg-red-500/20 text-red-500 border-red-500/20"
+                >
+                  Decline
+                </button>
+                <button
+                  onClick={() => joinCall(incomingCall.workspaceId)}
+                  className="flex-1 py-2.5 rounded-xl text-xs font-semibold cursor-pointer transition-colors bg-emerald-500 hover:bg-emerald-600 text-white"
+                >
+                  Join Call
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Global Active Call Widget */}
+      {activeCall && (
+        <div className="fixed bottom-6 right-6 z-[90] glass-strong rounded-2xl border p-4 shadow-xl flex items-center gap-4 max-w-md border-[var(--border-focus)]">
+          <div className="w-10 h-10 rounded-full bg-emerald-500/15 flex items-center justify-center text-emerald-500 shrink-0">
+            <PhoneCall size={18} className="animate-pulse" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-xs font-semibold text-[var(--text-primary)] leading-tight truncate">
+              Connected in Huddle
+            </p>
+            <p className="text-[10px] text-[var(--text-secondary)] mt-0.5 truncate">
+              {activeCall.workspaceName} ({activeCall.participants?.length || 1} participant{activeCall.participants?.length !== 1 ? 's' : ''})
+            </p>
+          </div>
+          <button
+            onClick={() => leaveCall(activeCall.workspaceId)}
+            className="w-9 h-9 rounded-xl flex items-center justify-center text-red-500 hover:bg-red-500/10 transition-colors border border-red-500/10 cursor-pointer shrink-0"
+            title="Leave huddle"
+          >
+            <PhoneOff size={15} />
+          </button>
+        </div>
+      )}
     </div>
   );
 }

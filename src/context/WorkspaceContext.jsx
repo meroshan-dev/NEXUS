@@ -1,8 +1,11 @@
-import React, { createContext, useState, useContext, useEffect, useRef } from 'react';
+/* eslint-disable react-refresh/only-export-components */
+import { createContext, useState, useContext, useEffect, useRef } from 'react';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { useAuth } from './AuthContext';
 
 const WorkspaceContext = createContext();
+
+const generateCallId = () => Math.random().toString(36).substring(2, 9);
 
 export function WorkspaceProvider({ children }) {
   const { user } = useAuth();
@@ -32,6 +35,467 @@ export function WorkspaceProvider({ children }) {
   const [typingUsers, setTypingUsers] = useState({});
   const activePresenceChannelRef = useRef(null);
   const userNotificationsChannelRef = useRef(null);
+
+  // Real-time Workspace Calling (Huddles) States
+  const [activeCall, setActiveCall] = useState(null);
+  const [incomingCall, setIncomingCall] = useState(null);
+  const [activeCalls, setActiveCalls] = useState({});
+  const [missedCalls, setMissedCalls] = useState(() => {
+    try {
+      const stored = localStorage.getItem(`nexus_missed_calls_${user?.id || 'guest'}`);
+      return stored ? JSON.parse(stored) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const huddleChannelsRef = useRef({});
+
+  // Sync missed calls to localStorage
+  useEffect(() => {
+    if (user?.id) {
+      localStorage.setItem(`nexus_missed_calls_${user.id}`, JSON.stringify(missedCalls));
+    }
+  }, [missedCalls, user?.id]);
+
+  // Global channel subscriptions for Huddles (Calls)
+  useEffect(() => {
+    if (!user?.id || workspaces.length === 0) return;
+
+    if (isSupabaseConfigured) {
+      // Clear existing channels
+      Object.values(huddleChannelsRef.current).forEach(ch => {
+        try { supabase.removeChannel(ch); } catch (e) { console.error(e); }
+      });
+      huddleChannelsRef.current = {};
+
+      // Subscribe to each workspace's huddle channel
+      workspaces.forEach(ws => {
+        const channelName = `workspace_huddle:${ws.id}`;
+        const ch = supabase.channel(channelName, {
+          config: { broadcast: { self: false } }
+        });
+
+        ch.on('broadcast', { event: 'call-start' }, ({ payload }) => {
+          console.log(`[Huddle] Received call-start in ${ws.name}:`, payload);
+          // Only show incoming call if we are not already in any call
+          if (!activeCall) {
+            setIncomingCall({
+              workspaceId: ws.id,
+              workspaceName: ws.name,
+              callerId: payload.callerId,
+              callerName: payload.callerName,
+              callId: payload.callId
+            });
+          }
+          setActiveCalls(prev => ({
+            ...prev,
+            [ws.id]: {
+              callerId: payload.callerId,
+              callerName: payload.callerName,
+              participants: payload.participants || []
+            }
+          }));
+        })
+        .on('broadcast', { event: 'call-join' }, ({ payload }) => {
+          console.log('[Huddle] Received call-join:', payload);
+          setActiveCalls(prev => {
+            const call = prev[ws.id];
+            if (!call) return prev;
+            if (call.participants.some(p => p.id === payload.userId)) return prev;
+            return {
+              ...prev,
+              [ws.id]: {
+                ...call,
+                participants: [...call.participants, { id: payload.userId, name: payload.userName, avatar: payload.userAvatar }]
+              }
+            };
+          });
+          setActiveCall(prev => {
+            if (prev && prev.workspaceId === ws.id) {
+              if (prev.participants.some(p => p.id === payload.userId)) return prev;
+              return {
+                ...prev,
+                participants: [...prev.participants, { id: payload.userId, name: payload.userName, avatar: payload.userAvatar }]
+              };
+            }
+            return prev;
+          });
+        })
+        .on('broadcast', { event: 'call-leave' }, ({ payload }) => {
+          console.log('[Huddle] Received call-leave:', payload);
+          setActiveCalls(prev => {
+            const call = prev[ws.id];
+            if (!call) return prev;
+            const updated = call.participants.filter(p => p.id !== payload.userId);
+            if (updated.length === 0 && call.callerId === payload.userId) {
+              const copy = { ...prev };
+              delete copy[ws.id];
+              return copy;
+            }
+            return {
+              ...prev,
+              [ws.id]: {
+                ...call,
+                participants: updated
+              }
+            };
+          });
+          setActiveCall(prev => {
+            if (prev && prev.workspaceId === ws.id) {
+              const updated = prev.participants.filter(p => p.id !== payload.userId);
+              if (updated.length === 0) return null;
+              return { ...prev, participants: updated };
+            }
+            return prev;
+          });
+        })
+        .on('broadcast', { event: 'call-end' }, () => {
+          console.log('[Huddle] Received call-end');
+          setActiveCalls(prev => {
+            const copy = { ...prev };
+            delete copy[ws.id];
+            return copy;
+          });
+          setIncomingCall(prev => (prev && prev.workspaceId === ws.id ? null : prev));
+          setActiveCall(prev => (prev && prev.workspaceId === ws.id ? null : prev));
+        })
+        .on('broadcast', { event: 'call-ping' }, ({ payload }) => {
+          setActiveCalls(prev => ({
+            ...prev,
+            [ws.id]: {
+              callerId: payload.callerId,
+              callerName: payload.callerName,
+              participants: payload.participants || []
+            }
+          }));
+        })
+        .subscribe();
+
+        huddleChannelsRef.current[ws.id] = ch;
+      });
+    }
+
+    return () => {
+      if (isSupabaseConfigured) {
+        Object.values(huddleChannelsRef.current).forEach(ch => {
+          try { supabase.removeChannel(ch); } catch (e) { console.error(e); }
+        });
+        huddleChannelsRef.current = {};
+      }
+    };
+  }, [user?.id, workspaces, activeCall]);
+
+  // Fallback storage sync listener for offline/multi-tab calls
+  useEffect(() => {
+    if (isSupabaseConfigured) return;
+
+    const handleStorage = (e) => {
+      if (e.key === 'nexus_local_huddle_event') {
+        try {
+          const { event, wsId, payload } = JSON.parse(e.newValue);
+          const ws = workspaces.find(w => w.id === wsId);
+          if (!ws) return;
+
+          if (event === 'call-start') {
+            if (payload.callerId !== user?.id && !activeCall) {
+              setIncomingCall({
+                workspaceId: wsId,
+                workspaceName: ws.name,
+                callerId: payload.callerId,
+                callerName: payload.callerName,
+                callId: payload.callId
+              });
+            }
+            setActiveCalls(prev => ({
+              ...prev,
+              [wsId]: {
+                callerId: payload.callerId,
+                callerName: payload.callerName,
+                participants: payload.participants || []
+              }
+            }));
+          } else if (event === 'call-join') {
+            setActiveCalls(prev => {
+              const call = prev[wsId];
+              if (!call) return prev;
+              if (call.participants.some(p => p.id === payload.userId)) return prev;
+              return {
+                ...prev,
+                [wsId]: {
+                  ...call,
+                  participants: [...call.participants, { id: payload.userId, name: payload.userName, avatar: payload.userAvatar }]
+                }
+              };
+            });
+            setActiveCall(prev => {
+              if (prev && prev.workspaceId === wsId) {
+                if (prev.participants.some(p => p.id === payload.userId)) return prev;
+                return {
+                  ...prev,
+                  participants: [...prev.participants, { id: payload.userId, name: payload.userName, avatar: payload.userAvatar }]
+                };
+              }
+              return prev;
+            });
+          } else if (event === 'call-leave') {
+            setActiveCalls(prev => {
+              const call = prev[wsId];
+              if (!call) return prev;
+              const updated = call.participants.filter(p => p.id !== payload.userId);
+              if (updated.length === 0 && call.callerId === payload.userId) {
+                const copy = { ...prev };
+                delete copy[wsId];
+                return copy;
+              }
+              return { ...prev, [wsId]: { ...call, participants: updated } };
+            });
+            setActiveCall(prev => {
+              if (prev && prev.workspaceId === wsId) {
+                const updated = prev.participants.filter(p => p.id !== payload.userId);
+                if (updated.length === 0) return null;
+                return { ...prev, participants: updated };
+              }
+              return prev;
+            });
+          } else if (event === 'call-end') {
+            setActiveCalls(prev => {
+              const copy = { ...prev };
+              delete copy[wsId];
+              return copy;
+            });
+            setIncomingCall(prev => (prev && prev.workspaceId === wsId ? null : prev));
+            setActiveCall(prev => (prev && prev.workspaceId === wsId ? null : prev));
+          }
+        } catch (err) {
+          console.error('[Huddle Local Storage Sync Error]:', err);
+        }
+      }
+    };
+
+    window.addEventListener('storage', handleStorage);
+    return () => window.removeEventListener('storage', handleStorage);
+  }, [user?.id, workspaces, activeCall]);
+
+  // Periodic call pinger to notify newly joined members about existing calls
+  useEffect(() => {
+    if (!activeCall || activeCall.callerId !== user?.id) return;
+
+    const interval = setInterval(() => {
+      if (isSupabaseConfigured) {
+        const ch = huddleChannelsRef.current[activeCall.workspaceId];
+        if (ch) {
+          ch.send({
+            type: 'broadcast',
+            event: 'call-ping',
+            payload: {
+              callerId: activeCall.callerId,
+              callerName: activeCall.callerName,
+              participants: activeCall.participants
+            }
+          });
+        }
+      }
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [activeCall, user?.id]);
+
+  const startCall = (workspaceId) => {
+    if (!user) return;
+    const ws = workspaces.find(w => w.id === workspaceId);
+    if (!ws) return;
+
+    const callerDetails = {
+      id: user.id,
+      name: user.name || user.email?.split('@')[0] || 'User',
+      avatar: user.avatar || null
+    };
+
+    const newCall = {
+      workspaceId,
+      workspaceName: ws.name,
+      callerId: user.id,
+      callerName: callerDetails.name,
+      callId: generateCallId(),
+      participants: [callerDetails]
+    };
+
+    setActiveCall(newCall);
+    setActiveCalls(prev => ({
+      ...prev,
+      [workspaceId]: {
+        callerId: user.id,
+        callerName: callerDetails.name,
+        participants: [callerDetails]
+      }
+    }));
+
+    if (isSupabaseConfigured) {
+      const ch = huddleChannelsRef.current[workspaceId];
+      if (ch) {
+        ch.send({
+          type: 'broadcast',
+          event: 'call-start',
+          payload: {
+            callerId: user.id,
+            callerName: callerDetails.name,
+            workspaceName: ws.name,
+            callId: newCall.callId,
+            participants: [callerDetails]
+          }
+        });
+      }
+    } else {
+      localStorage.setItem('nexus_local_huddle_event', JSON.stringify({
+        event: 'call-start',
+        wsId: workspaceId,
+        payload: {
+          callerId: user.id,
+          callerName: callerDetails.name,
+          workspaceName: ws.name,
+          callId: newCall.callId,
+          participants: [callerDetails]
+        }
+      }));
+    }
+    logActivity(workspaceId, 'started_call', `started a huddle call`);
+  };
+
+  const joinCall = (workspaceId) => {
+    if (!user) return;
+    const callInfo = activeCalls[workspaceId];
+    if (!callInfo) return;
+
+    const participantDetails = {
+      id: user.id,
+      name: user.name || user.email?.split('@')[0] || 'User',
+      avatar: user.avatar || null
+    };
+
+    const updatedParticipants = callInfo.participants.some(p => p.id === user.id)
+      ? callInfo.participants
+      : [...callInfo.participants, participantDetails];
+
+    setActiveCall({
+      workspaceId,
+      workspaceName: workspaces.find(w => w.id === workspaceId)?.name || 'Workspace',
+      callerId: callInfo.callerId,
+      callerName: callInfo.callerName,
+      participants: updatedParticipants
+    });
+
+    setIncomingCall(null);
+
+    setActiveCalls(prev => ({
+      ...prev,
+      [workspaceId]: {
+        ...callInfo,
+        participants: updatedParticipants
+      }
+    }));
+
+    if (isSupabaseConfigured) {
+      const ch = huddleChannelsRef.current[workspaceId];
+      if (ch) {
+        ch.send({
+          type: 'broadcast',
+          event: 'call-join',
+          payload: {
+            userId: user.id,
+            userName: participantDetails.name,
+            userAvatar: participantDetails.avatar
+          }
+        });
+      }
+    } else {
+      localStorage.setItem('nexus_local_huddle_event', JSON.stringify({
+        event: 'call-join',
+        wsId: workspaceId,
+        payload: {
+          userId: user.id,
+          userName: participantDetails.name,
+          userAvatar: participantDetails.avatar
+        }
+      }));
+    }
+  };
+
+  const declineCall = () => {
+    if (incomingCall) {
+      setMissedCalls(prev => {
+        const copy = [
+          {
+            id: `missed_${Date.now()}`,
+            workspaceId: incomingCall.workspaceId,
+            workspaceName: incomingCall.workspaceName,
+            callerName: incomingCall.callerName,
+            timestamp: new Date().toISOString()
+          },
+          ...prev
+        ];
+        return copy;
+      });
+    }
+    setIncomingCall(null);
+  };
+
+  const leaveCall = (workspaceId) => {
+    if (!user) return;
+
+    setActiveCall(null);
+
+    if (isSupabaseConfigured) {
+      const ch = huddleChannelsRef.current[workspaceId];
+      if (ch) {
+        ch.send({
+          type: 'broadcast',
+          event: 'call-leave',
+          payload: {
+            userId: user.id
+          }
+        });
+
+        // If user is caller and no one else is left, end call
+        const currentCall = activeCalls[workspaceId];
+        if (currentCall && currentCall.callerId === user.id) {
+          ch.send({
+            type: 'broadcast',
+            event: 'call-end',
+            payload: { workspaceId }
+          });
+        }
+      }
+    } else {
+      localStorage.setItem('nexus_local_huddle_event', JSON.stringify({
+        event: 'call-leave',
+        wsId: workspaceId,
+        payload: {
+          userId: user.id
+        }
+      }));
+
+      const currentCall = activeCalls[workspaceId];
+      if (currentCall && currentCall.callerId === user.id) {
+        localStorage.setItem('nexus_local_huddle_event', JSON.stringify({
+          event: 'call-end',
+          wsId: workspaceId,
+          payload: {}
+        }));
+      }
+    }
+
+    setActiveCalls(prev => {
+      const copy = { ...prev };
+      delete copy[workspaceId];
+      return copy;
+    });
+  };
+
+  const clearMissedCalls = () => {
+    setMissedCalls([]);
+  };
+
 
   const refetchTasks = async (wsId) => {
     if (!isSupabaseConfigured) return;
@@ -257,12 +721,16 @@ export function WorkspaceProvider({ children }) {
   // Load workspaces when authenticated user changes
   useEffect(() => {
     console.log('[Realtime Sync] loadWorkspaces useEffect triggered with user.id:', user?.id);
-    if (user?.id) {
-      setLoading(true);
-    } else {
-      setLoading(false);
-    }
-    loadWorkspaces();
+    
+    const timer = setTimeout(() => {
+      if (!user?.id) {
+        setNotifications([]);
+        setActiveWorkspaceId(null);
+        return;
+      }
+      loadWorkspaces();
+      loadNotifications();
+    }, 0);
     
     // Clean up channels on logout or user change
     if (!user?.id) {
@@ -278,15 +746,9 @@ export function WorkspaceProvider({ children }) {
         supabase.removeChannel(userNotificationsChannelRef.current);
         userNotificationsChannelRef.current = null;
       }
-      setNotifications([]);
-      setActiveWorkspaceId(null);
-      return;
     }
 
-    // Load user notifications and setup realtime listener
-    loadNotifications();
-
-    if (isSupabaseConfigured) {
+    if (isSupabaseConfigured && user?.id) {
       console.log(`[Realtime Sync] Creating global notifications channel for user ${user.id}`);
       const channel = supabase
         .channel(`user_notifications:${user.id}`)
@@ -318,11 +780,13 @@ export function WorkspaceProvider({ children }) {
     }
 
     return () => {
+      clearTimeout(timer);
       if (userNotificationsChannelRef.current) {
         supabase.removeChannel(userNotificationsChannelRef.current);
         userNotificationsChannelRef.current = null;
       }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
 
   // Clean up all subscription channels on unmount
@@ -1201,12 +1665,7 @@ export function WorkspaceProvider({ children }) {
       }
     } else {
       const stored = localStorage.getItem(`nexus_all_workspaces_mock`);
-      let allMockWorkspaces = [];
-      if (stored) {
-        allMockWorkspaces = JSON.parse(stored);
-      } else {
-        allMockWorkspaces = [...workspaces];
-      }
+      const allMockWorkspaces = stored ? JSON.parse(stored) : [...workspaces];
 
       const ws = allMockWorkspaces.find(w => w.inviteCode === cleanCode);
       if (!ws) {
@@ -1698,10 +2157,10 @@ export function WorkspaceProvider({ children }) {
 
     if (isSupabaseConfigured && file) {
       try {
-        const cleanFileName = file.name.replace(/[^\x00-\x7F]/g, '');
+        const cleanFileName = file.name.replace(/[^\x20-\x7E]/g, '');
         const storagePath = `${workspaceId}/${Date.now()}_${cleanFileName}`;
 
-        const { data: uploadData, error: uploadErr } = await supabase.storage
+        const { error: uploadErr } = await supabase.storage
           .from('files')
           .upload(storagePath, file, {
             cacheControl: '3600',
@@ -1816,7 +2275,7 @@ export function WorkspaceProvider({ children }) {
 
     if (isSupabaseConfigured) {
       try {
-        const { data, error } = await supabase
+        const { error } = await supabase
           .from('task_comments')
           .insert({
             task_id: taskId,
@@ -2155,7 +2614,18 @@ export function WorkspaceProvider({ children }) {
         markNotificationAsRead,
         markAllNotificationsAsRead,
         sendTypingIndicator,
-        deleteWorkspace
+        deleteWorkspace,
+
+        // Calling Huddles
+        activeCall,
+        incomingCall,
+        activeCalls,
+        missedCalls,
+        startCall,
+        joinCall,
+        declineCall,
+        leaveCall,
+        clearMissedCalls
       }}
     >
       {children}

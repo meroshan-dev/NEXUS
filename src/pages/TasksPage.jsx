@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
-import { Plus, Calendar, Trash2, Check, Clock } from 'lucide-react';
+import { Plus, Calendar, Trash2, Clock, CheckSquare } from 'lucide-react';
 import Button from '../components/ui/Button';
 import Avatar from '../components/ui/Avatar';
 import Badge, { PriorityBadge } from '../components/ui/Badge';
@@ -14,9 +14,9 @@ import { useWorkspace } from '../context/WorkspaceContext';
 import { useAuth } from '../context/AuthContext';
 
 const COLS = {
-  todo: { title: 'To do', dotColor: '#71717a', accent: 'var(--bg-subtle)' },
-  inProgress: { title: 'In progress', dotColor: '#f59e0b', accent: 'rgba(245,158,11,0.06)' },
-  done: { title: 'Done', dotColor: '#22c55e', accent: 'rgba(34,197,94,0.06)' },
+  todo: { title: 'To do', dotColor: '#9ca3af', accent: 'var(--bg-secondary)' },
+  inProgress: { title: 'In progress', dotColor: '#f59e0b', accent: 'rgba(245,158,11,0.04)' },
+  done: { title: 'Done', dotColor: '#10b981', accent: 'rgba(16,185,129,0.04)' },
 };
 
 export default function TasksPage() {
@@ -48,14 +48,13 @@ export default function TasksPage() {
     dueDate: '',
   });
 
-  // State for tabs, selected task and commenting
   const [activeTab, setActiveTab] = useState('all');
   const [selectedTask, setSelectedTask] = useState(null);
   const [commentText, setCommentText] = useState('');
 
   useEffect(() => {
     if (workspaceId) fetchWorkspaceDetails(workspaceId);
-  }, [workspaceId]);
+  }, [workspaceId, fetchWorkspaceDetails]);
 
   const workspace = workspaces.find((w) => w.id === workspaceId);
 
@@ -76,7 +75,6 @@ export default function TasksPage() {
   }
 
   const isOwner = workspace?.ownerId === user?.id;
-
   const members = workspaceMembers[workspaceId] || [];
   const data = tasks[workspaceId] || { todo: [], inProgress: [], done: [] };
 
@@ -92,7 +90,6 @@ export default function TasksPage() {
     return true;
   };
 
-  // Pre-filter the tasks for listing and drag-and-drop snap counting
   const todoList = data.todo?.filter(filterTask) || [];
   const inProgressList = data.inProgress?.filter(filterTask) || [];
   const doneList = data.done?.filter(filterTask) || [];
@@ -102,7 +99,6 @@ export default function TasksPage() {
   const onDragEnd = ({ source: s, destination: d }) => {
     if (!d) return;
 
-    // Permissions: members can only move tasks assigned to them
     const movedTaskId = data[s.droppableId][s.index].id;
     const movedTaskObj = [...data[s.droppableId], ...data[d.droppableId]].find(t => t.id === movedTaskId);
     if (!isOwner && movedTaskObj?.assignee !== user?.id) {
@@ -120,7 +116,6 @@ export default function TasksPage() {
       const dst = [...data[d.droppableId]];
       const [item] = src.splice(s.index, 1);
       
-      // Update task status inside the object representation
       const updatedItem = { ...item, status: d.droppableId };
       dst.splice(d.index, 0, updatedItem);
       updateTasks(workspaceId, { ...data, [s.droppableId]: src, [d.droppableId]: dst });
@@ -144,50 +139,66 @@ export default function TasksPage() {
 
   return (
     <div className="pb-8 min-w-0">
-      <header className="page-header flex flex-col sm:flex-row sm:items-end justify-between gap-5 mb-8">
+      <header className="page-header flex flex-col sm:flex-row sm:items-end justify-between gap-5">
         <div className="min-w-0">
           <p className="page-eyebrow">Tasks</p>
-          <h1 className="text-h1" style={{ color: 'var(--text-primary)' }}>
+          <h1 className="text-xl font-bold tracking-tight text-[var(--text-primary)]">
             Kanban board
           </h1>
-          <p className="text-body-sm mt-2" style={{ color: 'var(--text-secondary)' }}>
-            {totalTasks} task{totalTasks !== 1 ? 's' : ''} · drag cards to update status
+          <p className="text-xs text-[var(--text-secondary)] mt-1">
+            {totalTasks} task{totalTasks !== 1 ? 's' : ''} in this view · drag to update progress
           </p>
         </div>
         {isOwner && (
-          <Button icon={Plus} onClick={() => setShowCreate(true)}>
+          <Button icon={Plus} size="sm" onClick={() => setShowCreate(true)}>
             New task
           </Button>
         )}
       </header>
 
       {/* Tabs list */}
-      <div className="flex gap-2 mb-6 border-b pb-1" style={{ borderColor: 'var(--border-color)' }}>
+      <div className="flex gap-1 p-1 rounded-lg bg-[var(--bg-secondary)] border border-[var(--border-color)] self-start shadow-sm mb-6 relative">
         {[
           { id: 'all', label: 'All Tasks' },
           { id: 'my', label: 'My Tasks' },
           { id: 'completed', label: 'Completed' },
           { id: 'overdue', label: 'Overdue' }
-        ].map(t => (
-          <button
-            key={t.id}
-            onClick={() => setActiveTab(t.id)}
-            className="px-4 py-2 border-b-2 font-medium text-xs transition-colors cursor-pointer"
-            style={{
-              borderColor: activeTab === t.id ? 'var(--text-brand)' : 'transparent',
-              color: activeTab === t.id ? 'var(--text-brand)' : 'var(--text-secondary)'
-            }}
-          >
-            {t.label}
-          </button>
-        ))}
+        ].map(t => {
+          const active = activeTab === t.id;
+          return (
+            <button
+              key={t.id}
+              onClick={() => setActiveTab(t.id)}
+              className="relative px-3 py-1.5 rounded-md text-xs font-semibold transition-colors duration-150 cursor-pointer"
+              style={{
+                color: active ? 'var(--text-primary)' : 'var(--text-secondary)',
+                zIndex: 1
+              }}
+            >
+              {active && (
+                <motion.div
+                  layoutId="activeTaskTabGlow"
+                  className="absolute inset-0 rounded-md border"
+                  style={{
+                    background: 'var(--bg-primary)',
+                    borderColor: 'var(--border-color)',
+                    boxShadow: 'var(--shadow-xs)',
+                    zIndex: -1
+                  }}
+                  transition={{ type: 'spring', stiffness: 450, damping: 32 }}
+                />
+              )}
+              <span className="relative z-10">{t.label}</span>
+            </button>
+          );
+        })}
       </div>
 
       {totalTasks === 0 ? (
         <EmptyState
           icon={Plus}
           title="No tasks found"
-          description={isOwner ? "Create a task or change your filters." : "No tasks assigned to you here."}
+          description={isOwner ? "Create a task to get started." : "No tasks assigned to you here."}
           actionLabel={isOwner ? "Create task" : undefined}
           actionIcon={isOwner ? Plus : undefined}
           onAction={isOwner ? () => setShowCreate(true) : undefined}
@@ -195,41 +206,29 @@ export default function TasksPage() {
       ) : (
         <DragDropContext onDragEnd={onDragEnd}>
           <div
-            className="flex gap-4 overflow-x-auto pb-4 no-scrollbar snap-x snap-mandatory"
-            style={{ minHeight: 'min(60vh, 520px)' }}
+            className="flex gap-5 overflow-x-auto pb-4 no-scrollbar snap-x snap-mandatory"
+            style={{ minHeight: 'clamp(350px, calc(100vh - 280px), 680px)' }}
           >
             {Object.entries(COLS).map(([colId, cfg]) => {
               const columnTasks = colId === 'todo' ? todoList : colId === 'inProgress' ? inProgressList : doneList;
               return (
-                <div key={colId} className="flex flex-col shrink-0 w-[min(88vw,300px)] sm:w-[300px] snap-start">
-                  <div className="flex items-center justify-between mb-4 px-0.5">
-                    <div className="flex items-center gap-2.5">
-                      <span className="w-2 h-2 rounded-full" style={{ background: cfg.dotColor }} />
-                      <span className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
+                <div key={colId} className="flex flex-col shrink-0 w-[min(88vw,280px)] sm:w-[280px] snap-start">
+                  <div className="flex items-center justify-between mb-3.5 px-1">
+                    <div className="flex items-center gap-2">
+                      <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: cfg.dotColor }} />
+                      <span className="text-xs font-semibold uppercase tracking-wider text-[var(--text-secondary)]">
                         {cfg.title}
                       </span>
-                      <span
-                        className="min-w-[22px] h-[22px] px-2 rounded-[var(--radius-sm)] text-[11px] font-medium flex items-center justify-center"
-                        style={{ background: 'var(--bg-tertiary)', color: 'var(--text-tertiary)' }}
-                      >
+                      <span className="px-1.5 py-0.5 rounded-full text-[9px] font-bold border border-[var(--border-color)] bg-[var(--bg-secondary)] text-[var(--text-secondary)]">
                         {columnTasks.length}
                       </span>
                     </div>
                     {isOwner && (
                       <button
                         onClick={() => setShowCreate(true)}
-                        className="w-8 h-8 rounded-[var(--radius-sm)] flex items-center justify-center transition-colors cursor-pointer"
-                        style={{ color: 'var(--text-tertiary)' }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.background = 'var(--bg-hover)';
-                          e.currentTarget.style.color = 'var(--text-primary)';
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.background = 'transparent';
-                          e.currentTarget.style.color = 'var(--text-tertiary)';
-                        }}
+                        className="w-6 h-6 rounded-md flex items-center justify-center border border-[var(--border-color)] transition-colors cursor-pointer text-[var(--text-tertiary)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)]"
                       >
-                        <Plus size={15} strokeWidth={2} />
+                        <Plus size={12} />
                       </button>
                     )}
                   </div>
@@ -239,12 +238,12 @@ export default function TasksPage() {
                       <div
                         ref={provided.innerRef}
                         {...provided.droppableProps}
-                        className="flex-1 rounded-[var(--radius-lg)] space-y-3 p-3 sm:p-4 transition-all duration-200"
+                        className="flex-1 rounded-[var(--radius-lg)] space-y-3.5 p-3 transition-all duration-200"
                         style={{
-                          background: snapshot.isDraggingOver ? cfg.accent : 'var(--bg-subtle)',
+                          background: snapshot.isDraggingOver ? cfg.accent : 'var(--bg-secondary)',
                           border: snapshot.isDraggingOver
-                            ? `1px dashed ${cfg.dotColor}66`
-                            : '1px solid var(--border-light)',
+                            ? `1px dashed ${cfg.dotColor}55`
+                            : '1px solid var(--border-color)',
                           minHeight: 180,
                         }}
                       >
@@ -258,39 +257,39 @@ export default function TasksPage() {
                                   <motion.div
                                     layout
                                     onClick={() => setSelectedTask({ ...task, status: colId })}
-                                    className="group surface-panel p-4 sm:p-5 min-w-0 cursor-pointer hover:border-indigo-500/50 transition-colors"
+                                    className="group bg-[var(--bg-primary)] border border-[var(--border-color)] hover:border-[var(--accent)] rounded-lg p-4 cursor-pointer transition-all duration-200 hover:shadow-sm"
                                     style={{
-                                      boxShadow: snap.isDragging ? 'var(--shadow-lg)' : 'var(--shadow-card)',
-                                      opacity: isDragDisabled ? 0.85 : 1
+                                      boxShadow: snap.isDragging ? 'var(--shadow-md)' : 'var(--shadow-card)',
+                                      opacity: isDragDisabled ? 0.8 : 1
                                     }}
+                                    whileHover={{ y: -1 }}
                                   >
                                     {task.labels?.length > 0 && (
-                                      <div className="flex flex-wrap gap-1.5 mb-3">
+                                      <div className="flex flex-wrap gap-1.5 mb-2">
                                         {task.labels.slice(0, 2).map((l) => (
                                           <Badge key={l} variant="brand">{l}</Badge>
                                         ))}
                                       </div>
                                     )}
 
-                                    <h3 className="text-sm font-semibold leading-snug mb-2 overflow-safe" style={{ color: 'var(--text-primary)' }}>
+                                    <h3 className="text-xs font-semibold leading-snug mb-1.5 text-[var(--text-primary)] group-hover:text-[var(--accent)] transition-colors break-words">
                                       {task.title}
                                     </h3>
                                     {task.description && (
-                                      <p className="text-xs leading-relaxed line-clamp-2 mb-4" style={{ color: 'var(--text-tertiary)' }}>
+                                      <p className="text-[10px] leading-relaxed line-clamp-2 mb-3 text-[var(--text-tertiary)]">
                                         {task.description}
                                       </p>
                                     )}
 
                                     <div
-                                      className="flex flex-wrap items-center justify-between gap-2 pt-4"
-                                      style={{ borderTop: '1px solid var(--border-light)' }}
+                                      className="flex items-center justify-between gap-2 pt-2.5 border-t border-[var(--border-light)]"
                                     >
                                       <div className="flex items-center gap-2 min-w-0">
                                         {assignee && (
                                           <Avatar
                                             name={assignee.name}
                                             initials={assignee.initials}
-                                            color={assignee.color || '#5e6ad2'}
+                                            color={assignee.color || 'var(--accent)'}
                                             size="xs"
                                           />
                                         )}
@@ -298,11 +297,15 @@ export default function TasksPage() {
                                       </div>
                                       {task.dueDate && (
                                         <span
-                                          className="flex items-center gap-1 text-[11px] font-medium shrink-0"
-                                          style={{ color: dueDateColor(task.dueDate) }}
+                                          className="flex items-center gap-1 text-[9px] font-semibold px-2 py-0.5 rounded-full shrink-0 border"
+                                          style={{
+                                            color: dueDateColor(task.dueDate),
+                                            borderColor: dueDateColor(task.dueDate) + '1c',
+                                            background: dueDateColor(task.dueDate) + '08'
+                                          }}
                                         >
-                                          <Calendar size={11} strokeWidth={2} />
-                                          {new Date(task.dueDate).toLocaleDateString('en-US', {
+                                          <Calendar size={9} />
+                                          {new Date(task.dueDate).toLocaleDateString([], {
                                             month: 'short',
                                             day: 'numeric',
                                           })}
@@ -318,17 +321,8 @@ export default function TasksPage() {
                         {provided.placeholder}
 
                         {columnTasks.length === 0 && !snapshot.isDraggingOver && (
-                          <div className="flex flex-col items-center justify-center py-14 text-center">
-                            <p className="text-caption">No tasks here</p>
-                            {isOwner && (
-                              <button
-                                onClick={() => setShowCreate(true)}
-                                className="text-xs mt-2 font-medium cursor-pointer"
-                                style={{ color: 'var(--text-brand)' }}
-                              >
-                                Add task
-                              </button>
-                            )}
+                          <div className="flex flex-col items-center justify-center py-10 text-center">
+                            <p className="text-[10px] text-[var(--text-tertiary)] font-medium">No tasks here</p>
                           </div>
                         )}
                       </div>
@@ -341,7 +335,7 @@ export default function TasksPage() {
         </DragDropContext>
       )}
 
-      {/* Selected Task Details & Comments Modal */}
+      {/* Selected Task Details Modal */}
       {selectedTask && (
         <Modal
           isOpen={!!selectedTask}
@@ -362,17 +356,17 @@ export default function TasksPage() {
               });
               setSelectedTask(null);
             }
-          }} className="space-y-6">
-            <div className="flex items-center justify-between">
+          }} className="space-y-5">
+            <div className="flex items-center justify-between pb-3.5 border-b border-[var(--border-color)]">
               <PriorityBadge priority={selectedTask.priority} />
               {isOwner && (
                 <Button
                   variant="ghost"
                   type="button"
                   icon={Trash2}
-                  className="!text-danger"
+                  className="!text-[var(--color-danger)] hover:bg-red-500/5 transition-colors text-xs font-semibold px-2"
                   onClick={() => {
-                    if (window.confirm("Are you sure you want to delete this task?")) {
+                    if (window.confirm("Delete this task permanently?")) {
                       deleteTask(workspaceId, selectedTask.id);
                       setSelectedTask(null);
                     }
@@ -391,29 +385,29 @@ export default function TasksPage() {
               disabled={!isOwner}
             />
 
-            <div className="space-y-2">
-              <label className="block text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>
+            <div className="space-y-1.5">
+              <label className="block text-xs font-semibold uppercase tracking-wider text-[var(--text-secondary)]">
                 Description
               </label>
               <textarea
-                placeholder="No description provided."
+                placeholder="Add task description..."
                 value={selectedTask.description || ''}
                 onChange={(e) => isOwner && setSelectedTask({ ...selectedTask, description: e.target.value })}
-                className="input-base resize-none"
-                style={{ height: 88 }}
+                className="input-base resize-none focus:ring-2 focus:ring-[var(--accent-muted)] transition-all"
+                style={{ height: 80 }}
                 disabled={!isOwner}
               />
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label className="block text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>
+              <div className="space-y-1.5">
+                <label className="block text-xs font-semibold uppercase tracking-wider text-[var(--text-secondary)]">
                   Assignee
                 </label>
                 <select
                   value={selectedTask.assignee || ''}
                   onChange={(e) => isOwner && setSelectedTask({ ...selectedTask, assignee: e.target.value })}
-                  className="input-base"
+                  className="input-base focus:ring-2 focus:ring-[var(--accent-muted)] transition-all"
                   disabled={!isOwner}
                 >
                   <option value="">Unassigned</option>
@@ -425,14 +419,14 @@ export default function TasksPage() {
                 </select>
               </div>
 
-              <div className="space-y-2">
-                <label className="block text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>
+              <div className="space-y-1.5">
+                <label className="block text-xs font-semibold uppercase tracking-wider text-[var(--text-secondary)]">
                   Priority
                 </label>
                 <select
                   value={selectedTask.priority}
                   onChange={(e) => isOwner && setSelectedTask({ ...selectedTask, priority: e.target.value })}
-                  className="input-base"
+                  className="input-base focus:ring-2 focus:ring-[var(--accent-muted)] transition-all"
                   disabled={!isOwner}
                 >
                   <option value="low">Low</option>
@@ -452,14 +446,14 @@ export default function TasksPage() {
                 disabled={!isOwner}
               />
 
-              <div className="space-y-2">
-                <label className="block text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>
+              <div className="space-y-1.5">
+                <label className="block text-xs font-semibold uppercase tracking-wider text-[var(--text-secondary)]">
                   Status
                 </label>
                 <select
                   value={selectedTask.status || 'todo'}
                   onChange={(e) => isOwner && setSelectedTask({ ...selectedTask, status: e.target.value })}
-                  className="input-base"
+                  className="input-base focus:ring-2 focus:ring-[var(--accent-muted)] transition-all"
                   disabled={!isOwner}
                 >
                   <option value="todo">To Do</option>
@@ -469,29 +463,22 @@ export default function TasksPage() {
               </div>
             </div>
 
-            {!isOwner ? (
-              <div className="flex gap-2 justify-end pt-2">
-                <Button variant="secondary" type="button" onClick={() => setSelectedTask(null)}>
-                  Close
-                </Button>
-              </div>
-            ) : (
-              <div className="flex gap-2 justify-end pt-2">
-                <Button variant="secondary" type="button" onClick={() => setSelectedTask(null)}>
-                  Cancel
-                </Button>
-                <Button type="submit">
+            <div className="flex gap-2 justify-end pt-3 border-t border-[var(--border-light)]">
+              <Button variant="secondary" type="button" size="sm" onClick={() => setSelectedTask(null)}>
+                Cancel
+              </Button>
+              {isOwner && (
+                <Button type="submit" size="sm">
                   Save Changes
                 </Button>
-              </div>
-            )}
+              )}
+            </div>
 
             {/* Comments Section */}
-            <div className="border-t pt-6" style={{ borderColor: 'var(--border-color)' }}>
-              <h4 className="text-sm font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>Comments</h4>
+            <div className="border-t pt-5 border-[var(--border-color)]">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-[var(--text-secondary)] mb-3">Comments</h4>
               
-              {/* Comment Input */}
-              <div className="flex gap-3 mb-4">
+              <div className="flex gap-2.5 mb-4">
                 <Input
                   placeholder="Write a comment..."
                   value={commentText}
@@ -500,6 +487,7 @@ export default function TasksPage() {
                 />
                 <Button
                   type="button"
+                  size="sm"
                   onClick={() => {
                     if (commentText.trim()) {
                       addTaskComment(selectedTask.id, commentText);
@@ -511,24 +499,25 @@ export default function TasksPage() {
                 </Button>
               </div>
 
-              {/* Comments list */}
-              <div className="space-y-4 max-h-48 overflow-y-auto pr-1">
+              <div className="space-y-2.5 max-h-44 overflow-y-auto pr-1">
                 {(!taskComments[selectedTask.id] || taskComments[selectedTask.id].length === 0) ? (
-                  <p className="text-xs text-center py-4" style={{ color: 'var(--text-tertiary)' }}>No comments yet.</p>
+                  <p className="text-xs text-center py-4 text-[var(--text-tertiary)] border border-dashed border-[var(--border-color)] rounded-md bg-[var(--bg-secondary)]">
+                    No comments yet.
+                  </p>
                 ) : (
                   taskComments[selectedTask.id].map(comm => {
-                    const commenter = members.find(m => m.id === comm.userId) || { name: 'Someone', initials: 'S', color: '#6366f1' };
+                    const commenter = members.find(m => m.id === comm.userId) || { name: 'Member', initials: 'M', color: '#6366f1' };
                     return (
-                      <div key={comm.id} className="flex gap-2.5 items-start text-xs bg-[var(--bg-subtle)] p-2.5 rounded-lg border" style={{ borderColor: 'var(--border-light)' }}>
+                      <div key={comm.id} className="flex gap-2.5 items-start text-xs bg-[var(--bg-secondary)] p-3 rounded-lg border border-[var(--border-color)]">
                         <Avatar name={commenter.name} initials={commenter.initials} color={commenter.color} size="xs" />
-                        <div className="flex-1">
-                          <div className="flex justify-between items-center mb-1">
-                            <span className="font-semibold" style={{ color: 'var(--text-primary)' }}>{commenter.name}</span>
-                            <span style={{ color: 'var(--text-tertiary)', fontSize: 10 }}>
-                              {new Date(comm.createdAt).toLocaleDateString()} {new Date(comm.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex justify-between items-center mb-0.5 gap-2">
+                            <span className="font-semibold text-[var(--text-primary)] truncate">{commenter.name}</span>
+                            <span className="text-[9px] text-[var(--text-tertiary)] shrink-0 font-medium">
+                              {new Date(comm.createdAt).toLocaleDateString()}
                             </span>
                           </div>
-                          <p style={{ color: 'var(--text-secondary)', lineHeight: 1.4 }}>{comm.text}</p>
+                          <p className="text-[var(--text-secondary)] whitespace-pre-wrap break-words">{comm.text}</p>
                         </div>
                       </div>
                     );
@@ -538,67 +527,69 @@ export default function TasksPage() {
             </div>
 
             {/* Task History Section */}
-            <div className="border-t pt-6" style={{ borderColor: 'var(--border-color)' }}>
-              <h4 className="text-sm font-semibold mb-4 flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
-                <Clock size={14} /> Task History
+            <div className="border-t pt-5 border-[var(--border-color)]">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-[var(--text-secondary)] mb-3 flex items-center gap-1.5">
+                <Clock size={12} /> Task History
               </h4>
-              <div className="space-y-3 max-h-40 overflow-y-auto pr-1">
-                {(!activityFeed[workspaceId] || activityFeed[workspaceId].length === 0) ? (
-                  <p className="text-xs text-center py-4" style={{ color: 'var(--text-tertiary)' }}>No history logs recorded.</p>
-                ) : (
-                  (() => {
-                    const taskHistory = (activityFeed[workspaceId] || []).filter(act => 
-                      act.details?.toLowerCase().includes(selectedTask.title.toLowerCase())
-                    );
-                    if (taskHistory.length === 0) {
-                      return <p className="text-xs text-center py-4" style={{ color: 'var(--text-tertiary)' }}>No history logs recorded for this task.</p>;
-                    }
-                    return taskHistory.map((act, index) => {
-                      const actorName = act.user_id === user?.id ? 'You' : (members.find(m => m.id === act.user_id)?.name || 'Someone');
-                      return (
-                        <div key={act.id || index} className="text-[11px] flex items-center justify-between gap-4 py-1.5 border-b border-[var(--border-light)] last:border-b-0">
-                          <span style={{ color: 'var(--text-secondary)' }}>
-                            <span className="font-semibold" style={{ color: 'var(--text-primary)' }}>{actorName}</span>{' '}
-                            {act.details}
-                          </span>
-                          <span className="text-[10px] shrink-0" style={{ color: 'var(--text-tertiary)' }}>
-                            {new Date(act.created_at).toLocaleDateString()} {new Date(act.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                          </span>
-                        </div>
-                      );
-                    });
-                  })()
-                )}
+              <div className="space-y-2.5 max-h-36 overflow-y-auto pr-1">
+                {(() => {
+                  const taskHistory = (activityFeed[workspaceId] || []).filter(act => 
+                    act.details?.toLowerCase().includes(selectedTask.title.toLowerCase())
+                  );
+                  if (taskHistory.length === 0) {
+                    return <p className="text-[10px] text-center py-2 text-[var(--text-tertiary)]">No logs recorded.</p>;
+                  }
+                  return (
+                    <div className="relative pl-3 border-l border-[var(--border-color)] ml-1.5 space-y-2.5 py-0.5">
+                      {taskHistory.map((act, idx) => {
+                        const actorName = act.user_id === user?.id ? 'You' : (members.find(m => m.id === act.user_id)?.name || 'Someone');
+                        return (
+                          <div key={act.id || idx} className="text-[10px] relative flex items-start justify-between gap-4">
+                            <span className="absolute -left-[16.5px] top-1.5 w-1.5 h-1.5 rounded-full bg-[var(--bg-primary)] border border-[var(--accent)] shrink-0" />
+                            <span className="text-[var(--text-secondary)]">
+                              <span className="font-semibold text-[var(--text-primary)]">{actorName}</span>{' '}
+                              {act.details}
+                            </span>
+                            <span className="text-[9px] text-[var(--text-tertiary)] shrink-0 font-medium whitespace-nowrap">
+                              {new Date(act.created_at).toLocaleDateString()}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
               </div>
             </div>
           </form>
         </Modal>
       )}
 
+      {/* New Task modal */}
       <Modal isOpen={showCreate} onClose={() => setShowCreate(false)} title="Create task">
-        <form onSubmit={createTask} className="space-y-5">
+        <form onSubmit={createTask} className="space-y-4">
           <Input
             label="Task title"
-            placeholder="What needs to be done?"
+            placeholder="Title of task"
             value={newTask.title}
             onChange={(e) => setNewTask({ ...newTask, title: e.target.value })}
             required
           />
-          <div className="space-y-2">
-            <label className="block text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>
+          <div className="space-y-1.5">
+            <label className="block text-xs font-semibold uppercase tracking-wider text-[var(--text-secondary)]">
               Description
             </label>
             <textarea
-              placeholder="Add more context…"
+              placeholder="Add more description details…"
               value={newTask.description}
               onChange={(e) => setNewTask({ ...newTask, description: e.target.value })}
               className="input-base resize-none"
-              style={{ height: 88 }}
+              style={{ height: 80 }}
             />
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <label className="block text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>
+            <div className="space-y-1.5">
+              <label className="block text-xs font-semibold uppercase tracking-wider text-[var(--text-secondary)]">
                 Assignee
               </label>
               <select
@@ -614,8 +605,8 @@ export default function TasksPage() {
                 ))}
               </select>
             </div>
-            <div className="space-y-2">
-              <label className="block text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>
+            <div className="space-y-1.5">
+              <label className="block text-xs font-semibold uppercase tracking-wider text-[var(--text-secondary)]">
                 Priority
               </label>
               <select
@@ -636,7 +627,7 @@ export default function TasksPage() {
             value={newTask.dueDate}
             onChange={(e) => setNewTask({ ...newTask, dueDate: e.target.value })}
           />
-          <div className="flex gap-3 pt-2">
+          <div className="flex gap-3 pt-3 border-t border-[var(--border-light)]">
             <Button variant="secondary" type="button" className="flex-1" onClick={() => setShowCreate(false)}>
               Cancel
             </Button>

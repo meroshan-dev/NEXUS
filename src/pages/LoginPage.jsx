@@ -43,175 +43,104 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex" style={{ background: 'var(--bg-app)' }}>
-      <div
-        className="hidden lg:flex flex-col justify-between w-[440px] xl:w-[480px] shrink-0 p-12 xl:p-14 relative overflow-hidden"
-        style={{ background: 'var(--gradient-brand)' }}
-      >
-        <div className="absolute inset-0 pointer-events-none overflow-hidden">
-          <motion.div
-            animate={{ x: [0, 40, -20, 0], y: [0, -30, 30, 0] }}
-            transition={{ duration: 22, repeat: Infinity, ease: 'easeInOut' }}
-            className="absolute -top-24 -left-24 w-80 h-80 rounded-full opacity-25 blur-3xl"
-            style={{ background: '#a5b4fc' }}
-          />
-          <motion.div
-            animate={{ x: [0, -30, 30, 0], y: [0, 40, -20, 0] }}
-            transition={{ duration: 28, repeat: Infinity, ease: 'easeInOut' }}
-            className="absolute bottom-0 right-0 w-72 h-72 rounded-full opacity-20 blur-3xl"
-            style={{ background: '#c4b5fd' }}
-          />
-          <div
-            className="absolute inset-0 opacity-[0.04]"
-            style={{
-              backgroundImage: `linear-gradient(rgba(255,255,255,0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.5) 1px, transparent 1px)`,
-              backgroundSize: '40px 40px',
-            }}
-          />
-        </div>
-
-        <div className="relative flex items-center gap-3">
-          <div
-            className="w-10 h-10 rounded-[var(--radius-md)] flex items-center justify-center"
-            style={{ background: 'rgba(255,255,255,0.12)' }}
-          >
-            <Sparkles size={20} className="text-white" />
-          </div>
-          <span className="text-lg font-semibold text-white tracking-tight">Nexus</span>
-        </div>
-
-        <div className="relative space-y-10">
-          <div className="space-y-4">
-            <h1 className="text-[2.5rem] font-semibold text-white leading-[1.15] tracking-tight">
-              Your team's
-              <br />
-              command center
-            </h1>
-            <p className="text-[15px] text-white/70 leading-relaxed max-w-xs">
-              Chat, tasks, and files — everything your team needs in one calm workspace.
-            </p>
-          </div>
-
-          <div
-            className="rounded-[var(--radius-lg)] p-6"
-            style={{
-              background: 'rgba(255,255,255,0.08)',
-              backdropFilter: 'blur(16px)',
-              border: '1px solid rgba(255,255,255,0.12)',
-            }}
-          >
-            <p className="text-sm text-white/80 leading-relaxed mb-4">
-              "Nexus replaced three tools for us. Our team collaboration has never been smoother."
-            </p>
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center text-white text-xs font-semibold">
-                SC
-              </div>
-              <div>
-                <p className="text-sm font-medium text-white">Sarah Chen</p>
-                <p className="text-xs text-white/50">Engineering Lead</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="relative" />
+    <div className="min-h-screen flex flex-col justify-center items-center px-4 relative overflow-hidden" style={{ background: 'var(--bg-app)' }}>
+      {/* Subtle Background Radial Gradients */}
+      <div className="absolute top-[-30%] left-[-10%] w-[60%] h-[60%] rounded-full bg-indigo-500/5 blur-[120px] pointer-events-none -z-10" />
+      <div className="absolute bottom-[-30%] right-[-10%] w-[60%] h-[60%] rounded-full bg-purple-500/5 blur-[120px] pointer-events-none -z-10" />
+      
+      <div className="absolute top-6 right-6 z-30">
+        <ThemeToggle />
       </div>
 
-      <div
-        className="flex-1 flex flex-col items-center justify-center px-6 py-12 relative"
-        style={{ minHeight: '100vh' }}
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+        className="w-full max-w-[420px] flex flex-col"
       >
-        <div className="absolute top-6 right-6">
-          <ThemeToggle />
-        </div>
-
-        <div className="lg:hidden mb-10 flex items-center gap-3">
+        {/* Brand Logo */}
+        <div className="flex items-center gap-2 justify-center mb-8">
           <div
-            className="w-10 h-10 rounded-[var(--radius-md)] flex items-center justify-center"
-            style={{ background: 'var(--gradient-brand)' }}
+            className="w-9 h-9 rounded-lg flex items-center justify-center border border-[var(--border-color)] bg-[var(--bg-secondary)]"
           >
-            <Sparkles size={18} className="text-white" />
+            <Sparkles size={16} className="text-[var(--accent)]" />
           </div>
-          <span className="text-xl font-semibold tracking-tight gradient-text">Nexus</span>
+          <span className="text-lg font-bold tracking-tight text-[var(--text-primary)]">
+            Nexus
+          </span>
         </div>
 
-        <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-          className="w-full max-w-[400px]"
+        {/* Login Card Container */}
+        <div 
+          className="p-8 sm:p-9 rounded-[var(--radius-xl)] border"
+          style={{
+            background: 'var(--bg-primary)',
+            borderColor: 'var(--border-color)',
+            boxShadow: 'var(--shadow-lg)'
+          }}
         >
-          <div className="mb-8">
-            <h2 className="text-h2 mb-2" style={{ color: 'var(--text-primary)' }}>
+          <div className="mb-6 text-center">
+            <h2 className="text-xl font-bold tracking-tight text-[var(--text-primary)]">
               {isSignUp ? 'Create your account' : 'Welcome back'}
             </h2>
-            <p className="text-body-sm" style={{ color: 'var(--text-secondary)' }}>
-              {isSignUp ? 'Start collaborating with your team today.' : 'Sign in to continue to Nexus.'}
+            <p className="text-xs text-[var(--text-secondary)] mt-1.5 font-normal">
+              {isSignUp ? 'Start collaborating with your team today.' : 'Sign in to your Nexus workspace.'}
             </p>
+            
             {isDemo && (
               <div
-                className="mt-5 flex items-center gap-2 px-4 py-3 rounded-[var(--radius-md)] text-sm font-medium"
+                className="mt-4 flex items-center gap-2 px-3 py-2 rounded-lg text-[11px] font-medium border"
                 style={{
-                  background: 'var(--bg-active)',
-                  border: '1px solid var(--border-focus)',
+                  background: 'var(--accent-muted)',
+                  borderColor: 'var(--border-focus)',
                   color: 'var(--text-brand)',
                 }}
               >
-                <Sparkles size={14} />
-                Demo mode — enter any email to explore
+                <Sparkles size={11} className="animate-pulse shrink-0" />
+                <span>Demo mode — enter any email to explore</span>
               </div>
             )}
           </div>
 
           {error && (
             <motion.div
-              initial={{ opacity: 0, y: -6 }}
+              initial={{ opacity: 0, y: -4 }}
               animate={{ opacity: 1, y: 0 }}
-              className="mb-5 px-4 py-3 rounded-[var(--radius-md)] text-sm"
+              className="mb-4 px-3.5 py-2.5 rounded-lg text-xs font-medium border"
               style={{
                 color: 'var(--color-danger)',
-                background: 'rgba(239,68,68,0.08)',
-                border: '1px solid rgba(239,68,68,0.2)',
+                background: 'rgba(239,68,68,0.05)',
+                borderColor: 'rgba(239,68,68,0.15)',
               }}
             >
               {error}
             </motion.div>
           )}
 
-          <button
+          {/* Google Button */}
+          <Button
+            variant="secondary"
             onClick={handleGoogle}
-            className="w-full flex items-center justify-center gap-3 h-11 rounded-[var(--radius-md)] text-sm font-medium transition-all mb-5 cursor-pointer"
-            style={{
-              background: 'var(--bg-elevated)',
-              border: '1px solid var(--border-color)',
-              color: 'var(--text-primary)',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.borderColor = 'var(--border-focus)';
-              e.currentTarget.style.background = 'var(--bg-hover)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.borderColor = 'var(--border-color)';
-              e.currentTarget.style.background = 'var(--bg-elevated)';
-            }}
+            className="w-full flex items-center justify-center gap-2.5 h-10 cursor-pointer mb-5"
           >
-            <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden>
+            <svg width="15" height="15" viewBox="0 0 24 24" aria-hidden="true" className="shrink-0">
               <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" />
               <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
               <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
               <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
             </svg>
-            Continue with Google
-          </button>
+            <span className="font-medium text-xs">Continue with Google</span>
+          </Button>
 
+          {/* Separator */}
           <div className="flex items-center gap-3 mb-5">
             <div className="flex-1 h-px" style={{ background: 'var(--border-color)' }} />
-            <span className="text-caption">or continue with email</span>
+            <span className="text-[10px] font-medium text-[var(--text-tertiary)] uppercase tracking-wider">or email</span>
             <div className="flex-1 h-px" style={{ background: 'var(--border-color)' }} />
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Form */}
+          <form onSubmit={handleSubmit} className="flex flex-col space-y-4">
             {isSignUp && (
               <Input
                 label="Full name"
@@ -226,7 +155,7 @@ export default function LoginPage() {
               label="Email address"
               type="email"
               icon={Mail}
-              placeholder="you@company.com"
+              placeholder="name@company.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
@@ -242,19 +171,29 @@ export default function LoginPage() {
             />
 
             {!isSignUp && (
-              <div className="flex justify-end -mt-1">
-                <button type="button" className="text-sm font-medium cursor-pointer" style={{ color: 'var(--text-brand)' }}>
+              <div className="flex justify-end">
+                <button 
+                  type="button" 
+                  className="text-xs font-medium hover:underline cursor-pointer" 
+                  style={{ color: 'var(--accent)' }}
+                >
                   Forgot password?
                 </button>
               </div>
             )}
 
-            <Button type="submit" loading={loading} size="lg" iconRight={ArrowRight} className="w-full mt-2">
-              {isSignUp ? 'Create account' : 'Sign in'}
+            <Button
+              type="submit"
+              loading={loading}
+              className="w-full flex items-center justify-center gap-2 h-10 text-xs font-semibold tracking-wide text-white hover:opacity-95 shadow-md cursor-pointer transition-all"
+            >
+              <span>{isSignUp ? 'Create Account' : 'Sign In'}</span>
+              <ArrowRight size={14} />
             </Button>
           </form>
 
-          <p className="text-center text-body-sm mt-8" style={{ color: 'var(--text-secondary)' }}>
+          {/* Toggle Signin/Signup */}
+          <p className="text-center text-xs mt-6" style={{ color: 'var(--text-secondary)' }}>
             {isSignUp ? 'Already have an account? ' : "Don't have an account? "}
             <button
               type="button"
@@ -262,14 +201,14 @@ export default function LoginPage() {
                 setIsSignUp(!isSignUp);
                 setError('');
               }}
-              className="font-semibold cursor-pointer"
-              style={{ color: 'var(--text-brand)' }}
+              className="font-semibold hover:underline cursor-pointer"
+              style={{ color: 'var(--accent)' }}
             >
               {isSignUp ? 'Sign in' : 'Sign up free'}
             </button>
           </p>
-        </motion.div>
-      </div>
+        </div>
+      </motion.div>
     </div>
   );
 }

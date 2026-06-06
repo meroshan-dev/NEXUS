@@ -4,20 +4,45 @@ import { useTheme } from '../../context/ThemeContext';
 
 export default function ThemeToggle({ className = '' }) {
   const { theme, toggleTheme } = useTheme();
+
   return (
-    <motion.button
-      whileHover={{ scale: 1.04 }}
-      whileTap={{ scale: 0.96 }}
+    <div
       onClick={toggleTheme}
-      className={`w-9 h-9 rounded-[var(--radius-md)] flex items-center justify-center transition-colors cursor-pointer ${className}`}
-      style={{ background: 'var(--bg-tertiary)', color: 'var(--text-secondary)' }}
+      className={`relative w-15 h-7.5 rounded-full p-0.5 bg-[var(--bg-secondary)] border border-[var(--border-color)] flex items-center justify-between cursor-pointer select-none ${className}`}
+      style={{ minWidth: '60px' }}
       aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
-      onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--text-primary)')}
-      onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-secondary)')}
     >
-      <motion.div animate={{ rotate: theme === 'dark' ? 0 : 180 }} transition={{ duration: 0.25 }}>
-        {theme === 'dark' ? <Sun size={16} strokeWidth={1.75} /> : <Moon size={16} strokeWidth={1.75} />}
-      </motion.div>
-    </motion.button>
+      {/* Sliding indicator */}
+      <motion.div
+        layout
+        transition={{ type: 'spring', stiffness: 450, damping: 30 }}
+        className="absolute top-0.5 bottom-0.5 w-6.5 h-6.5 rounded-full z-0 border"
+        style={{
+          left: theme === 'dark' ? '2px' : '30px',
+          background: 'var(--bg-primary)',
+          borderColor: 'var(--border-color)',
+          boxShadow: 'var(--shadow-sm)',
+        }}
+      />
+      
+      {/* Moon Icon (Left) */}
+      <div className="z-10 pl-1.5 flex items-center justify-center">
+        <Moon
+          size={12}
+          strokeWidth={2}
+          className={`transition-colors duration-200 ${theme === 'dark' ? 'text-[var(--text-primary)]' : 'text-[var(--text-tertiary)]/50'}`}
+        />
+      </div>
+
+      {/* Sun Icon (Right) */}
+      <div className="z-10 pr-1.5 flex items-center justify-center">
+        <Sun
+          size={12}
+          strokeWidth={2}
+          className={`transition-colors duration-200 ${theme === 'light' ? 'text-[var(--text-primary)]' : 'text-[var(--text-tertiary)]/50'}`}
+        />
+      </div>
+    </div>
   );
 }
+

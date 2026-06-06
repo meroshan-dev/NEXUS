@@ -1,11 +1,11 @@
 export default function Badge({ children, variant = 'default', dot, className = '' }) {
   const variants = {
-    default: 'bg-[var(--bg-tertiary)] text-[var(--text-secondary)]',
-    brand:   'bg-brand-50 text-brand-700 [html[data-theme=dark]_&]:bg-brand-900/30 [html[data-theme=dark]_&]:text-brand-300',
-    success: 'bg-emerald-50 text-emerald-700 [html[data-theme=dark]_&]:bg-emerald-900/30 [html[data-theme=dark]_&]:text-emerald-400',
-    warning: 'bg-amber-50 text-amber-700 [html[data-theme=dark]_&]:bg-amber-900/30 [html[data-theme=dark]_&]:text-amber-400',
-    danger:  'bg-red-50 text-red-700 [html[data-theme=dark]_&]:bg-red-900/30 [html[data-theme=dark]_&]:text-red-400',
-    info:    'bg-blue-50 text-blue-700 [html[data-theme=dark]_&]:bg-blue-900/30 [html[data-theme=dark]_&]:text-blue-400',
+    default: 'bg-[var(--bg-secondary)] text-[var(--text-secondary)] border border-[var(--border-color)]',
+    brand:   'bg-[var(--accent-muted)] text-[var(--text-brand)] border border-[var(--border-focus)]',
+    success: 'bg-[rgba(16,185,129,0.06)] text-[var(--color-success)] border border-[rgba(16,185,129,0.15)]',
+    warning: 'bg-[rgba(245,158,11,0.06)] text-[var(--color-warning)] border border-[rgba(245,158,11,0.15)]',
+    danger:  'bg-[rgba(239,68,68,0.06)] text-[var(--color-danger)] border border-[rgba(239,68,68,0.15)]',
+    info:    'bg-[rgba(59,130,246,0.06)] text-[var(--color-info)] border border-[rgba(59,130,246,0.15)]',
   };
   const dotColors = {
     default: 'bg-surface-400', brand: 'bg-brand-500', success: 'bg-success',

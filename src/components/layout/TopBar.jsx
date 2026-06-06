@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Bell, Search, Menu, Check, Trash2, BellOff } from 'lucide-react';
+import { Bell, Search, Menu, Check, BellOff } from 'lucide-react';
 import ThemeToggle from '../ui/ThemeToggle';
 import Avatar from '../ui/Avatar';
 import { useAuth } from '../../context/AuthContext';
@@ -29,55 +29,35 @@ export default function TopBar({ onMobileMenuToggle }) {
 
   return (
     <header
-      className="glass-strong h-[var(--topbar-height)] flex items-center justify-between px-4 sm:px-6 sticky top-0 z-30 shrink-0"
-      style={{ borderBottom: '1px solid var(--border-color)' }}
+      className="h-[var(--topbar-height)] flex items-center justify-between px-4 sm:px-6 sticky top-0 z-30 shrink-0"
+      style={{ borderBottom: '1px solid var(--border-color)', background: 'var(--bg-primary)' }}
     >
       <div className="flex items-center gap-2">
         <button
           onClick={onMobileMenuToggle}
-          className="lg:hidden w-9 h-9 rounded-[var(--radius-md)] flex items-center justify-center transition-colors cursor-pointer"
-          style={{ color: 'var(--text-secondary)', background: 'var(--bg-tertiary)' }}
+          className="lg:hidden w-8.5 h-8.5 rounded-[var(--radius-md)] flex items-center justify-center transition-colors cursor-pointer"
+          style={{ color: 'var(--text-secondary)', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)' }}
           aria-label="Open menu"
         >
-          <Menu size={18} strokeWidth={1.75} />
+          <Menu size={16} strokeWidth={1.75} />
         </button>
       </div>
 
       <div className="hidden lg:flex flex-1 max-w-sm min-w-0 mx-4 xl:mx-8">
         <div className="relative w-full">
           <Search
-            size={15}
-            strokeWidth={1.75}
+            size={14}
+            strokeWidth={2}
             className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none"
             style={{ color: 'var(--text-tertiary)' }}
           />
           <input
             type="text"
-            placeholder="Search…"
-            className="w-full pl-10 pr-14 py-2.5 text-sm rounded-[var(--radius-md)] transition-all outline-none"
-            style={{
-              background: 'var(--bg-tertiary)',
-              border: '1px solid transparent',
-              color: 'var(--text-primary)',
-            }}
-            onFocus={(e) => {
-              e.target.style.background = 'var(--bg-primary)';
-              e.target.style.borderColor = 'var(--border-focus)';
-              e.target.style.boxShadow = '0 0 0 3px var(--accent-muted)';
-            }}
-            onBlur={(e) => {
-              e.target.style.background = 'var(--bg-tertiary)';
-              e.target.style.borderColor = 'transparent';
-              e.target.style.boxShadow = 'none';
-            }}
+            placeholder="Search"
+            className="w-full search-capsule"
           />
           <kbd
-            className="absolute right-3 top-1/2 -translate-y-1/2 hidden lg:flex items-center px-1.5 py-0.5 rounded-[6px] text-[10px] font-mono"
-            style={{
-              background: 'var(--bg-elevated)',
-              border: '1px solid var(--border-color)',
-              color: 'var(--text-tertiary)',
-            }}
+            className="absolute right-3.5 top-1/2 -translate-y-1/2 hidden lg:flex items-center px-1.5 py-0.5 rounded-[5px] text-[10px] font-mono border border-[var(--border-color)] bg-[var(--bg-secondary)] text-[var(--text-tertiary)]"
           >
             ⌘K
           </kbd>
@@ -90,16 +70,16 @@ export default function TopBar({ onMobileMenuToggle }) {
         <div className="relative">
           <button
             onClick={() => setShowNotifications(!showNotifications)}
-            className="relative w-9 h-9 rounded-[var(--radius-md)] flex items-center justify-center transition-colors cursor-pointer"
-            style={{ background: 'var(--bg-tertiary)', color: 'var(--text-secondary)' }}
+            className="relative w-8.5 h-8.5 rounded-[var(--radius-md)] flex items-center justify-center transition-colors cursor-pointer"
+            style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', color: 'var(--text-secondary)' }}
             onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--text-primary)')}
             onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-secondary)')}
             aria-label="Notifications"
           >
-            <Bell size={16} strokeWidth={1.75} />
+            <Bell size={15} strokeWidth={1.75} />
             {unreadCount > 0 && (
               <span
-                className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full flex items-center justify-center text-[10px] font-bold text-white"
+                className="absolute -top-1 -right-1 min-w-[16px] h-[16px] px-1 rounded-full flex items-center justify-center text-[9px] font-bold text-white"
                 style={{ background: 'var(--color-danger)' }}
               >
                 {unreadCount}
@@ -111,9 +91,9 @@ export default function TopBar({ onMobileMenuToggle }) {
             <>
               <div className="fixed inset-0 z-40" onClick={() => setShowNotifications(false)} />
               <div
-                className="absolute right-0 mt-2 w-80 rounded-xl border z-50 flex flex-col"
+                className="absolute right-0 mt-2 w-80 rounded-[var(--radius-lg)] border z-50 flex flex-col"
                 style={{
-                  background: 'var(--bg-elevated)',
+                  background: 'var(--bg-primary)',
                   borderColor: 'var(--border-color)',
                   boxShadow: 'var(--shadow-lg)',
                   top: '100%',

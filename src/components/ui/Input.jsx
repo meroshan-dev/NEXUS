@@ -16,7 +16,7 @@ export default function Input({
   return (
     <div className={`space-y-2 ${className}`}>
       {label && (
-        <label className="block text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>
+        <label className="block text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>
           {label}
         </label>
       )}

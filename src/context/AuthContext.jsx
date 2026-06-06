@@ -1,13 +1,19 @@
+/* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useState, useEffect } from 'react';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
-import { currentUser } from '../data/mockData';
 
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState(() => {
+    if (!isSupabaseConfigured) {
+      const stored = localStorage.getItem('nexus_demo_session');
+      return stored ? JSON.parse(stored) : null;
+    }
+    return null;
+  });
   const [session, setSession] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => !!isSupabaseConfigured);
 
   useEffect(() => {
     const syncProfile = async (u) => {
@@ -98,12 +104,7 @@ export function AuthProvider({ children }) {
 
       return () => subscription.unsubscribe();
     } else {
-      // Demo mode — check localStorage for mock session
-      const stored = localStorage.getItem('nexus_demo_session');
-      if (stored) {
-        setUser(JSON.parse(stored));
-      }
-      setLoading(false);
+      // Demo mode states are initialized in useState
     }
   }, []);
 

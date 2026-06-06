@@ -3,24 +3,25 @@ import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   LayoutDashboard, CheckSquare, FileText, User, LogOut, Sparkles,
-  ChevronLeft, ChevronRight, ChevronDown, Hash, Home, Plus,
+  ChevronLeft, ChevronRight, ChevronDown, Home, Plus,
+  FolderKanban, File, MessageSquare, Video, Users, Settings
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useWorkspace } from '../../context/WorkspaceContext';
 import Avatar from '../ui/Avatar';
 
 const navItemClass = (collapsed, isActive) => `
-  relative flex items-center gap-3 h-11 rounded-[var(--radius-md)] text-[13px]
-  transition-colors duration-150
-  ${collapsed ? 'justify-center px-0 w-11 mx-auto' : 'px-3.5 w-full min-w-0'}
+  relative flex items-center gap-3 h-9.5 rounded-[var(--radius-md)] text-[13px]
+  transition-all duration-150
+  ${collapsed ? 'justify-center px-0 w-9.5 mx-auto' : 'px-3 w-full min-w-0'}
   ${isActive
-    ? 'bg-[var(--bg-active)] text-[var(--text-brand)] font-medium'
+    ? 'bg-[var(--bg-active)] text-[var(--text-primary)] font-medium'
     : 'text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)]'}
 `;
 
 export default function Sidebar({ collapsed, onToggle }) {
   const { user, signOut } = useAuth();
-  const { workspaces } = useWorkspace();
+  const { workspaces, activeCalls = {} } = useWorkspace();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -30,6 +31,13 @@ export default function Sidebar({ collapsed, onToggle }) {
   const match = location.pathname.match(/^\/workspace\/([^/]+)/);
   const activeWorkspaceId = match ? match[1] : null;
   const activeWorkspace = workspaces.find((w) => w.id === activeWorkspaceId);
+
+  const isTabActive = (tabName) => {
+    if (!activeWorkspaceId) return false;
+    const searchParams = new URLSearchParams(location.search);
+    const tab = searchParams.get('tab') || 'overview';
+    return location.pathname === `/workspace/${activeWorkspaceId}` && tab === tabName;
+  };
 
   useEffect(() => {
     function handleClickOutside(event) {
@@ -41,15 +49,15 @@ export default function Sidebar({ collapsed, onToggle }) {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const W = collapsed ? 76 : 280;
+  const W = collapsed ? 72 : 260;
 
   return (
     <motion.aside
       animate={{ width: W, minWidth: W, maxWidth: W }}
-      transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+      transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
       className="hidden lg:flex flex-col h-screen sticky top-0 shrink-0 overflow-hidden"
       style={{
-        background: 'var(--bg-elevated)',
+        background: 'var(--bg-primary)',
         borderRight: '1px solid var(--border-color)',
         zIndex: 40,
       }}
@@ -183,24 +191,29 @@ export default function Sidebar({ collapsed, onToggle }) {
 
           {activeWorkspace ? (
             <>
-              <NavLink to={`/workspace/${activeWorkspaceId}`} end className={({ isActive }) => navItemClass(collapsed, isActive)}>
-                <Hash size={17} strokeWidth={1.75} className="shrink-0" />
-                {!collapsed && 'General'}
-              </NavLink>
-              <NavLink
-                to={`/workspace/${activeWorkspaceId}/tasks`}
-                className={({ isActive }) => navItemClass(collapsed, isActive)}
-              >
-                <CheckSquare size={17} strokeWidth={1.75} className="shrink-0" />
-                {!collapsed && 'Tasks'}
-              </NavLink>
-              <NavLink
-                to={`/workspace/${activeWorkspaceId}/files`}
-                className={({ isActive }) => navItemClass(collapsed, isActive)}
-              >
-                <FileText size={17} strokeWidth={1.75} className="shrink-0" />
-                {!collapsed && 'Files'}
-              </NavLink>
+              {[
+                { tab: 'overview', icon: FolderKanban, label: 'Overview' },
+                { tab: 'tasks', icon: CheckSquare, label: 'Tasks' },
+                { tab: 'files', icon: FileText, label: 'Files' },
+                { tab: 'notes', icon: File, label: 'Notes' },
+                { tab: 'chat', icon: MessageSquare, label: 'Chat' },
+                { tab: 'meetings', icon: Video, label: 'Meetings' },
+                { tab: 'members', icon: Users, label: 'Members' },
+                { tab: 'settings', icon: Settings, label: 'Settings' }
+              ].map(item => {
+                const isActive = isTabActive(item.tab);
+                const Icon = item.icon;
+                return (
+                  <NavLink
+                    key={item.tab}
+                    to={`/workspace/${activeWorkspaceId}?tab=${item.tab}`}
+                    className={navItemClass(collapsed, isActive)}
+                  >
+                    <Icon size={17} strokeWidth={1.75} className="shrink-0" />
+                    {!collapsed && item.label}
+                  </NavLink>
+                );
+              })}
               <div className="pt-4 mt-4" style={{ borderTop: '1px solid var(--border-light)' }}>
                 <NavLink to="/dashboard" className={({ isActive }) => navItemClass(collapsed, isActive)}>
                   <Home size={17} strokeWidth={1.75} className="shrink-0" />
@@ -238,18 +251,25 @@ export default function Sidebar({ collapsed, onToggle }) {
             <div className="space-y-0.5">
               {workspaces.map((ws) => {
                 const active = ws.id === activeWorkspaceId;
+                const hasActiveCall = !!activeCalls[ws.id];
                 return (
                   <NavLink
                     key={ws.id}
-                    to={`/workspace/${ws.id}`}
-                    className={`flex items-center gap-2.5 h-10 px-3.5 rounded-[var(--radius-md)] text-[13px] transition-colors duration-150 min-w-0 ${
+                    to={`/workspace/${ws.id}?tab=overview`}
+                    className={`relative flex items-center gap-2.5 h-9 px-3 rounded-[var(--radius-md)] text-[13px] transition-all duration-150 min-w-0 ${
                       active
-                        ? 'bg-[var(--bg-active)] text-[var(--text-brand)] font-medium'
+                        ? 'bg-[var(--bg-active)] text-[var(--text-primary)] font-medium'
                         : 'text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)]'
                     }`}
                   >
                     <span className="text-base shrink-0">{ws.icon}</span>
-                    <span className="text-ellipsis flex-1">{ws.name}</span>
+                    <span className="text-ellipsis flex-1 truncate">{ws.name}</span>
+                    {hasActiveCall && (
+                      <span className="flex h-2 w-2 relative shrink-0">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                      </span>
+                    )}
                   </NavLink>
                 );
               })}

@@ -1,7 +1,7 @@
 const statusColors = {
-  online: 'bg-success',
-  away: 'bg-warning',
-  offline: 'bg-surface-300',
+  online: 'bg-emerald-500',
+  away: 'bg-amber-500',
+  offline: 'bg-zinc-400 dark:bg-zinc-600',
 };
 
 const sizeMap = {

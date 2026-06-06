@@ -15,16 +15,16 @@ export default function Modal({ isOpen, onClose, title, children, size = 'md' })
             transition={{ duration: 0.15 }}
             onClick={onClose}
             className="absolute inset-0"
-            style={{ background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(8px)' }}
+            style={{ background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(4px)' }}
           />
           <motion.div
-            initial={{ opacity: 0, scale: 0.98, y: 10 }}
+            initial={{ opacity: 0, scale: 0.99, y: 8 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.98, y: 10 }}
-            transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+            exit={{ opacity: 0, scale: 0.99, y: 8 }}
+            transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
             className={`relative w-full ${sizes[size]} overflow-hidden`}
             style={{
-              background: 'var(--bg-elevated)',
+              background: 'var(--bg-primary)',
               border: '1px solid var(--border-color)',
               borderRadius: 'var(--radius-xl)',
               boxShadow: 'var(--shadow-xl)',

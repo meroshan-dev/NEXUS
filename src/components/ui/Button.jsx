@@ -1,18 +1,18 @@
 import { motion } from 'framer-motion';
 
 const variants = {
-  primary: 'bg-brand-600 hover:bg-brand-700 text-white shadow-sm',
+  primary: 'bg-[var(--accent)] hover:opacity-95 text-white shadow-sm',
   secondary:
-    'border border-[var(--border-color)] bg-[var(--bg-elevated)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--border-focus)] hover:bg-[var(--bg-hover)]',
+    'border border-[var(--border-color)] bg-[var(--bg-primary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--border-focus)] hover:bg-[var(--bg-hover)]',
   ghost: 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)]',
-  danger: 'bg-danger hover:bg-red-600 text-white',
-  success: 'bg-success hover:bg-emerald-600 text-white',
+  danger: 'bg-[var(--color-danger)] hover:opacity-95 text-white shadow-sm',
+  success: 'bg-[var(--color-success)] hover:opacity-95 text-white shadow-sm',
 };
 
 const sizes = {
-  xs: 'h-7 px-3 text-xs rounded-[var(--radius-sm)] gap-1.5',
-  sm: 'h-8 px-3.5 text-sm rounded-[var(--radius-sm)] gap-1.5',
-  md: 'h-9 px-4 text-sm rounded-[var(--radius-md)] gap-2',
+  xs: 'h-7.5 px-2.5 text-xs rounded-[var(--radius-sm)] gap-1.5',
+  sm: 'h-8.5 px-3.5 text-xs rounded-[var(--radius-md)] gap-1.5',
+  md: 'h-9.5 px-4 text-sm rounded-[var(--radius-md)] gap-2',
   lg: 'h-11 px-5 text-sm rounded-[var(--radius-md)] gap-2',
 };
 
