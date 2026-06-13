@@ -4,20 +4,18 @@ import { createContext, useContext, useState, useEffect } from 'react';
 const ThemeContext = createContext(null);
 
 export function ThemeProvider({ children }) {
-  const [theme, setTheme] = useState(() => {
-    const stored = localStorage.getItem('nexus_theme');
-    if (stored) return stored;
-    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-  });
+  // Force dark theme for liquid glass design
+  const [theme] = useState('dark');
 
   useEffect(() => {
     const root = document.documentElement;
-    root.setAttribute('data-theme', theme);
-    root.classList.add('theme-transition');
-    localStorage.setItem('nexus_theme', theme);
-  }, [theme]);
+    root.setAttribute('data-theme', 'dark');
+    localStorage.setItem('nexus_theme', 'dark');
+  }, []);
 
-  const toggleTheme = () => setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
+  const toggleTheme = () => {
+    // No-op: Liquid glass design is dark-mode only
+  };
 
   return (
     <ThemeContext.Provider value={{ theme, toggleTheme }}>

@@ -623,27 +623,27 @@ export default function WorkspacePage() {
 
   return (
     <div className="page-stack pb-8 min-w-0">
-      {/* Workspace Header */}
+      {/* Workspace Header — Glass */}
       <header className="flex flex-col sm:flex-row sm:items-start justify-between gap-5 min-w-0">
         <div className="flex items-start gap-3.5 min-w-0 flex-1">
           <div
-            className="w-10 h-10 rounded-lg flex items-center justify-center text-lg shrink-0 border border-[var(--border-color)]"
-            style={{ background: workspace.color + '0c', color: workspace.color }}
+            className="w-10 h-10 rounded-[var(--radius-md)] flex items-center justify-center text-lg shrink-0"
+            style={{ background: workspace.color + '18', color: workspace.color, border: `1px solid ${workspace.color}25` }}
           >
             {workspace.icon}
           </div>
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2.5">
-              <h1 className="text-xl font-bold tracking-tight text-[var(--text-primary)]">
+              <h1 className="text-xl font-medium tracking-tight truncate" style={{ color: 'var(--text-primary)' }}>
                 {workspace.name}
               </h1>
               {activeCalls[workspace.id] && (
-                <span className="flex items-center gap-1 text-[9px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 uppercase animate-pulse">
-                  <Phone size={8} /> Huddle Live
+                <span className="flex items-center gap-1 text-[9px] font-medium px-2 py-0.5 rounded-[var(--radius-pill)] uppercase animate-pulse" style={{ background: 'rgba(16,185,129,0.15)', color: '#34d399', border: '1px solid rgba(16,185,129,0.25)' }}>
+                  <Phone size={8} strokeWidth={1.5} /> Huddle Live
                 </span>
               )}
             </div>
-            <p className="text-xs text-[var(--text-secondary)] mt-1">
+            <p className="text-xs mt-1 truncate" style={{ color: 'var(--text-secondary)' }}>
               {workspace.description || 'Collaborative workspace hub.'}
             </p>
           </div>
@@ -665,8 +665,8 @@ export default function WorkspacePage() {
         </div>
       </header>
 
-      {/* Tabs */}
-      <div className="flex gap-1 p-1 rounded-lg bg-[var(--bg-secondary)] border border-[var(--border-color)] self-start shadow-sm mb-6 overflow-x-auto no-scrollbar max-w-full">
+      {/* Tabs — Glass Tab Container */}
+      <div className="glass-tab-container flex gap-1 self-start mb-6 overflow-x-auto no-scrollbar max-w-full">
         {workspaceTabs.map((t) => {
           const active = activeTab === t.id;
           const Icon = t.icon;
@@ -674,27 +674,13 @@ export default function WorkspacePage() {
             <button
               key={t.id}
               onClick={() => handleTabChange(t.id)}
-              className="relative flex items-center gap-2 px-3.5 py-1.5 rounded-md text-xs font-semibold transition-colors duration-150 cursor-pointer shrink-0"
+              className={`relative flex items-center gap-2 px-3.5 py-1.5 text-xs font-medium transition-all duration-200 cursor-pointer shrink-0 ${active ? 'glass-tab-active' : 'rounded-[var(--radius-md)] hover:bg-[rgba(255,255,255,0.05)]'}`}
               style={{
                 color: active ? 'var(--text-primary)' : 'var(--text-secondary)',
-                zIndex: 1
               }}
             >
-              {active && (
-                <motion.div
-                  layoutId="activeTabGlow"
-                  className="absolute inset-0 rounded-md border"
-                  style={{
-                    background: 'var(--bg-primary)',
-                    borderColor: 'var(--border-color)',
-                    boxShadow: 'var(--shadow-xs)',
-                    zIndex: -1
-                  }}
-                  transition={{ type: 'spring', stiffness: 450, damping: 32 }}
-                />
-              )}
               <span className="relative z-10 flex items-center gap-1.5">
-                <Icon size={13} style={{ color: active ? 'var(--accent)' : 'var(--text-secondary)' }} />
+                <Icon size={13} strokeWidth={1.5} style={{ color: active ? 'var(--accent)' : 'var(--text-secondary)' }} />
                 {t.label}
               </span>
             </button>
@@ -712,31 +698,31 @@ export default function WorkspacePage() {
                 
                 {/* Active Workspace Huddle Box */}
                 {activeCalls[workspace.id] ? (
-                  <div className="p-5 rounded-xl border border-emerald-500/20 bg-emerald-500/5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 animate-pulse">
+                  <div className="glass-card p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 animate-pulse" style={{ borderColor: 'rgba(16,185,129,0.25)' }}>
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-emerald-500/10 text-emerald-500 flex items-center justify-center shrink-0">
-                        <PhoneCall size={18} />
+                      <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0" style={{ background: 'rgba(16,185,129,0.15)', color: '#34d399' }}>
+                        <PhoneCall size={18} strokeWidth={1.5} />
                       </div>
                       <div>
-                        <h3 className="text-sm font-semibold text-[var(--text-primary)]">Ongoing Workspace Huddle</h3>
-                        <p className="text-xs text-[var(--text-secondary)] mt-0.5">
+                        <h3 className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Ongoing Workspace Huddle</h3>
+                        <p className="text-xs mt-0.5" style={{ color: 'var(--text-secondary)' }}>
                           Started by {activeCalls[workspace.id].callerName} · {activeCalls[workspace.id].participants?.length || 1} participant(s) in call
                         </p>
                       </div>
                     </div>
-                    <Button variant="primary" size="sm" className="bg-emerald-500 hover:bg-emerald-600 text-white border-none shrink-0" onClick={() => joinCall(workspace.id)}>
+                    <Button variant="primary" size="sm" className="shrink-0" style={{ background: 'rgba(16,185,129,0.5)', borderColor: 'rgba(16,185,129,0.4)' }} onClick={() => joinCall(workspace.id)}>
                       Join Huddle
                     </Button>
                   </div>
                 ) : (
-                  <div className="p-5 rounded-xl border border-[var(--border-color)] bg-[var(--bg-primary)] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                  <div className="glass-card p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-[var(--bg-secondary)] text-[var(--text-secondary)] flex items-center justify-center shrink-0">
-                        <Phone size={16} />
+                      <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0" style={{ background: 'rgba(255,255,255,0.06)', color: 'var(--text-secondary)' }}>
+                        <Phone size={16} strokeWidth={1.5} />
                       </div>
                       <div>
-                        <h3 className="text-sm font-semibold text-[var(--text-primary)]">Workspace Voice Huddle</h3>
-                        <p className="text-xs text-[var(--text-secondary)] mt-0.5">Start a real-time call to discuss topics with your teammates.</p>
+                        <h3 className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Workspace Voice Huddle</h3>
+                        <p className="text-xs mt-0.5" style={{ color: 'var(--text-secondary)' }}>Start a real-time call to discuss topics with your teammates.</p>
                       </div>
                     </div>
                     <Button variant="secondary" size="sm" icon={PhoneCall} className="shrink-0" onClick={() => startCall(workspace.id)}>
@@ -745,94 +731,96 @@ export default function WorkspacePage() {
                   </div>
                 )}
 
-                {/* Workspace Quick Actions */}
-                <Card padding className="space-y-4">
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--text-secondary)]">Workspace Actions</h3>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
-                    <button onClick={() => setShowCreateTask(true)} className="flex flex-col items-center justify-center p-4 rounded-xl border border-[var(--border-color)] bg-[var(--bg-secondary)] hover:bg-[var(--bg-hover)] text-center gap-2 transition-all cursor-pointer">
-                      <CheckSquare size={16} className="text-[var(--text-tertiary)]" />
-                      <span className="text-[10px] font-semibold text-[var(--text-primary)]">Create Task</span>
-                    </button>
-                    <label className="flex flex-col items-center justify-center p-4 rounded-xl border border-[var(--border-color)] bg-[var(--bg-secondary)] hover:bg-[var(--bg-hover)] text-center gap-2 transition-all cursor-pointer">
-                      <input type="file" onChange={handleFileUpload} className="hidden" />
-                      <Upload size={16} className="text-[var(--text-tertiary)]" />
-                      <span className="text-[10px] font-semibold text-[var(--text-primary)]">Upload File</span>
-                    </label>
-                    <button onClick={createNewNote} className="flex flex-col items-center justify-center p-4 rounded-xl border border-[var(--border-color)] bg-[var(--bg-secondary)] hover:bg-[var(--bg-hover)] text-center gap-2 transition-all cursor-pointer">
-                      <File size={16} className="text-[var(--text-tertiary)]" />
-                      <span className="text-[10px] font-semibold text-[var(--text-primary)]">Create Note</span>
-                    </button>
-                    <button onClick={() => startCall(workspace.id)} className="flex flex-col items-center justify-center p-4 rounded-xl border border-[var(--border-color)] bg-[var(--bg-secondary)] hover:bg-[var(--bg-hover)] text-center gap-2 transition-all cursor-pointer">
-                      <PhoneCall size={16} className="text-[var(--text-tertiary)]" />
-                      <span className="text-[10px] font-semibold text-[var(--text-primary)]">Start Call</span>
-                    </button>
-                    <button onClick={() => { handleTabChange('meetings'); setShowScheduleMeeting(true); }} className="flex flex-col items-center justify-center p-4 rounded-xl border border-[var(--border-color)] bg-[var(--bg-secondary)] hover:bg-[var(--bg-hover)] text-center gap-2 transition-all cursor-pointer">
-                      <Calendar size={16} className="text-[var(--text-tertiary)]" />
-                      <span className="text-[10px] font-semibold text-[var(--text-primary)]">Schedule Meeting</span>
-                    </button>
-                    <button onClick={() => setShowInvite(true)} className="flex flex-col items-center justify-center p-4 rounded-xl border border-[var(--border-color)] bg-[var(--bg-secondary)] hover:bg-[var(--bg-hover)] text-center gap-2 transition-all cursor-pointer">
-                      <UserPlus size={16} className="text-[var(--text-tertiary)]" />
-                      <span className="text-[10px] font-semibold text-[var(--text-primary)]">Invite Member</span>
-                    </button>
+                {/* Workspace Quick Actions — flex-wrap with gap:12px */}
+                <Card padding={false} className="" style={{ padding: '20px 24px', boxSizing: 'border-box' }}>
+                  <h3 className="section-label" style={{ marginBottom: '12px' }}>Workspace Actions</h3>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
+                    {[
+                      { onClick: () => setShowCreateTask(true), icon: CheckSquare, label: 'Create Task' },
+                      { isUpload: true, icon: Upload, label: 'Upload File' },
+                      { onClick: createNewNote, icon: File, label: 'Create Note' },
+                      { onClick: () => startCall(workspace.id), icon: PhoneCall, label: 'Start Call' },
+                      { onClick: () => { handleTabChange('meetings'); setShowScheduleMeeting(true); }, icon: Calendar, label: 'Schedule Meeting' },
+                      { onClick: () => setShowInvite(true), icon: UserPlus, label: 'Invite Member' },
+                    ].map((action, i) => {
+                      const ActionIcon = action.icon;
+                      const content = (
+                        <>
+                          <div className="flex items-center justify-center" style={{ width: '36px', height: '36px', borderRadius: '12px', background: 'rgba(255,255,255,0.06)', border: '1px solid var(--glass-border-light)', flexShrink: 0 }}>
+                            <ActionIcon size={16} strokeWidth={1.5} className="icon-glow" style={{ color: 'var(--text-tertiary)' }} />
+                          </div>
+                          <span className="text-truncate" style={{ fontSize: '10px', fontWeight: 500, color: 'var(--text-primary)' }}>{action.label}</span>
+                        </>
+                      );
+                      if (action.isUpload) {
+                        return (
+                          <label key={i} style={{ flex: '1 1 120px', minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '16px 8px', borderRadius: '16px', textAlign: 'center', gap: '8px', background: 'rgba(255,255,255,0.02)', border: '1px solid var(--glass-border-light)', cursor: 'pointer', boxSizing: 'border-box', overflow: 'hidden' }}>
+                            <input type="file" onChange={handleFileUpload} className="hidden" />
+                            {content}
+                          </label>
+                        );
+                      }
+                      return (
+                        <button key={i} onClick={action.onClick} style={{ flex: '1 1 120px', minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '16px 8px', borderRadius: '16px', textAlign: 'center', gap: '8px', background: 'rgba(255,255,255,0.02)', border: '1px solid var(--glass-border-light)', cursor: 'pointer', boxSizing: 'border-box', overflow: 'hidden', transition: 'background 0.2s' }}>
+                          {content}
+                        </button>
+                      );
+                    })}
                   </div>
                 </Card>
 
-                {/* Dashboard summary stats & activities */}
+                {/* Stats & Activity — Glass Metric Cards */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                  {/* Stats list */}
+                  {/* Glass Stats Cards */}
                   <div className="space-y-4">
-                    <Card padding className="flex items-center gap-3 border border-[var(--border-color)]">
-                      <div className="w-8 h-8 rounded-lg bg-[var(--accent)]/10 text-[var(--accent)] flex items-center justify-center text-sm border border-[var(--accent)]/10">
-                        <Users size={14} />
-                      </div>
-                      <div>
-                        <p className="text-base font-bold leading-none">{members.length}</p>
-                        <p className="text-[9px] text-[var(--text-tertiary)] uppercase font-semibold tracking-wider mt-1">Total Members</p>
-                      </div>
-                    </Card>
-                    <Card padding className="flex items-center gap-3 border border-[var(--border-color)]">
-                      <div className="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-500 flex items-center justify-center text-sm border border-emerald-500/10">
-                        <CheckSquare size={14} />
-                      </div>
-                      <div>
-                        <p className="text-base font-bold leading-none">{completedTasksCount}/{totalTasksCount}</p>
-                        <p className="text-[9px] text-[var(--text-tertiary)] uppercase font-semibold tracking-wider mt-1">Tasks Completed</p>
-                      </div>
-                    </Card>
-                    <Card padding className="flex items-center gap-3 border border-[var(--border-color)]">
-                      <div className="w-8 h-8 rounded-lg bg-amber-500/10 text-amber-500 flex items-center justify-center text-sm border border-amber-500/10">
-                        <FileText size={14} />
-                      </div>
-                      <div>
-                        <p className="text-base font-bold leading-none">{wsFiles.length}</p>
-                        <p className="text-[9px] text-[var(--text-tertiary)] uppercase font-semibold tracking-wider mt-1">Shared Files</p>
-                      </div>
-                    </Card>
+                    {[
+                      { icon: Users, value: members.length, label: 'Total Members', iconBg: 'rgba(129,140,248,0.12)', iconColor: 'var(--accent)' },
+                      { icon: CheckSquare, value: `${completedTasksCount}/${totalTasksCount}`, label: 'Tasks Completed', iconBg: 'rgba(16,185,129,0.12)', iconColor: '#34d399' },
+                      { icon: FileText, value: wsFiles.length, label: 'Shared Files', iconBg: 'rgba(251,191,36,0.12)', iconColor: '#fbbf24' },
+                    ].map((stat, i) => {
+                      const StatIcon = stat.icon;
+                      return (
+                        <div key={i} className="glass-stat-card flex items-center gap-3">
+                          <div className="w-9 h-9 rounded-[var(--radius-md)] flex items-center justify-center shrink-0" style={{ background: stat.iconBg, color: stat.iconColor }}>
+                            <StatIcon size={15} strokeWidth={1.5} />
+                          </div>
+                          <div>
+                            <p className="text-base font-medium leading-none" style={{ color: 'var(--text-primary)' }}>{stat.value}</p>
+                            <p className="text-[9px] uppercase font-medium tracking-wider mt-1" style={{ color: 'var(--text-tertiary)' }}>{stat.label}</p>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
 
-                  {/* Activity Timeline specific to workspace */}
+                  {/* Activity Timeline — Fix "Someone" bug */}
                   <Card padding className="lg:col-span-2 space-y-4">
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--text-primary)]">Workspace Activity</h3>
+                    <h3 className="section-label" style={{ marginBottom: '8px' }}>Workspace Activity</h3>
                     {workspaceActivities.length === 0 ? (
-                      <div className="py-10 text-center border border-dashed border-[var(--border-color)] rounded-xl">
-                        <p className="text-xs text-[var(--text-tertiary)]">No recent activity.</p>
+                      <div className="py-10 text-center rounded-[var(--radius-lg)]" style={{ border: '1px dashed var(--glass-border)' }}>
+                        <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>No recent activity.</p>
                       </div>
                     ) : (
                       <div className="space-y-4 pt-2">
-                        {workspaceActivities.map((act) => (
-                          <div key={act.id} className="flex gap-3 items-start text-xs">
-                            <Avatar name={act.profiles?.name || 'Someone'} initials={(act.profiles?.name || 'Someone').slice(0, 2).toUpperCase()} size="xs" />
-                            <div className="min-w-0 flex-1">
-                              <p className="text-[var(--text-secondary)]">
-                                <span className="font-semibold text-[var(--text-primary)]">{act.profiles?.name || 'Someone'}</span>{' '}
-                                {act.details}
-                              </p>
-                              <span className="text-[9px] text-[var(--text-tertiary)] font-mono block mt-0.5">
-                                {formatActivityTime(act.created_at || act.createdAt)}
-                              </span>
+                        {workspaceActivities.map((act) => {
+                          const actorName = act.profiles?.name ?? act.profiles?.display_name ?? act.profiles?.email ?? 'A member';
+                          return (
+                            <div key={act.id} style={{ display: 'flex', gap: '8px', alignItems: 'flex-start', fontSize: '12px' }}>
+                              <div style={{ flexShrink: 0, width: '24px' }}>
+                                <Avatar name={actorName} initials={actorName.slice(0, 2).toUpperCase()} size="xs" />
+                              </div>
+                              <div style={{ minWidth: 0, flex: 1, overflow: 'hidden' }}>
+                                <p className="text-truncate" style={{ color: 'var(--text-secondary)' }}>
+                                  <span className="font-medium" style={{ color: 'var(--text-primary)' }}>{actorName}</span>{' '}
+                                  {act.details}
+                                </p>
+                                <span style={{ fontSize: '9px', fontFamily: 'monospace', display: 'block', marginTop: '2px', color: 'var(--text-tertiary)' }}>
+                                  {formatActivityTime(act.created_at || act.createdAt)}
+                                </span>
+                              </div>
                             </div>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     )}
                   </Card>
@@ -879,7 +867,7 @@ export default function WorkspacePage() {
                       {Object.entries(KANBAN_COLS).map(([colId, cfg]) => {
                         const columnTasks = colId === 'todo' ? todoList : colId === 'inProgress' ? inProgressList : doneList;
                         return (
-                          <div key={colId} className="flex flex-col shrink-0 w-[280px] snap-start">
+                          <div key={colId} className="flex flex-col snap-start" style={{ width: '280px', flexShrink: 0, overflow: 'hidden' }}>
                             <div className="flex items-center justify-between mb-3 px-1">
                               <div className="flex items-center gap-2">
                                 <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: cfg.dotColor }} />
@@ -913,18 +901,18 @@ export default function WorkspacePage() {
                                           <div ref={prov.innerRef} {...prov.draggableProps} {...prov.dragHandleProps} style={{ ...prov.draggableProps.style }}>
                                             <div
                                               onClick={() => setSelectedTask({ ...task, status: colId })}
-                                              className="bg-[var(--bg-primary)] border border-[var(--border-color)] hover:border-[var(--accent)] rounded-lg p-3.5 cursor-pointer transition-all hover:shadow-xs"
-                                              style={{ boxShadow: snap.isDragging ? 'var(--shadow-md)' : 'none' }}
+                                              className="glass-card cursor-pointer transition-all hover:shadow-xs"
+                                              style={{ boxShadow: snap.isDragging ? 'var(--shadow-md)' : 'none', padding: '12px 14px', boxSizing: 'border-box', width: '100%' }}
                                             >
-                                              <h3 className="text-xs font-semibold leading-snug mb-1 text-[var(--text-primary)] break-words">
+                                              <h3 style={{ fontSize: '12px', fontWeight: 600, lineHeight: 1.4, marginBottom: '4px', color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '100%' }}>
                                                 {task.title}
                                               </h3>
                                               {task.description && (
-                                                <p className="text-[10px] leading-relaxed line-clamp-2 text-[var(--text-tertiary)] mb-2.5">
+                                                <p className="text-clamp-2" style={{ fontSize: '10px', lineHeight: 1.5, color: 'var(--text-tertiary)', marginBottom: '10px' }}>
                                                   {task.description}
                                                 </p>
                                               )}
-                                              <div className="flex items-center justify-between gap-2 pt-2 border-t border-[var(--border-light)]">
+                                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', paddingTop: '8px', borderTop: '1px solid var(--border-light)' }}>
                                                 <div className="flex items-center gap-2">
                                                   {assignee && (
                                                     <Avatar name={assignee.name} initials={assignee.initials} color={assignee.color} size="xs" />
@@ -932,7 +920,7 @@ export default function WorkspacePage() {
                                                   <PriorityBadge priority={task.priority} />
                                                 </div>
                                                 {task.dueDate && (
-                                                  <span className="flex items-center gap-1 text-[9px] font-semibold px-2 py-0.5 rounded border" style={{ color: dueDateColor(task.dueDate), borderColor: dueDateColor(task.dueDate) + '1c' }}>
+                                                  <span style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '9px', fontWeight: 600, padding: '2px 8px', borderRadius: '999px', flexShrink: 0, color: dueDateColor(task.dueDate), border: `1px solid ${dueDateColor(task.dueDate)}1c` }}>
                                                     {task.dueDate}
                                                   </span>
                                                 )}
@@ -999,17 +987,17 @@ export default function WorkspacePage() {
                   <div className="surface-panel overflow-hidden border border-[var(--border-color)] rounded-xl">
                     <div className="divide-y divide-[var(--border-light)]">
                       {filteredFiles.map(file => (
-                        <div key={file.id} className="flex items-center justify-between p-3.5 hover:bg-[var(--bg-hover)] transition-colors gap-4">
-                          <div className="flex items-center gap-3.5 min-w-0" onClick={() => handlePreviewFile(file)}>
-                            <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-[var(--bg-secondary)] shrink-0">
+                        <div key={file.id} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 14px', overflow: 'hidden' }} className="hover:bg-[var(--bg-hover)] transition-colors">
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0, flex: 1, cursor: 'pointer' }} onClick={() => handlePreviewFile(file)}>
+                            <div style={{ width: '32px', height: '32px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-secondary)', flexShrink: 0 }}>
                               <FileText size={15} />
                             </div>
-                            <div className="min-w-0">
-                              <p className="text-xs font-semibold text-[var(--text-primary)] truncate cursor-pointer hover:underline">{file.name}</p>
-                              <p className="text-[10px] text-[var(--text-tertiary)] mt-0.5">{file.size} · Uploaded by {(members.find(m => m.id === file.uploadedBy)?.name || 'Someone')}</p>
+                            <div style={{ minWidth: 0, flex: 1, overflow: 'hidden' }}>
+                              <p className="text-truncate" style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)' }}>{file.name}</p>
+                              <p className="text-truncate" style={{ fontSize: '10px', color: 'var(--text-tertiary)', marginTop: '2px' }}>{file.size} · Uploaded by {members.find(m => m.id === file.uploadedBy)?.name ?? members.find(m => m.id === file.uploadedBy)?.email ?? 'A member'}</p>
                             </div>
                           </div>
-                          <div className="flex gap-2">
+                          <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
                             <button onClick={() => downloadFile(file)} className="p-1.5 rounded hover:bg-[var(--bg-secondary)] text-[var(--text-tertiary)] hover:text-[var(--text-primary)]">
                               <Download size={13} />
                             </button>
@@ -1199,7 +1187,7 @@ export default function WorkspacePage() {
                               <div className="flex-1 min-w-0 pt-0.5 overflow-hidden">
                                 {showHeader && (
                                   <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 mb-0.5">
-                                    <span className="text-xs font-bold text-[var(--text-primary)] hover:underline cursor-pointer transition-colors">
+                                    <span className="text-truncate" style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)', cursor: 'pointer' }}>
                                       {sender?.name}
                                     </span>
                                     <span className="text-[9px] text-[var(--text-tertiary)] shrink-0">
@@ -1207,7 +1195,7 @@ export default function WorkspacePage() {
                                     </span>
                                   </div>
                                 )}
-                                <p className="text-xs leading-relaxed text-[var(--text-secondary)] whitespace-pre-wrap break-words">
+                                <p style={{ fontSize: '12px', lineHeight: 1.6, color: 'var(--text-secondary)', whiteSpace: 'pre-wrap', wordBreak: 'break-word', maxWidth: '100%' }}>
                                   {msg.text}
                                 </p>
                               </div>
@@ -1271,7 +1259,8 @@ export default function WorkspacePage() {
               <motion.div key="meetings" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-6">
                 
                 {/* Voice Calling / Huddle Launcher Panel */}
-                <div className="surface-panel p-6 rounded-xl border border-[var(--border-color)] flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
+                <div className="glass-card" style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '16px', overflow: 'hidden', boxSizing: 'border-box' }}>
+                  <div style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '16px' }}>
                   <div className="flex items-center gap-3.5">
                     <div className="w-10 h-10 rounded-full bg-indigo-500/10 text-indigo-500 flex items-center justify-center shrink-0 border border-indigo-500/10">
                       <PhoneCall size={18} />
@@ -1292,14 +1281,15 @@ export default function WorkspacePage() {
                       Start Huddle
                     </Button>
                   )}
+                  </div>
                 </div>
 
                 {/* Scheduled Meetings list */}
                 <div className="space-y-4">
                   <div className="flex items-center justify-between pb-2 border-b border-[var(--border-light)]">
                     <div className="flex items-center gap-2">
-                      <Calendar size={15} className="text-[var(--text-tertiary)]" />
-                      <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--text-primary)]">Scheduled Meetings</h3>
+                      <Calendar size={15} style={{ color: 'var(--text-tertiary)' }} />
+                      <h3 className="section-label">Scheduled Meetings</h3>
                     </div>
                     <Button icon={Plus} size="sm" onClick={() => setShowScheduleMeeting(true)}>
                       Schedule Meeting
@@ -1355,38 +1345,40 @@ export default function WorkspacePage() {
             {activeTab === 'members' && (
               <motion.div key="members" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-5">
                 <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pb-2 border-b border-[var(--border-light)]">
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--text-primary)]">Workspace Members ({members.length})</h3>
+                  <h3 className="section-label">Workspace Members ({members.length})</h3>
                   <Button icon={UserPlus} size="sm" onClick={() => { setShowInvite(true); setInviteError(''); setInviteSuccess(false); setInviteEmail(''); }}>
                     Invite Teammate
                   </Button>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '16px' }}>
                   {members.map(member => (
-                    <Card key={member.id} padding className="flex items-start gap-4 border border-[var(--border-color)] bg-[var(--bg-primary)]">
-                      <Avatar
-                        name={member.name}
-                        initials={member.initials}
-                        color={member.color || 'var(--accent)'}
-                        size="sm"
-                        status={member.status}
-                      />
-                      <div className="min-w-0 flex-1 space-y-1">
-                        <div className="flex items-center justify-between gap-2">
-                          <p className="text-xs font-bold text-[var(--text-primary)] truncate">{member.name}</p>
+                    <div key={member.id} className="glass-card" style={{ padding: '16px', boxSizing: 'border-box', display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+                      <div style={{ flexShrink: 0 }}>
+                        <Avatar
+                          name={member.name}
+                          initials={member.initials}
+                          color={member.color || 'var(--accent)'}
+                          size="sm"
+                          status={member.status}
+                        />
+                      </div>
+                      <div style={{ minWidth: 0, flex: 1, overflow: 'hidden' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                          <p className="text-truncate" style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)' }}>{member.name}</p>
                           {member.id === workspace.ownerId && (
-                            <span className="text-[7px] font-bold px-1.5 py-0.5 bg-amber-500/10 text-amber-500 border border-amber-500/20 rounded uppercase shrink-0">
+                            <span style={{ fontSize: '7px', fontWeight: 700, padding: '2px 6px', background: 'rgba(245,158,11,0.1)', color: '#f59e0b', border: '1px solid rgba(245,158,11,0.2)', borderRadius: '4px', textTransform: 'uppercase', flexShrink: 0 }}>
                               Owner
                             </span>
                           )}
                         </div>
-                        <p className="text-[10px] text-[var(--text-secondary)] truncate leading-none">{member.email}</p>
-                        <p className="text-[9px] text-[var(--text-tertiary)] pt-1 flex items-center gap-1">
-                          <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${member.status === 'online' ? 'bg-emerald-500' : member.status === 'away' ? 'bg-amber-500' : 'bg-zinc-500'}`} />
+                        <p className="text-truncate" style={{ fontSize: '10px', color: 'var(--text-secondary)', lineHeight: 1 }}>{member.email}</p>
+                        <p style={{ fontSize: '9px', color: 'var(--text-tertiary)', paddingTop: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <span style={{ width: '6px', height: '6px', borderRadius: '50%', flexShrink: 0, background: member.status === 'online' ? '#10b981' : member.status === 'away' ? '#f59e0b' : '#71717a' }} />
                           <span>{member.status === 'online' ? 'Online' : member.status === 'away' ? 'Away' : formatLastSeen(member.lastSeen)}</span>
                         </p>
                       </div>
-                    </Card>
+                    </div>
                   ))}
                 </div>
               </motion.div>
@@ -1397,8 +1389,8 @@ export default function WorkspacePage() {
               <motion.div key="settings" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-6">
                 <Card className="space-y-6">
                   <div>
-                    <h3 className="text-sm font-bold uppercase tracking-wider text-[var(--text-primary)]">Workspace configurations</h3>
-                    <p className="text-xs mt-1 text-[var(--text-secondary)]">Rename the workspace or update theme colors.</p>
+                    <h3 className="section-label" style={{ marginBottom: '4px' }}>Workspace configurations</h3>
+                    <p style={{ fontSize: '12px', marginTop: '4px', color: 'var(--text-secondary)' }}>Rename the workspace or update theme colors.</p>
                   </div>
                   
                   <form onSubmit={handleUpdateSettings} className="space-y-5 pt-3 border-t border-[var(--border-light)]">

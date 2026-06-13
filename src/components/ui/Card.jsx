@@ -5,14 +5,15 @@ export default function Card({ children, className = '', hover = false, padding 
   const motionProps =
     hover || onClick
       ? {
-          whileHover: { y: -1 },
-          transition: { duration: 0.2, ease: 'easeOut' },
+          whileHover: { y: -2 },
+          transition: { duration: 0.25, ease: 'easeOut' },
         }
       : {};
 
   return (
     <Tag
-      className={`card min-w-0 ${padding ? 'p-5 sm:p-6' : ''} ${hover || onClick ? 'card-hover cursor-pointer' : ''} ${className}`}
+      className={`glass-card ${padding ? 'p-4 sm:p-5' : ''} ${hover || onClick ? 'glass-card-hover cursor-pointer' : ''} ${className}`}
+      style={{ boxSizing: 'border-box', minWidth: 0 }}
       onClick={onClick}
       {...motionProps}
       {...props}

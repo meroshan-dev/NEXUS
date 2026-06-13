@@ -35,17 +35,17 @@ function SettingsCard({ title, description, children, delay = 0, danger }) {
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay, duration: 0.3 }}
-      className="surface-panel p-6 sm:p-7 bg-[var(--bg-primary)] border-[var(--border-color)]"
-      style={danger ? { borderColor: 'rgba(239,68,68,0.2)' } : undefined}
+      className="glass-card"
+      style={{ padding: '20px 24px', boxSizing: 'border-box', borderColor: danger ? 'rgba(239,68,68,0.2)' : undefined }}
     >
       <h2
-        className="text-xs font-bold uppercase tracking-wider mb-1"
-        style={{ color: danger ? 'var(--color-danger)' : 'var(--text-primary)' }}
+        className="section-label"
+        style={{ color: danger ? 'var(--color-danger)' : undefined, marginBottom: '4px', opacity: danger ? 1 : undefined }}
       >
         {title}
       </h2>
       {description && (
-        <p className="text-[11px] text-[var(--text-tertiary)] mb-5">{description}</p>
+        <p style={{ fontSize: '11px', color: 'var(--text-tertiary)', marginBottom: '16px' }}>{description}</p>
       )}
       {children}
     </motion.div>
@@ -243,7 +243,7 @@ export default function ProfilePage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                 <Input
                   label="Full name"
                   value={profile.name}
@@ -282,16 +282,16 @@ export default function ProfilePage() {
                     </button>
                   )}
                 </div>
-                <div className="md:col-span-2 space-y-1.5">
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-[var(--text-secondary)]">
+                <div className="md:col-span-2" style={{ gridColumn: '1 / -1' }}>
+                  <label className="block" style={{ fontSize: '12px', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-secondary)', marginBottom: '6px' }}>
                     Bio
                   </label>
                   <textarea
                     value={profile.bio}
                     disabled={!editing}
                     onChange={(e) => setProfile({ ...profile, bio: e.target.value })}
-                    className="input-base resize-none"
-                    style={{ height: 80, opacity: editing ? 1 : 0.8 }}
+                    className="input-base"
+                    style={{ height: 80, opacity: editing ? 1 : 0.8, width: '100%', boxSizing: 'border-box', resize: 'vertical' }}
                   />
                 </div>
               </div>
@@ -299,7 +299,7 @@ export default function ProfilePage() {
           </div>
         </motion.div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 min-w-0">
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', alignItems: 'start', minWidth: 0 }}>
           <SettingsCard title="Notifications" description="Manage how updates are sent to you" delay={0.06}>
             <div className="space-y-4">
               {[

@@ -14,19 +14,21 @@ export default function LoadingState({ label = 'Loading…', size = 'md' }) {
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3 }}
-        className="flex flex-col items-center gap-5"
+        className="flex flex-col items-center gap-5 glass-card p-10"
       >
         <div className="relative">
           <div
-            className={`${s.ring} rounded-full border-2 border-[var(--border-color)]`}
+            className={`${s.ring} rounded-full border-2`}
+            style={{ borderColor: 'var(--glass-border)' }}
             aria-hidden
           />
           <div
-            className={`${s.ring} rounded-full border-2 border-transparent border-t-[var(--accent)] absolute inset-0 animate-spin`}
+            className={`${s.ring} rounded-full border-2 border-transparent absolute inset-0 animate-spin`}
+            style={{ borderTopColor: 'var(--accent)' }}
             aria-hidden
           />
         </div>
-        <p className={`${s.text} font-medium tracking-wide`} style={{ color: 'var(--text-tertiary)' }}>
+        <p className={`${s.text} font-medium tracking-wide`} style={{ color: 'var(--text-secondary)' }}>
           {label}
         </p>
       </motion.div>
