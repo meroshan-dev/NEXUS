@@ -2625,7 +2625,10 @@ export function WorkspaceProvider({ children }) {
         joinCall,
         declineCall,
         leaveCall,
-        clearMissedCalls
+        clearMissedCalls,
+
+        // Task fetching for dashboard
+        refetchTasks
       }}
     >
       {children}

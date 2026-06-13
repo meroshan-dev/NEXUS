@@ -10,14 +10,44 @@ import { useAuth } from '../../context/AuthContext';
 import { useWorkspace } from '../../context/WorkspaceContext';
 import Avatar from '../ui/Avatar';
 
-const navItemClass = (collapsed, isActive) => `
-  relative flex items-center gap-3 h-9.5 text-[13px]
-  transition-all duration-200 overflow-hidden
-  ${collapsed ? 'justify-center px-0 w-9.5 mx-auto rounded-[var(--radius-md)]' : 'px-3.5 w-full min-w-0 rounded-[var(--radius-pill)]'}
-  ${isActive
-    ? 'bg-[rgba(129,140,248,0.15)] text-[var(--text-primary)] font-medium shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]'
-    : 'text-[var(--text-secondary)] hover:bg-[rgba(255,255,255,0.06)] hover:text-[var(--text-primary)]'}
-`;
+// Nav item style function — frosted glass active state
+const navItemStyle = (collapsed, isActive) => ({
+  display: 'flex',
+  alignItems: 'center',
+  gap: collapsed ? '0' : '10px',
+  padding: collapsed ? '8px' : '8px 12px',
+  borderRadius: '10px',
+  overflow: 'hidden',
+  width: collapsed ? '38px' : '100%',
+  justifyContent: collapsed ? 'center' : 'flex-start',
+  minWidth: 0,
+  fontSize: '14px',
+  cursor: 'pointer',
+  transition: 'all 0.2s',
+  textDecoration: 'none',
+  boxSizing: 'border-box',
+  background: isActive ? 'rgba(255,255,255,0.1)' : 'transparent',
+  backdropFilter: isActive ? 'blur(12px)' : 'none',
+  WebkitBackdropFilter: isActive ? 'blur(12px)' : 'none',
+  border: isActive ? '1px solid rgba(255,255,255,0.15)' : '1px solid transparent',
+  color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
+  fontWeight: isActive ? 500 : 400,
+});
+
+const navIconStyle = (isActive) => ({
+  width: '18px',
+  height: '18px',
+  flexShrink: 0,
+  opacity: isActive ? 1 : 0.7,
+});
+
+const navLabelStyle = {
+  fontSize: '14px',
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+  whiteSpace: 'nowrap',
+  opacity: 0.85,
+};
 
 export default function Sidebar({ collapsed, onToggle }) {
   const { user, signOut } = useAuth();
@@ -201,29 +231,46 @@ export default function Sidebar({ collapsed, onToggle }) {
                   <NavLink
                     key={item.tab}
                     to={`/workspace/${activeWorkspaceId}?tab=${item.tab}`}
-                    className={navItemClass(collapsed, isActive)}
+                    style={navItemStyle(collapsed, isActive)}
+                    onMouseEnter={(e) => { if (!isActive) e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; }}
+                    onMouseLeave={(e) => { if (!isActive) e.currentTarget.style.background = 'transparent'; }}
                   >
-                    <Icon size={17} strokeWidth={1.5} className={`shrink-0 ${isActive ? '' : 'icon-glow'}`} />
-                    {!collapsed && <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.label}</span>}
+                    <Icon size={18} strokeWidth={1.5} style={navIconStyle(isActive)} />
+                    {!collapsed && <span style={navLabelStyle}>{item.label}</span>}
                   </NavLink>
                 );
               })}
-              <div className="pt-4 mt-4" style={{ borderTop: '1px solid var(--glass-border-light)' }}>
-                <NavLink to="/dashboard" className={({ isActive }) => navItemClass(collapsed, isActive)}>
-                  <Home size={17} strokeWidth={1.5} className="shrink-0" />
-                  {!collapsed && 'All workspaces'}
+              <div style={{ paddingTop: '12px', marginTop: '12px', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+                <NavLink
+                  to="/dashboard"
+                  style={({ isActive }) => navItemStyle(collapsed, isActive)}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+                >
+                  <Home size={18} strokeWidth={1.5} style={navIconStyle(false)} />
+                  {!collapsed && <span style={navLabelStyle}>All workspaces</span>}
                 </NavLink>
               </div>
             </>
           ) : (
             <>
-              <NavLink to="/dashboard" className={({ isActive }) => navItemClass(collapsed, isActive)}>
-                <LayoutDashboard size={17} strokeWidth={1.5} className="shrink-0" />
-                {!collapsed && 'Dashboard'}
+              <NavLink
+                to="/dashboard"
+                style={({ isActive }) => navItemStyle(collapsed, isActive)}
+                onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+              >
+                <LayoutDashboard size={18} strokeWidth={1.5} style={navIconStyle(false)} />
+                {!collapsed && <span style={navLabelStyle}>Dashboard</span>}
               </NavLink>
-              <NavLink to="/profile" className={({ isActive }) => navItemClass(collapsed, isActive)}>
-                <User size={17} strokeWidth={1.5} className="shrink-0" />
-                {!collapsed && 'Profile'}
+              <NavLink
+                to="/profile"
+                style={({ isActive }) => navItemStyle(collapsed, isActive)}
+                onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+              >
+                <User size={18} strokeWidth={1.5} style={navIconStyle(false)} />
+                {!collapsed && <span style={navLabelStyle}>Profile</span>}
               </NavLink>
             </>
           )}
@@ -250,14 +297,27 @@ export default function Sidebar({ collapsed, onToggle }) {
                   <NavLink
                     key={ws.id}
                     to={`/workspace/${ws.id}?tab=overview`}
-                    className={`relative flex items-center gap-2.5 h-9 px-3.5 rounded-[var(--radius-pill)] text-[13px] transition-all duration-200 min-w-0 ${
-                      active
-                        ? 'bg-[rgba(129,140,248,0.15)] text-[var(--text-primary)] font-medium shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]'
-                        : 'text-[var(--text-secondary)] hover:bg-[rgba(255,255,255,0.06)] hover:text-[var(--text-primary)]'
-                    }`}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '10px',
+                      padding: '8px 12px',
+                      borderRadius: '10px',
+                      overflow: 'hidden',
+                      minWidth: 0,
+                      fontSize: '13px',
+                      transition: 'all 0.2s',
+                      textDecoration: 'none',
+                      background: active ? 'rgba(255,255,255,0.1)' : 'transparent',
+                      border: active ? '1px solid rgba(255,255,255,0.12)' : '1px solid transparent',
+                      color: active ? 'var(--text-primary)' : 'var(--text-secondary)',
+                      fontWeight: active ? 500 : 400,
+                    }}
+                    onMouseEnter={(e) => { if (!active) e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; }}
+                    onMouseLeave={(e) => { if (!active) e.currentTarget.style.background = 'transparent'; }}
                   >
-                    <span className="text-base shrink-0">{ws.icon}</span>
-                    <span className="truncate flex-1">{ws.name}</span>
+                    <span style={{ flexShrink: 0, width: '20px', textAlign: 'center', fontSize: '14px' }}>{ws.icon}</span>
+                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0, flex: 1 }}>{ws.name}</span>
                     {hasActiveCall && (
                       <span className="flex h-2 w-2 relative shrink-0">
                         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
@@ -272,28 +332,26 @@ export default function Sidebar({ collapsed, onToggle }) {
         )}
       </div>
 
-      <div className="shrink-0 p-3" style={{ borderTop: '1px solid var(--glass-border-light)' }}>
+      <div style={{ flexShrink: 0, padding: '12px', borderTop: '1px solid rgba(255,255,255,0.08)', overflow: 'hidden' }}>
         {collapsed ? (
-          <div className="flex justify-center py-2">
+          <div style={{ display: 'flex', justifyContent: 'center', padding: '4px 0' }}>
             <button onClick={() => navigate('/profile')} className="cursor-pointer">
               <Avatar name={user?.name} size="sm" status="online" />
             </button>
           </div>
         ) : (
-          <div
-            className="flex items-center gap-3 px-2 py-2.5 rounded-[var(--radius-pill)] transition-all hover:bg-[rgba(255,255,255,0.06)]"
-          >
-            <button onClick={() => navigate('/profile')} className="cursor-pointer shrink-0">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', overflow: 'hidden' }}>
+            <button onClick={() => navigate('/profile')} style={{ cursor: 'pointer', flexShrink: 0, background: 'none', border: 'none', padding: 0 }}>
               <Avatar name={user?.name} size="sm" status="online" />
             </button>
             <button
               onClick={() => navigate('/profile')}
-              className="flex-1 min-w-0 text-left cursor-pointer"
+              style={{ flex: 1, minWidth: 0, overflow: 'hidden', textAlign: 'left', cursor: 'pointer', background: 'none', border: 'none', padding: 0 }}
             >
-              <p className="text-sm font-medium truncate" style={{ color: 'var(--text-primary)' }}>
+              <p style={{ fontSize: '14px', fontWeight: 500, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {user?.name}
               </p>
-              <p className="text-[11px] truncate mt-0.5" style={{ color: 'var(--text-tertiary)' }}>
+              <p style={{ fontSize: '11px', color: 'var(--text-tertiary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: '2px' }}>
                 {user?.email}
               </p>
             </button>
@@ -302,8 +360,7 @@ export default function Sidebar({ collapsed, onToggle }) {
                 await signOut();
                 navigate('/login');
               }}
-              className="w-8 h-8 rounded-[var(--radius-sm)] flex items-center justify-center shrink-0 transition-all cursor-pointer icon-glow"
-              style={{ color: 'var(--text-tertiary)' }}
+              style={{ width: '32px', height: '32px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, cursor: 'pointer', transition: 'all 0.2s', color: 'var(--text-tertiary)', background: 'transparent', border: 'none' }}
               title="Sign out"
               onMouseEnter={(e) => {
                 e.currentTarget.style.color = '#f87171';

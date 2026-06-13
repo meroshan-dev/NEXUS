@@ -1,9 +1,9 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
-  Plus, CheckSquare, Clock, Database, ArrowUpRight, Sparkles, CheckSquare as CheckIcon, CheckCircle2,
-  Calendar, AlertCircle, History, FolderOpen
+  Plus, CheckSquare, Clock, CheckCircle2,
+  Calendar, AlertCircle, History
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import Modal from '../components/ui/Modal';
@@ -26,7 +26,7 @@ export default function DashboardPage() {
     dbError,
     activityFeed,
     tasks,
-    updateTaskDetails
+    refetchTasks
   } = useWorkspace();
 
   const [showCreate, setShowCreate] = useState(false);
@@ -57,6 +57,18 @@ export default function DashboardPage() {
       .sort((a, b) => b.openedAt - a.openedAt);
   }, [workspaces, openedMap]);
 
+  // Fix 3: Pre-fetch tasks for ALL workspaces on mount so data survives refresh
+  useEffect(() => {
+    if (workspaces.length > 0 && refetchTasks) {
+      workspaces.forEach(ws => {
+        // Only fetch if we don't already have tasks for this workspace
+        if (!tasks[ws.id]) {
+          refetchTasks(ws.id);
+        }
+      });
+    }
+  }, [workspaces]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Helper to format relative time for Continue Working
   const formatTimeAgo = (date) => {
     const seconds = Math.floor((new Date() - date) / 1000);
@@ -75,12 +87,15 @@ export default function DashboardPage() {
     Object.entries(tasks || {}).forEach(([wsId, cols]) => {
       const ws = workspaces.find(w => w.id === wsId);
       if (!ws) return;
-      ['todo', 'inProgress'].forEach(colKey => {
+      // Map column keys to status labels
+      const statusMap = { todo: 'TO DO', inProgress: 'IN PROGRESS', done: 'DONE' };
+      ['todo', 'inProgress', 'done'].forEach(colKey => {
         const items = cols[colKey] || [];
         items.forEach(t => {
           if (t.assignee === user?.id) {
             list.push({
               ...t,
+              status: statusMap[colKey],
               workspaceId: wsId,
               workspaceName: ws.name,
               workspaceColor: ws.color
@@ -98,6 +113,7 @@ export default function DashboardPage() {
     const upcoming = [];
 
     list.forEach(t => {
+      if (t.status === 'DONE') return; // Don't show done tasks
       if (!t.dueDate) {
         upcoming.push(t);
         return;
@@ -115,14 +131,6 @@ export default function DashboardPage() {
     return { overdue, dueToday, upcoming, totalCount: list.length };
   }, [tasks, workspaces, user?.id]);
 
-  // Handler to toggle task completion immediately
-  const handleCheckTask = async (task) => {
-    try {
-      await updateTaskDetails(task.workspaceId, task.id, { status: 'done' });
-    } catch (err) {
-      console.error(err);
-    }
-  };
 
   // 3. Redesigned timeline activities: Grouped by Today/Yesterday, relative timestamps, activity type icons, clean spacing
   const groupedActivities = useMemo(() => {
@@ -228,64 +236,63 @@ export default function DashboardPage() {
 
   if (loading) return <LoadingState label="Loading overview…" />;
 
-  // Task row component for DRY rendering
-  const TaskRow = ({ t, dateLabel, dateColor, dateBg }) => (
-    <div className="flex items-start justify-between p-3.5 rounded-[var(--radius-lg)] transition-all gap-4 hover:bg-[rgba(255,255,255,0.04)]" style={{ border: '1px solid var(--glass-border-light)' }}>
-      <div className="flex items-start gap-3 min-w-0">
-        <button
-          onClick={() => handleCheckTask(t)}
-          className="mt-0.5 w-4.5 h-4.5 rounded-full flex items-center justify-center cursor-pointer text-[10px] text-transparent hover:text-[var(--accent)] bg-transparent shrink-0 transition-all"
-          style={{ border: '1.5px solid var(--glass-border)' }}
-          onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--accent)'; e.currentTarget.style.boxShadow = '0 0 8px rgba(129,140,248,0.3)'; }}
-          onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--glass-border)'; e.currentTarget.style.boxShadow = 'none'; }}
-        >
-          ✓
-        </button>
-        <div className="min-w-0">
-          <p className="text-xs font-medium leading-snug truncate" style={{ color: 'var(--text-primary)' }}>{t.title}</p>
-          <span className="text-[9px] font-medium mt-1 inline-block truncate max-w-[150px]" style={{ color: t.workspaceColor }}>
+  // Status badge color map
+  const statusStyles = {
+    'TO DO': { background: 'rgba(148,163,184,0.15)', color: '#94a3b8' },
+    'IN PROGRESS': { background: 'rgba(251,191,36,0.15)', color: '#fbbf24' },
+    'DONE': { background: 'rgba(34,197,94,0.15)', color: '#22c55e' },
+  };
+
+  // Task row component — Fix 4: no checkbox, show status badge
+  const TaskRow = ({ t }) => {
+    const badge = statusStyles[t.status] || statusStyles['TO DO'];
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 0', borderBottom: '1px solid rgba(255,255,255,0.05)', overflow: 'hidden' }}>
+        <div style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
+          <p style={{ fontSize: '14px', fontWeight: 500, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.title}</p>
+          <span style={{ fontSize: '11px', opacity: 0.45, color: 'var(--text-secondary)', display: 'block', marginTop: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {t.workspaceName}
           </span>
         </div>
-      </div>
-      <div className="flex flex-col items-end shrink-0 gap-1 text-[10px]">
-        <span className="font-medium" style={{ color: dateColor }}>{dateLabel}</span>
-        <span className="text-[9px] px-1.5 py-0.5 rounded-[var(--radius-pill)] font-mono uppercase tracking-wider"
-          style={{ background: dateBg, color: dateColor, border: `1px solid ${dateColor}20` }}>
-          {t.priority}
+        <span style={{
+          fontSize: '10px', padding: '2px 8px', borderRadius: '999px',
+          whiteSpace: 'nowrap', flexShrink: 0, fontWeight: 500, letterSpacing: '0.04em',
+          background: badge.background, color: badge.color,
+        }}>
+          {t.status}
         </span>
       </div>
-    </div>
-  );
+    );
+  };
 
   return (
-    <div className="space-y-8 pb-12">
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
       {dbError && <DbSetupModal />}
 
-      {/* Welcome Back Card */}
+      {/* Welcome Back Card — Fix 2: overflow hidden, flex-wrap, buttons contained */}
       <motion.div
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
-        className="w-full glass-card"
-        style={{ padding: '24px 28px', boxSizing: 'border-box' }}
+        className="glass-card"
+        style={{ padding: '24px', boxSizing: 'border-box', overflow: 'hidden', position: 'relative' }}
       >
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6" style={{ minWidth: 0 }}>
-          <div style={{ minWidth: 0, flex: 1 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '16px', flexWrap: 'wrap' }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
             <span className="section-label" style={{ marginBottom: '8px', display: 'block', opacity: 1, color: 'var(--accent)' }}>
               Personal Overview
             </span>
-            <h1 className="text-display text-2xl sm:text-3xl text-truncate" style={{ color: 'var(--text-primary)' }}>
+            <h1 style={{ fontSize: 'clamp(20px, 3vw, 30px)', fontWeight: 500, letterSpacing: '-0.02em', color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               Welcome back, {user?.name?.split(' ')[0] || 'User'}
             </h1>
-            <p className="text-xs leading-relaxed text-truncate" style={{ color: 'var(--text-secondary)', marginTop: '8px' }}>
+            <p style={{ fontSize: '12px', lineHeight: 1.6, color: 'var(--text-secondary)', marginTop: '8px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               All workspaces are synchronized. Here is what is on your plate next.
             </p>
           </div>
-          <div className="flex gap-2.5 shrink-0">
-            <Button variant="secondary" size="sm" onClick={() => setShowJoin(true)}>
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexShrink: 0 }}>
+            <Button variant="secondary" size="sm" style={{ whiteSpace: 'nowrap', flexShrink: 0, padding: '8px 16px' }} onClick={() => setShowJoin(true)}>
               Join workspace
             </Button>
-            <Button icon={Plus} size="sm" onClick={() => setShowCreate(true)}>
+            <Button icon={Plus} size="sm" style={{ whiteSpace: 'nowrap', flexShrink: 0, padding: '8px 16px' }} onClick={() => setShowCreate(true)}>
               Create workspace
             </Button>
           </div>
@@ -299,33 +306,38 @@ export default function DashboardPage() {
             <History size={15} strokeWidth={1.5} style={{ color: 'var(--text-tertiary)' }} />
             <h2 className="section-label">Continue working</h2>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '16px' }}>
             {continueWorkingList.slice(0, 3).map((ws) => (
               <motion.div
                 key={ws.id}
                 initial={{ opacity: 0, y: 6 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="glass-card glass-card-hover p-5 flex flex-col justify-between h-[130px]"
+                className="glass-card glass-card-hover"
+                style={{ borderRadius: '16px', overflow: 'hidden', padding: '16px', boxSizing: 'border-box', position: 'relative', minHeight: '120px', display: 'flex', flexDirection: 'column' }}
               >
-                <div className="flex items-center gap-3">
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', overflow: 'hidden' }}>
                   <div
-                    className="w-9 h-9 rounded-[var(--radius-md)] flex items-center justify-center text-lg shrink-0"
-                    style={{ background: ws.color + '18', border: `1px solid ${ws.color}20` }}
+                    style={{
+                      width: '32px', height: '32px', borderRadius: '8px', flexShrink: 0,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: '16px', objectFit: 'contain',
+                      background: ws.color + '18', border: `1px solid ${ws.color}20`,
+                    }}
                   >
                     {ws.icon}
                   </div>
-                  <div className="min-w-0">
-                    <h3 className="text-xs font-medium truncate" style={{ color: 'var(--text-primary)' }}>{ws.name}</h3>
-                    <p className="text-[10px] mt-0.5" style={{ color: 'var(--text-tertiary)' }}>
+                  <div style={{ minWidth: 0, flex: 1, overflow: 'hidden' }}>
+                    <h3 style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ws.name}</h3>
+                    <p style={{ fontSize: '11px', opacity: 0.5, color: 'var(--text-tertiary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: '2px' }}>
                       Last opened {formatTimeAgo(ws.openedAt)}
                     </p>
                   </div>
                 </div>
-                <div className="flex justify-end mt-2">
+                <div style={{ marginTop: 'auto', paddingTop: '12px', display: 'flex', justifyContent: 'flex-end' }}>
                   <Button
                     variant="secondary"
                     size="sm"
-                    className="h-7.5 px-3.5 text-[11px]"
+                    style={{ fontSize: '11px', whiteSpace: 'nowrap' }}
                     onClick={() => navigate(`/workspace/${ws.id}?tab=overview`)}
                   >
                     Open Workspace
@@ -337,243 +349,77 @@ export default function DashboardPage() {
         </section>
       )}
 
-      {/* Main Grid: My Tasks (left) and Workspaces + Activity (right column) */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start" style={{ minWidth: 0 }}>
-        {/* Left Column (2/3 width) - My Tasks Checklist */}
-        <div className="lg:col-span-2" style={{ minWidth: 0 }}>
-          <section className="glass-card" style={{ padding: '20px 24px', boxSizing: 'border-box' }}>
-            <div className="flex items-center justify-between pb-3" style={{ marginBottom: '16px', borderBottom: '1px solid var(--glass-border-light)' }}>
-              <div className="flex items-center gap-2">
-                <CheckSquare size={16} strokeWidth={1.5} style={{ color: 'var(--accent)' }} />
-                <h2 className="section-label">My Tasks</h2>
-              </div>
-              <span className="text-[10px] font-mono" style={{ color: 'var(--text-tertiary)' }}>
-                {personalTasks.totalCount} active tasks
-              </span>
-            </div>
-
-            {personalTasks.totalCount === 0 ? (
-              <div className="py-12 text-center flex flex-col items-center justify-center gap-3">
-                <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ background: 'rgba(16,185,129,0.1)', color: '#34d399' }}>
-                  <CheckCircle2 size={20} strokeWidth={1.5} />
-                </div>
-                <div>
-                  <p className="text-xs font-medium" style={{ color: 'var(--text-primary)' }}>All caught up!</p>
-                  <p className="text-[11px] mt-0.5" style={{ color: 'var(--text-tertiary)' }}>No tasks assigned to you yet.</p>
-                </div>
-              </div>
-            ) : (
-              <div className="space-y-6">
-                {/* Group: Overdue */}
-                {personalTasks.overdue.length > 0 && (
-                  <div className="space-y-2.5">
-                    <div className="flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-wider" style={{ color: '#f87171' }}>
-                      <AlertCircle size={12} strokeWidth={1.5} />
-                      <span>Overdue ({personalTasks.overdue.length})</span>
-                    </div>
-                    <div className="space-y-2">
-                      {personalTasks.overdue.map(t => (
-                        <TaskRow key={t.id} t={t} dateLabel={t.dueDate} dateColor="#f87171" dateBg="rgba(239,68,68,0.08)" />
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Group: Due Today */}
-                {personalTasks.dueToday.length > 0 && (
-                  <div className="space-y-2.5">
-                    <div className="flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-wider" style={{ color: '#fbbf24' }}>
-                      <Calendar size={12} strokeWidth={1.5} />
-                      <span>Due Today ({personalTasks.dueToday.length})</span>
-                    </div>
-                    <div className="space-y-2">
-                      {personalTasks.dueToday.map(t => (
-                        <TaskRow key={t.id} t={t} dateLabel="Today" dateColor="#fbbf24" dateBg="rgba(245,158,11,0.08)" />
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Group: Upcoming */}
-                {personalTasks.upcoming.length > 0 && (
-                  <div className="space-y-2.5">
-                    <div className="flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-wider" style={{ color: 'var(--text-tertiary)' }}>
-                      <Clock size={12} strokeWidth={1.5} />
-                      <span>Upcoming ({personalTasks.upcoming.length})</span>
-                    </div>
-                    <div className="space-y-2">
-                      {personalTasks.upcoming.map(t => (
-                        <TaskRow key={t.id} t={t} dateLabel={t.dueDate || 'No date'} dateColor="var(--text-tertiary)" dateBg="rgba(255,255,255,0.04)" />
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-          </section>
+      {/* My Tasks — Full width single column (Fix 4: right panel removed) */}
+      <section className="glass-card" style={{ padding: '20px 24px', boxSizing: 'border-box', width: '100%' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: '12px', marginBottom: '16px', borderBottom: '1px solid var(--glass-border-light)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <CheckSquare size={16} strokeWidth={1.5} style={{ color: 'var(--accent)' }} />
+            <h2 className="section-label">My Tasks</h2>
+          </div>
+          <span style={{ fontSize: '10px', fontFamily: 'var(--font-mono, monospace)', color: 'var(--text-tertiary)' }}>
+            {personalTasks.totalCount} active tasks
+          </span>
         </div>
 
-        {/* Right Column (1/3 width) - Workspaces & Activity — FIXED RIGHT PANEL */}
-        <div style={{ minWidth: 0 }} className="space-y-6">
-          {/* My Workspaces list — glass side panel */}
-          <section className="glass-card" style={{ padding: '20px 24px', boxSizing: 'border-box' }}>
-            <div className="flex items-center justify-between pb-3" style={{ marginBottom: '16px', borderBottom: '1px solid var(--glass-border-light)' }}>
-              <div className="flex items-center gap-2">
-                <Database size={15} strokeWidth={1.5} style={{ color: 'var(--accent)' }} />
-                <h2 className="section-label">My Workspaces</h2>
-              </div>
-              <span className="text-[10px] font-mono" style={{ color: 'var(--text-tertiary)' }}>
-                {workspaces.length} total
-              </span>
+        {personalTasks.totalCount === 0 ? (
+          <div style={{ padding: '48px 24px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '12px' }}>
+            <div style={{ width: '40px', height: '40px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(16,185,129,0.1)', color: '#34d399' }}>
+              <CheckCircle2 size={20} strokeWidth={1.5} />
             </div>
-
-            {workspaces.length === 0 ? (
-              <div className="py-6 text-center">
-                <p className="text-[11px]" style={{ color: 'var(--text-tertiary)' }}>No workspaces joined.</p>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {workspaces.map((ws) => (
-                  <button
-                    key={ws.id}
-                    onClick={() => navigate(`/workspace/${ws.id}?tab=overview`)}
-                    className="w-full text-left p-3 rounded-[var(--radius-lg)] flex items-center justify-between gap-3 cursor-pointer group transition-all"
-                    style={{
-                      background: 'rgba(255,255,255,0.03)',
-                      border: '1px solid var(--glass-border-light)',
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.borderColor = 'var(--border-focus)';
-                      e.currentTarget.style.background = 'rgba(255,255,255,0.06)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.borderColor = 'var(--glass-border-light)';
-                      e.currentTarget.style.background = 'rgba(255,255,255,0.03)';
-                    }}
-                  >
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <div
-                        className="w-7 h-7 rounded-[var(--radius-sm)] flex items-center justify-center shrink-0 text-sm"
-                        style={{ background: ws.color + '18', border: `1px solid ${ws.color}20` }}
-                      >
-                        {ws.icon}
-                      </div>
-                      <span className="text-xs font-medium truncate" style={{ color: 'var(--text-primary)' }}>{ws.name}</span>
-                    </div>
-                    <ArrowUpRight size={14} strokeWidth={1.5} className="opacity-0 group-hover:opacity-100 transition-all shrink-0" style={{ color: 'var(--text-tertiary)' }} />
-                  </button>
-                ))}
+            <div>
+              <p style={{ fontSize: '12px', fontWeight: 500, color: 'var(--text-primary)' }}>All caught up!</p>
+              <p style={{ fontSize: '11px', marginTop: '4px', color: 'var(--text-tertiary)' }}>No tasks assigned to you yet.</p>
+            </div>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+            {/* Group: Overdue */}
+            {personalTasks.overdue.length > 0 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', opacity: 0.8, padding: '8px 0 4px', letterSpacing: '0.06em', textTransform: 'uppercase', fontWeight: 500, color: '#f87171' }}>
+                  <AlertCircle size={12} strokeWidth={1.5} />
+                  <span>Overdue ({personalTasks.overdue.length})</span>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
+                  {personalTasks.overdue.map(t => (
+                    <TaskRow key={t.id} t={t} />
+                  ))}
+                </div>
               </div>
             )}
-          </section>
 
-          {/* Grouped Timeline Activity Feed */}
-          <section className="glass-card" style={{ padding: '20px 24px', boxSizing: 'border-box' }}>
-            <div className="flex items-center gap-2 pb-3" style={{ marginBottom: '16px', borderBottom: '1px solid var(--glass-border-light)' }}>
-              <Clock size={15} strokeWidth={1.5} style={{ color: 'var(--accent)' }} />
-              <h2 className="section-label">My Recent Activity</h2>
-            </div>
-
-            {(!groupedActivities.today.length && !groupedActivities.yesterday.length && !groupedActivities.older.length) ? (
-              <div className="py-8 text-center rounded-[var(--radius-lg)]" style={{ border: '1px dashed var(--glass-border)' }}>
-                <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>No recent activities.</p>
-              </div>
-            ) : (
-              <div className="space-y-6">
-                {/* Today */}
-                {groupedActivities.today.length > 0 && (
-                  <div className="space-y-3">
-                    <p className="text-[10px] font-medium uppercase tracking-wider" style={{ color: 'var(--text-tertiary)' }}>Today</p>
-                    <div className="space-y-4">
-                      {groupedActivities.today.map((act) => {
-                        const Icon = getActivityIcon(act.action);
-                        return (
-                          <div key={act.id} className="flex gap-3 items-start text-xs">
-                            <div className="w-5.5 h-5.5 rounded-full flex items-center justify-center shrink-0" style={{ border: '1px solid var(--glass-border-light)', background: 'rgba(255,255,255,0.04)', color: 'var(--text-tertiary)' }}>
-                              <Icon size={11} strokeWidth={1.5} />
-                            </div>
-                            <div className="min-w-0 flex-1">
-                              <p className="leading-normal truncate" style={{ color: 'var(--text-primary)' }}>{act.details}</p>
-                              <div className="flex items-center gap-2 mt-1">
-                                <span className="text-[9px] font-medium truncate max-w-[100px]" style={{ color: act.workspaceColor }}>
-                                  {act.workspaceName}
-                                </span>
-                                <span className="text-[9px]" style={{ color: 'var(--text-tertiary)' }}>
-                                  {formatActivityTime(act.created_at || act.createdAt)}
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-
-                {/* Yesterday */}
-                {groupedActivities.yesterday.length > 0 && (
-                  <div className="space-y-3">
-                    <p className="text-[10px] font-medium uppercase tracking-wider" style={{ color: 'var(--text-tertiary)' }}>Yesterday</p>
-                    <div className="space-y-4">
-                      {groupedActivities.yesterday.map((act) => {
-                        const Icon = getActivityIcon(act.action);
-                        return (
-                          <div key={act.id} className="flex gap-3 items-start text-xs">
-                            <div className="w-5.5 h-5.5 rounded-full flex items-center justify-center shrink-0" style={{ border: '1px solid var(--glass-border-light)', background: 'rgba(255,255,255,0.04)', color: 'var(--text-tertiary)' }}>
-                              <Icon size={11} strokeWidth={1.5} />
-                            </div>
-                            <div className="min-w-0 flex-1">
-                              <p className="leading-normal truncate" style={{ color: 'var(--text-primary)' }}>{act.details}</p>
-                              <div className="flex items-center gap-2 mt-1">
-                                <span className="text-[9px] font-medium truncate max-w-[100px]" style={{ color: act.workspaceColor }}>
-                                  {act.workspaceName}
-                                </span>
-                                <span className="text-[9px]" style={{ color: 'var(--text-tertiary)' }}>
-                                  {formatActivityTime(act.created_at || act.createdAt)}
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-
-                {/* Older */}
-                {groupedActivities.older.length > 0 && (
-                  <div className="space-y-3">
-                    <p className="text-[10px] font-medium uppercase tracking-wider" style={{ color: 'var(--text-tertiary)' }}>Earlier</p>
-                    <div className="space-y-4">
-                      {groupedActivities.older.slice(0, 5).map((act) => {
-                        const Icon = getActivityIcon(act.action);
-                        return (
-                          <div key={act.id} className="flex gap-3 items-start text-xs">
-                            <div className="w-5.5 h-5.5 rounded-full flex items-center justify-center shrink-0" style={{ border: '1px solid var(--glass-border-light)', background: 'rgba(255,255,255,0.04)', color: 'var(--text-tertiary)' }}>
-                              <Icon size={11} strokeWidth={1.5} />
-                            </div>
-                            <div className="min-w-0 flex-1">
-                              <p className="leading-normal truncate" style={{ color: 'var(--text-primary)' }}>{act.details}</p>
-                              <div className="flex items-center gap-2 mt-1">
-                                <span className="text-[9px] font-medium truncate max-w-[100px]" style={{ color: act.workspaceColor }}>
-                                  {act.workspaceName}
-                                </span>
-                                <span className="text-[9px]" style={{ color: 'var(--text-tertiary)' }}>
-                                  {new Date(act.created_at || act.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric' })}
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
+            {/* Group: Due Today */}
+            {personalTasks.dueToday.length > 0 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', opacity: 0.8, padding: '8px 0 4px', letterSpacing: '0.06em', textTransform: 'uppercase', fontWeight: 500, color: '#fbbf24' }}>
+                  <Calendar size={12} strokeWidth={1.5} />
+                  <span>Due Today ({personalTasks.dueToday.length})</span>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
+                  {personalTasks.dueToday.map(t => (
+                    <TaskRow key={t.id} t={t} />
+                  ))}
+                </div>
               </div>
             )}
-          </section>
-        </div>
-      </div>
+
+            {/* Group: Upcoming */}
+            {personalTasks.upcoming.length > 0 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', opacity: 0.5, padding: '8px 0 4px', letterSpacing: '0.06em', textTransform: 'uppercase', fontWeight: 500, color: 'var(--text-tertiary)' }}>
+                  <Clock size={12} strokeWidth={1.5} />
+                  <span>Upcoming ({personalTasks.upcoming.length})</span>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
+                  {personalTasks.upcoming.map(t => (
+                    <TaskRow key={t.id} t={t} />
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </section>
 
       {/* Workspace Creation & Join Modals */}
       <Modal isOpen={showCreate} onClose={() => setShowCreate(false)} title="Create workspace">

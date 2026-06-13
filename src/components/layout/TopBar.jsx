@@ -96,68 +96,89 @@ export default function TopBar({ onMobileMenuToggle }) {
 
           {showNotifications && (
             <>
-              <div className="fixed inset-0 z-40" onClick={() => setShowNotifications(false)} />
               <div
-                className="absolute right-0 mt-2 w-80 glass-card z-50 flex flex-col"
-                style={{ top: '100%' }}
+                style={{ position: 'fixed', inset: 0, zIndex: 9998, background: 'rgba(0,0,0,0.3)' }}
+                onClick={() => setShowNotifications(false)}
+              />
+              <div
+                style={{
+                  position: 'absolute', top: '48px', right: 0,
+                  width: '340px', boxSizing: 'border-box', overflow: 'hidden',
+                  background: 'rgba(10, 10, 30, 0.92)',
+                  backdropFilter: 'blur(40px) saturate(200%)',
+                  WebkitBackdropFilter: 'blur(40px) saturate(200%)',
+                  border: '1px solid rgba(255,255,255,0.18)',
+                  borderRadius: '16px',
+                  padding: '16px 18px',
+                  boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
+                  zIndex: 9999,
+                  display: 'flex', flexDirection: 'column',
+                }}
               >
-                <div className="flex items-center justify-between p-4" style={{ borderBottom: '1px solid var(--glass-border-light)' }}>
-                  <span className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+                  <span style={{ fontSize: '14px', fontWeight: 600, color: 'white' }}>
                     Notifications
                   </span>
                   {unreadCount > 0 && (
                     <button
                       onClick={() => markAllNotificationsAsRead()}
-                      className="text-xs font-medium hover:underline cursor-pointer"
-                      style={{ color: 'var(--text-brand)' }}
+                      style={{ fontSize: '11px', fontWeight: 500, color: 'var(--text-brand)', cursor: 'pointer', background: 'none', border: 'none', padding: 0 }}
                     >
                       Mark all as read
                     </button>
                   )}
                 </div>
 
-                <div className="max-h-[320px] overflow-y-auto">
+                <div style={{ maxHeight: '340px', overflowY: 'auto', overflowX: 'hidden', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   {notifications.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-10 px-4 text-center">
-                      <div className="p-3 rounded-full mb-3" style={{ background: 'rgba(255,255,255,0.04)' }}>
-                        <BellOff size={18} style={{ color: 'var(--text-tertiary)' }} />
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '32px 12px', textAlign: 'center' }}>
+                      <div style={{ padding: '12px', borderRadius: '50%', marginBottom: '12px', background: 'rgba(255,255,255,0.06)' }}>
+                        <BellOff size={18} style={{ color: 'rgba(255,255,255,0.4)' }} />
                       </div>
-                      <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>No notifications</p>
-                      <p className="text-xs mt-1" style={{ color: 'var(--text-tertiary)' }}>We'll notify you here when things change.</p>
+                      <p style={{ fontSize: '13px', fontWeight: 500, color: 'white' }}>No notifications</p>
+                      <p style={{ fontSize: '11px', marginTop: '4px', color: 'rgba(255,255,255,0.45)' }}>We'll notify you here when things change.</p>
                     </div>
                   ) : (
                     notifications.map((notif) => (
                       <div
                         key={notif.id}
-                        className={`p-4 flex gap-3 transition-colors ${!notif.read ? 'bg-[rgba(129,140,248,0.06)]' : ''}`}
-                        style={{ borderBottom: '1px solid var(--glass-border-light)' }}
+                        style={{
+                          background: !notif.read ? 'rgba(129,140,248,0.1)' : 'rgba(255,255,255,0.06)',
+                          borderRadius: '10px',
+                          padding: '10px 12px',
+                          overflow: 'hidden',
+                          display: 'flex', gap: '10px', alignItems: 'flex-start',
+                        }}
                       >
-                        <div className="flex-1 min-w-0">
-                          <p className="text-xs font-medium truncate" style={{ color: 'var(--text-primary)' }}>
+                        <div style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
+                          <p style={{ fontSize: '13px', fontWeight: 600, color: 'white', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                             {notif.title}
                           </p>
-                          <p className="text-xs mt-1 font-normal line-clamp-2" style={{ color: 'var(--text-secondary)' }}>
+                          <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.75)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: '3px' }}>
                             {notif.text}
                           </p>
-                          <span className="text-[10px] mt-2 block" style={{ color: 'var(--text-tertiary)' }}>
+                          <span style={{ fontSize: '10px', color: 'rgba(255,255,255,0.35)', display: 'block', marginTop: '5px' }}>
                             {formatTime(notif.created_at)}
                           </span>
                         </div>
                         {!notif.read && (
                           <button
                             onClick={() => markNotificationAsRead(notif.id)}
-                            className="p-1.5 rounded-[var(--radius-sm)] cursor-pointer self-start transition-all"
-                            style={{ color: 'var(--text-tertiary)', background: 'rgba(255,255,255,0.04)' }}
+                            style={{
+                              padding: '5px', borderRadius: '6px', cursor: 'pointer', flexShrink: 0,
+                              color: 'rgba(255,255,255,0.5)', background: 'rgba(255,255,255,0.06)',
+                              border: 'none', transition: 'all 0.15s', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            }}
                             onMouseEnter={(e) => {
-                              e.currentTarget.style.background = 'var(--accent-muted)';
-                              e.currentTarget.style.color = 'var(--text-brand)';
+                              e.currentTarget.style.background = 'rgba(99,102,241,0.2)';
+                              e.currentTarget.style.color = '#818cf8';
                             }}
                             onMouseLeave={(e) => {
-                              e.currentTarget.style.background = 'rgba(255,255,255,0.04)';
-                              e.currentTarget.style.color = 'var(--text-tertiary)';
+                              e.currentTarget.style.background = 'rgba(255,255,255,0.06)';
+                              e.currentTarget.style.color = 'rgba(255,255,255,0.5)';
                             }}
                           >
-                            <Check size={12} />
+                            <Check size={11} />
                           </button>
                         )}
                       </div>
