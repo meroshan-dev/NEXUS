@@ -269,26 +269,26 @@ export default function DashboardPage() {
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
       {dbError && <DbSetupModal />}
 
-      {/* Welcome Back Card — Fix 2: overflow hidden, flex-wrap, buttons contained */}
+      {/* Welcome Back Card */}
       <motion.div
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         className="glass-card"
-        style={{ padding: '24px', boxSizing: 'border-box', overflow: 'hidden', position: 'relative' }}
+        style={{ padding: '24px', boxSizing: 'border-box', overflow: 'hidden' }}
       >
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '16px', flexWrap: 'wrap' }}>
-          <div style={{ flex: 1, minWidth: 0 }}>
+        <div className="hero-card-inner" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '16px', flexWrap: 'wrap' }}>
+          <div className="hero-text" style={{ flex: 1, minWidth: 0 }}>
             <span className="section-label" style={{ marginBottom: '8px', display: 'block', opacity: 1, color: 'var(--accent)' }}>
               Personal Overview
             </span>
-            <h1 style={{ fontSize: 'clamp(20px, 3vw, 30px)', fontWeight: 500, letterSpacing: '-0.02em', color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            <h1 className="hero-title" style={{ fontSize: 'clamp(20px, 3vw, 30px)', fontWeight: 500, letterSpacing: '-0.02em', color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               Welcome back, {user?.name?.split(' ')[0] || 'User'}
             </h1>
-            <p style={{ fontSize: '12px', lineHeight: 1.6, color: 'var(--text-secondary)', marginTop: '8px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            <p className="hero-subtitle" style={{ fontSize: '12px', lineHeight: 1.6, color: 'var(--text-secondary)', marginTop: '8px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               All workspaces are synchronized. Here is what is on your plate next.
             </p>
           </div>
-          <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexShrink: 0 }}>
+          <div className="hero-buttons" style={{ display: 'flex', gap: '8px', alignItems: 'center', flexShrink: 0 }}>
             <Button variant="secondary" size="sm" style={{ whiteSpace: 'nowrap', flexShrink: 0, padding: '8px 16px' }} onClick={() => setShowJoin(true)}>
               Join workspace
             </Button>
@@ -306,7 +306,7 @@ export default function DashboardPage() {
             <History size={15} strokeWidth={1.5} style={{ color: 'var(--text-tertiary)' }} />
             <h2 className="section-label">Continue working</h2>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '16px' }}>
+          <div className="continue-working-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '16px' }}>
             {continueWorkingList.slice(0, 3).map((ws) => (
               <motion.div
                 key={ws.id}

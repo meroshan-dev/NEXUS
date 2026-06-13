@@ -54,16 +54,10 @@ export default function AppLayout() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const location = useLocation();
   const isKeyboardVisible = useKeyboardVisible();
-  const { incomingCall, joinCall, declineCall, activeCall, leaveCall } = useWorkspace();
+  const { incomingCall, joinCall, declineCall, activeCall, leaveCall, workspaces = [] } = useWorkspace();
 
   const match = location.pathname.match(/^\/workspace\/([^/]+)/);
-  const activeWorkspaceId = match ? match[1] : 'ws_001';
-
-  const mobileNavItems = [
-    { to: '/dashboard', icon: LayoutDashboard, label: 'Home' },
-    { to: `/workspace/${activeWorkspaceId}`, icon: FolderKanban, label: 'Workspace' },
-    { to: '/profile', icon: User, label: 'Profile' },
-  ];
+  const activeWorkspaceId = match ? match[1] : null;
 
   return (
     <div className="flex h-screen overflow-hidden min-w-0 relative mesh-bg">
@@ -94,59 +88,108 @@ export default function AppLayout() {
               animate={{ x: 0 }}
               exit={{ x: -SIDEBAR_FULL }}
               transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
-              className="fixed left-0 top-0 h-full z-50 lg:hidden flex flex-col glass-sidebar"
-              style={{ width: SIDEBAR_FULL }}
+              className="fixed left-0 top-0 h-full z-50 lg:hidden flex flex-col"
+              style={{
+                width: SIDEBAR_FULL,
+                background: 'rgba(255,255,255,0.05)',
+                backdropFilter: 'blur(20px)',
+                WebkitBackdropFilter: 'blur(20px)',
+                borderRight: '1px solid rgba(255,255,255,0.08)',
+              }}
             >
+              {/* Header */}
               <div
-                className="flex items-center justify-between px-5 h-[var(--topbar-height)] shrink-0"
-                style={{ borderBottom: '1px solid var(--glass-border-light)' }}
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 20px', height: 'var(--topbar-height)', flexShrink: 0, borderBottom: '1px solid rgba(255,255,255,0.08)' }}
               >
-                <div className="flex items-center gap-3">
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                   <div
-                    className="w-9 h-9 rounded-[var(--radius-md)] flex items-center justify-center"
                     style={{
+                      width: '36px', height: '36px', borderRadius: '10px',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
                       background: 'linear-gradient(135deg, rgba(99,102,241,0.4), rgba(129,140,248,0.3))',
                       boxShadow: '0 0 20px rgba(99,102,241,0.2)',
                     }}
                   >
-                    <Sparkles size={16} className="text-white" strokeWidth={1.5} />
+                    <Sparkles size={16} style={{ color: 'white' }} strokeWidth={1.5} />
                   </div>
-                  <span className="font-medium text-[15px] tracking-tight" style={{ color: 'var(--text-primary)' }}>Nexus</span>
+                  <span style={{ fontWeight: 500, fontSize: '15px', letterSpacing: '-0.01em', color: 'var(--text-primary)' }}>Nexus</span>
                 </div>
                 <button
                   onClick={() => setMobileOpen(false)}
-                  className="w-9 h-9 rounded-[var(--radius-md)] flex items-center justify-center cursor-pointer"
-                  style={{ background: 'rgba(255,255,255,0.06)', color: 'var(--text-secondary)' }}
+                  style={{ width: '36px', height: '36px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', background: 'rgba(255,255,255,0.06)', color: 'var(--text-secondary)', border: 'none' }}
                 >
                   <X size={16} strokeWidth={1.5} />
                 </button>
               </div>
-              <nav className="flex-1 px-3 py-5 space-y-1">
-                {mobileNavItems.map((item) => {
-                  const active =
-                    location.pathname === item.to ||
-                    (item.to !== '/dashboard' &&
-                      item.to !== '/profile' &&
-                      location.pathname.startsWith(item.to));
-                  return (
-                    <NavLink
-                      key={item.to}
-                      to={item.to}
-                      onClick={() => setMobileOpen(false)}
-                      className={`flex items-center gap-3 h-11 px-3.5 rounded-[var(--radius-pill)] text-sm transition-all duration-200 ${
-                        active ? 'font-medium' : 'font-normal'
-                      }`}
-                      style={{
-                        background: active ? 'rgba(129,140,248,0.15)' : 'transparent',
-                        color: active ? 'var(--text-brand)' : 'var(--text-secondary)',
-                        boxShadow: active ? 'inset 0 1px 0 rgba(255,255,255,0.08)' : 'none',
-                      }}
-                    >
-                      <item.icon size={18} strokeWidth={active ? 1.75 : 1.5} />
-                      {item.label}
-                    </NavLink>
-                  );
-                })}
+
+              {/* Nav — matches desktop sidebar */}
+              <nav style={{ flex: 1, padding: '16px 12px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                {/* Dashboard */}
+                <NavLink
+                  to="/dashboard"
+                  onClick={() => setMobileOpen(false)}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 14px', borderRadius: '10px', overflow: 'hidden',
+                    textDecoration: 'none', fontSize: '14px', transition: 'all 0.2s',
+                    background: location.pathname === '/dashboard' ? 'rgba(255,255,255,0.1)' : 'transparent',
+                    backdropFilter: location.pathname === '/dashboard' ? 'blur(12px)' : 'none',
+                    border: location.pathname === '/dashboard' ? '1px solid rgba(255,255,255,0.15)' : '1px solid transparent',
+                    color: location.pathname === '/dashboard' ? 'var(--text-primary)' : 'var(--text-secondary)',
+                    fontWeight: location.pathname === '/dashboard' ? 500 : 400,
+                  }}
+                >
+                  <LayoutDashboard size={18} strokeWidth={1.5} style={{ flexShrink: 0, opacity: location.pathname === '/dashboard' ? 1 : 0.7 }} />
+                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Dashboard</span>
+                </NavLink>
+
+                {/* Profile */}
+                <NavLink
+                  to="/profile"
+                  onClick={() => setMobileOpen(false)}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 14px', borderRadius: '10px', overflow: 'hidden',
+                    textDecoration: 'none', fontSize: '14px', transition: 'all 0.2s',
+                    background: location.pathname === '/profile' ? 'rgba(255,255,255,0.1)' : 'transparent',
+                    border: location.pathname === '/profile' ? '1px solid rgba(255,255,255,0.15)' : '1px solid transparent',
+                    color: location.pathname === '/profile' ? 'var(--text-primary)' : 'var(--text-secondary)',
+                    fontWeight: location.pathname === '/profile' ? 500 : 400,
+                  }}
+                >
+                  <User size={18} strokeWidth={1.5} style={{ flexShrink: 0, opacity: location.pathname === '/profile' ? 1 : 0.7 }} />
+                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Profile</span>
+                </NavLink>
+
+                {/* Workspaces section */}
+                {workspaces.length > 0 && (
+                  <div style={{ marginTop: '16px' }}>
+                    <p style={{ fontSize: '11px', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.06em', opacity: 0.5, color: 'var(--text-tertiary)', padding: '0 14px 8px' }}>
+                      Workspaces
+                    </p>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                      {workspaces.map((ws) => {
+                        const isActive = location.pathname === `/workspace/${ws.id}`;
+                        return (
+                          <NavLink
+                            key={ws.id}
+                            to={`/workspace/${ws.id}?tab=overview`}
+                            onClick={() => setMobileOpen(false)}
+                            style={{
+                              display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 14px', borderRadius: '10px',
+                              overflow: 'hidden', textDecoration: 'none', fontSize: '13px', transition: 'all 0.2s',
+                              background: isActive ? 'rgba(255,255,255,0.1)' : 'transparent',
+                              border: isActive ? '1px solid rgba(255,255,255,0.12)' : '1px solid transparent',
+                              color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
+                              fontWeight: isActive ? 500 : 400,
+                            }}
+                          >
+                            <span style={{ flexShrink: 0, width: '20px', textAlign: 'center', fontSize: '14px' }}>{ws.icon}</span>
+                            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, minWidth: 0 }}>{ws.name}</span>
+                          </NavLink>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
               </nav>
             </motion.div>
           </>
@@ -163,7 +206,7 @@ export default function AppLayout() {
           style={{
             padding: isKeyboardVisible
               ? 'var(--page-padding-y) var(--page-padding-x) 12px var(--page-padding-x)'
-              : 'var(--page-padding-y) var(--page-padding-x) 76px var(--page-padding-x)',
+              : 'var(--page-padding-y) var(--page-padding-x) 72px var(--page-padding-x)',
           }}
         >
           <motion.div
@@ -175,39 +218,58 @@ export default function AppLayout() {
             <Outlet />
           </motion.div>
         </main>
+        {/* Bottom Nav — glass pill bar */}
         <nav
-          className="fixed bottom-0 left-0 right-0 z-30 flex items-center justify-around px-4 glass-strong transition-all duration-200"
           style={{
-            height: '52px',
-            borderTop: '1px solid var(--glass-border-light)',
-            paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+            position: 'fixed', bottom: 0, left: 0, right: 0,
+            height: '60px',
             display: isKeyboardVisible ? 'none' : 'flex',
+            alignItems: 'center', justifyContent: 'space-around',
+            background: 'rgba(10,10,30,0.85)',
+            backdropFilter: 'blur(20px)',
+            WebkitBackdropFilter: 'blur(20px)',
+            borderTop: '1px solid rgba(255,255,255,0.08)',
+            zIndex: 100,
+            paddingBottom: 'env(safe-area-inset-bottom, 0px)',
           }}
+          className="lg:hidden"
         >
-          {mobileNavItems.map((item) => {
-            const active =
-              location.pathname === item.to ||
-              (item.to !== '/dashboard' &&
-                item.to !== '/profile' &&
-                location.pathname.startsWith(item.to));
-            return (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                className="flex items-center justify-center rounded-[var(--radius-md)] transition-all cursor-pointer"
-                style={{
-                  width: '44px',
-                  height: '44px',
-                  color: active ? 'var(--text-brand)' : 'var(--text-tertiary)',
-                  background: active ? 'rgba(129,140,248,0.15)' : 'transparent',
-                  boxShadow: active ? 'inset 0 1px 0 rgba(255,255,255,0.08)' : 'none',
-                }}
-                title={item.label}
-              >
-                <item.icon size={20} strokeWidth={active ? 1.75 : 1.5} />
-              </NavLink>
-            );
-          })}
+          <NavLink
+            to="/dashboard"
+            style={{
+              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '2px',
+              width: '48px', height: '48px', borderRadius: '12px', textDecoration: 'none',
+              color: location.pathname === '/dashboard' ? 'var(--accent)' : 'var(--text-tertiary)',
+              background: location.pathname === '/dashboard' ? 'rgba(129,140,248,0.15)' : 'transparent',
+            }}
+          >
+            <LayoutDashboard size={20} strokeWidth={1.5} />
+            <span style={{ fontSize: '9px', fontWeight: 500 }}>Home</span>
+          </NavLink>
+          <NavLink
+            to={activeWorkspaceId && activeWorkspaceId !== 'ws_001' ? `/workspace/${activeWorkspaceId}?tab=overview` : (workspaces[0] ? `/workspace/${workspaces[0].id}?tab=overview` : '/dashboard')}
+            style={{
+              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '2px',
+              width: '48px', height: '48px', borderRadius: '12px', textDecoration: 'none',
+              color: location.pathname.startsWith('/workspace/') ? 'var(--accent)' : 'var(--text-tertiary)',
+              background: location.pathname.startsWith('/workspace/') ? 'rgba(129,140,248,0.15)' : 'transparent',
+            }}
+          >
+            <FolderKanban size={20} strokeWidth={1.5} />
+            <span style={{ fontSize: '9px', fontWeight: 500 }}>Workspace</span>
+          </NavLink>
+          <NavLink
+            to="/profile"
+            style={{
+              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '2px',
+              width: '48px', height: '48px', borderRadius: '12px', textDecoration: 'none',
+              color: location.pathname === '/profile' ? 'var(--accent)' : 'var(--text-tertiary)',
+              background: location.pathname === '/profile' ? 'rgba(129,140,248,0.15)' : 'transparent',
+            }}
+          >
+            <User size={20} strokeWidth={1.5} />
+            <span style={{ fontSize: '9px', fontWeight: 500 }}>Profile</span>
+          </NavLink>
         </nav>
       </div>
 

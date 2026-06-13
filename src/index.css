@@ -882,3 +882,58 @@ body {
     font-size: 13px;
   }
 }
+
+/* ===== Mobile Dashboard Fixes ===== */
+@media (max-width: 768px) {
+  /* Hero card: stack vertically, text wraps */
+  .hero-card-inner {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 12px !important;
+  }
+
+  .hero-card-inner .hero-text {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .hero-card-inner .hero-title {
+    font-size: 24px !important;
+    white-space: normal !important;
+    word-break: break-word;
+    line-height: 1.2;
+    overflow: visible !important;
+    text-overflow: unset !important;
+  }
+
+  .hero-card-inner .hero-subtitle {
+    white-space: normal !important;
+    overflow: visible !important;
+    text-overflow: unset !important;
+    line-height: 1.5;
+    font-size: 13px !important;
+  }
+
+  .hero-card-inner .hero-buttons {
+    width: 100% !important;
+    flex-wrap: wrap !important;
+    flex-shrink: unset !important;
+  }
+
+  .hero-card-inner .hero-buttons button,
+  .hero-card-inner .hero-buttons a {
+    flex: 1;
+    min-width: 120px;
+  }
+
+  /* Continue working: stack on mobile */
+  .continue-working-grid {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+
+  /* Tasks section full width */
+  .glass-card {
+    border-radius: 12px;
+  }
+}
