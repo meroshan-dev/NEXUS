@@ -41,7 +41,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col justify-center items-center px-4 relative overflow-hidden" style={{ background: '#06060e' }}>
+    <div className="login-wrapper">
       {/* Deep mesh gradient background */}
       <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
         <div className="absolute inset-0" style={{
@@ -49,11 +49,13 @@ export default function LoginPage() {
         }} />
       </div>
 
-      {/* Floating Orbs */}
-      <div className="orb orb-1" />
-      <div className="orb orb-2" />
-      <div className="orb orb-3" />
-      <div className="orb orb-4" />
+      {/* Floating Orbs — hidden on mobile via .login-orbs */}
+      <div className="login-orbs">
+        <div className="orb orb-1" />
+        <div className="orb orb-2" />
+        <div className="orb orb-3" />
+        <div className="orb orb-4" />
+      </div>
 
       <motion.div
         initial={{ opacity: 0, y: 16 }}
@@ -61,25 +63,12 @@ export default function LoginPage() {
         transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
         className="w-full max-w-[420px] relative z-10"
       >
-        {/* ═══ UNIFIED GLASS CARD — Everything inside, one padded container ═══ */}
-        <div
-          style={{
-            background: 'rgba(255,255,255,0.07)',
-            backdropFilter: 'blur(20px) saturate(160%)',
-            WebkitBackdropFilter: 'blur(20px) saturate(160%)',
-            border: '1px solid rgba(255,255,255,0.12)',
-            borderRadius: '20px',
-            boxShadow: '0 8px 32px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.1)',
-            padding: '32px 28px',
-            boxSizing: 'border-box',
-            overflow: 'hidden',
-            width: '100%',
-          }}
-        >
+        {/* ═══ UNIFIED GLASS CARD — responsive via .login-card class ═══ */}
+        <div className="login-card">
           {/* Logo inside card at top */}
-          <div className="flex items-center gap-2.5 justify-center" style={{ marginBottom: '24px' }}>
+          <div className="flex items-center gap-2.5 justify-center login-logo-section">
             <div
-              className="flex items-center justify-center"
+              className="flex items-center justify-center shrink-0"
               style={{
                 width: '40px', height: '40px', borderRadius: '12px',
                 background: 'linear-gradient(135deg, rgba(99,102,241,0.4), rgba(129,140,248,0.3))',
@@ -95,11 +84,11 @@ export default function LoginPage() {
           </div>
 
           {/* Heading */}
-          <div style={{ marginBottom: '24px', textAlign: 'center' }}>
-            <h2 className="text-xl font-medium tracking-tight" style={{ color: 'var(--text-primary)' }}>
+          <div className="login-logo-section" style={{ textAlign: 'center' }}>
+            <h2 className="login-title">
               {isSignUp ? 'Create your account' : 'Welcome back'}
             </h2>
-            <p className="text-xs font-normal" style={{ color: 'var(--text-secondary)', marginTop: '8px' }}>
+            <p className="login-subtitle">
               {isSignUp ? 'Start collaborating with your team today.' : 'Sign in to your Nexus workspace.'}
             </p>
             
@@ -140,30 +129,8 @@ export default function LoginPage() {
             </motion.div>
           )}
 
-          {/* Google Button — Glass Pill */}
-          <button
-            onClick={handleGoogle}
-            className="w-full flex items-center justify-center gap-2.5 cursor-pointer transition-all duration-200"
-            style={{
-              height: '44px',
-              borderRadius: '12px',
-              background: 'rgba(255,255,255,0.06)',
-              backdropFilter: 'blur(16px)',
-              border: '1px solid rgba(255,255,255,0.12)',
-              color: 'var(--text-primary)',
-              boxShadow: '0 4px 16px rgba(0,0,0,0.1), inset 0 1px 0 rgba(255,255,255,0.08)',
-              marginBottom: '20px',
-              boxSizing: 'border-box',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = 'rgba(255,255,255,0.1)';
-              e.currentTarget.style.transform = 'translateY(-1px)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'rgba(255,255,255,0.06)';
-              e.currentTarget.style.transform = 'translateY(0)';
-            }}
-          >
+          {/* Google Button — Glass Pill, responsive */}
+          <button onClick={handleGoogle} className="login-google-btn">
             <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" className="shrink-0">
               <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" />
               <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
@@ -180,7 +147,7 @@ export default function LoginPage() {
             <div className="flex-1 h-px" style={{ background: 'rgba(255,255,255,0.06)' }} />
           </div>
 
-          {/* Form — ALL labels INSIDE the card with proper spacing */}
+          {/* Form — ALL labels INSIDE the card */}
           <form onSubmit={handleSubmit} className="flex flex-col" style={{ gap: '16px' }}>
             {isSignUp && (
               <Input
@@ -215,7 +182,7 @@ export default function LoginPage() {
               <div className="flex justify-end" style={{ marginTop: '-4px' }}>
                 <button 
                   type="button" 
-                  className="text-xs font-medium hover:underline cursor-pointer transition-colors" 
+                  className="login-link font-medium hover:underline cursor-pointer transition-colors" 
                   style={{ color: 'var(--accent)' }}
                 >
                   Forgot password?
@@ -223,29 +190,11 @@ export default function LoginPage() {
               </div>
             )}
 
-            {/* Sign In — Glowing Purple Pill Button */}
+            {/* Sign In — Glowing Purple Pill, responsive */}
             <button
               type="submit"
               disabled={loading}
-              className="w-full flex items-center justify-center gap-2 text-[13px] font-medium tracking-wide text-white cursor-pointer transition-all duration-300 disabled:opacity-40 disabled:cursor-not-allowed"
-              style={{
-                height: '44px',
-                borderRadius: '12px',
-                background: 'linear-gradient(135deg, rgba(99,102,241,0.7), rgba(129,140,248,0.5))',
-                border: '1px solid rgba(129,140,248,0.4)',
-                boxShadow: '0 4px 20px rgba(99,102,241,0.3), inset 0 1px 0 rgba(255,255,255,0.15)',
-                boxSizing: 'border-box',
-              }}
-              onMouseEnter={(e) => {
-                if (!loading) {
-                  e.currentTarget.style.boxShadow = '0 4px 28px rgba(99,102,241,0.45), inset 0 1px 0 rgba(255,255,255,0.2), 0 0 40px rgba(129,140,248,0.2)';
-                  e.currentTarget.style.transform = 'translateY(-1px)';
-                }
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.boxShadow = '0 4px 20px rgba(99,102,241,0.3), inset 0 1px 0 rgba(255,255,255,0.15)';
-                e.currentTarget.style.transform = 'translateY(0)';
-              }}
+              className="login-submit-btn"
             >
               {loading ? (
                 <svg className="animate-spin" width={15} height={15} viewBox="0 0 24 24">
@@ -262,7 +211,7 @@ export default function LoginPage() {
           </form>
 
           {/* Toggle Signin/Signup */}
-          <p className="text-center text-xs" style={{ color: 'var(--text-secondary)', marginTop: '24px' }}>
+          <p className="text-center login-link" style={{ color: 'var(--text-secondary)', marginTop: '24px' }}>
             {isSignUp ? 'Already have an account? ' : "Don't have an account? "}
             <button
               type="button"
@@ -270,7 +219,7 @@ export default function LoginPage() {
                 setIsSignUp(!isSignUp);
                 setError('');
               }}
-              className="font-medium hover:underline cursor-pointer transition-colors"
+              className="login-link font-medium hover:underline cursor-pointer transition-colors"
               style={{ color: 'var(--accent)' }}
             >
               {isSignUp ? 'Sign in' : 'Sign up free'}
