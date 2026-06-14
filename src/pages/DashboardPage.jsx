@@ -7,8 +7,8 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import Modal from '../components/ui/Modal';
-import Input from '../components/ui/Input';
 import Button from '../components/ui/Button';
+
 import LoadingState from '../components/ui/LoadingState';
 import DbSetupModal from '../components/ui/DbSetupModal';
 import { useWorkspace } from '../context/WorkspaceContext';
@@ -266,7 +266,7 @@ export default function DashboardPage() {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
       {dbError && <DbSetupModal />}
 
       {/* Welcome Back Card */}
@@ -423,86 +423,182 @@ export default function DashboardPage() {
 
       {/* Workspace Creation & Join Modals */}
       <Modal isOpen={showCreate} onClose={() => setShowCreate(false)} title="Create workspace">
-        <form onSubmit={handleCreate} className="space-y-5">
-          <Input
-            label="Workspace name"
-            placeholder="e.g. Product Development"
-            value={newWs.name}
-            onChange={(e) => setNewWs({ ...newWs, name: e.target.value })}
-            required
-          />
-          <div className="space-y-1.5">
-            <label className="block text-xs font-medium tracking-wide" style={{ color: 'var(--text-secondary)' }}>
+        <form onSubmit={handleCreate} style={{ display: 'flex', flexDirection: 'column', gap: '16px', width: '100%', boxSizing: 'border-box' }}>
+          {/* Workspace name */}
+          <div style={{ width: '100%', boxSizing: 'border-box' }}>
+            <label style={{ fontSize: '12px', fontWeight: 500, opacity: 0.6, marginBottom: '6px', marginTop: 0, display: 'block', color: 'white' }}>
+              Workspace name
+            </label>
+            <input
+              type="text"
+              placeholder="e.g. Product Development"
+              value={newWs.name}
+              onChange={(e) => setNewWs({ ...newWs, name: e.target.value })}
+              required
+            />
+          </div>
+
+          {/* Description */}
+          <div style={{ width: '100%', boxSizing: 'border-box' }}>
+            <label style={{ fontSize: '12px', fontWeight: 500, opacity: 0.6, marginBottom: '6px', marginTop: 0, display: 'block', color: 'white' }}>
               Description
             </label>
             <textarea
               placeholder="What's this workspace about?"
               value={newWs.description}
               onChange={(e) => setNewWs({ ...newWs, description: e.target.value })}
-              className="input-base resize-none text-xs p-3 w-full"
-              style={{ height: 80, borderRadius: 'var(--radius-md)' }}
+              style={{
+                minHeight: '100px',
+                resize: 'none',
+                fontFamily: 'inherit',
+              }}
             />
           </div>
-          <div className="space-y-2">
-            <label className="block text-xs font-medium tracking-wide" style={{ color: 'var(--text-secondary)' }}>
+
+          {/* Theme color */}
+          <div style={{ width: '100%', boxSizing: 'border-box' }}>
+            <label style={{ fontSize: '12px', fontWeight: 500, opacity: 0.6, marginBottom: '6px', marginTop: 0, display: 'block', color: 'white' }}>
               Theme color
             </label>
-            <div className="flex flex-wrap gap-2.5">
+            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginTop: '8px' }}>
               {PALETTE.map((c) => (
                 <button
                   key={c}
                   type="button"
                   onClick={() => setNewWs({ ...newWs, color: c })}
-                  className="w-7 h-7 rounded-full transition-all focus:outline-none cursor-pointer"
                   style={{
+                    width: '28px',
+                    height: '28px',
+                    borderRadius: '50%',
+                    cursor: 'pointer',
+                    flexShrink: 0,
                     background: c,
-                    boxShadow: newWs.color === c ? `0 0 0 1.5px var(--bg-app), 0 0 0 3px ${c}, 0 0 12px ${c}50` : 'none',
-                    transform: newWs.color === c ? 'scale(1.05)' : undefined,
                     border: '1px solid rgba(255,255,255,0.1)',
+                    boxShadow: newWs.color === c ? `0 0 0 1.5px #06060e, 0 0 0 3px ${c}, 0 0 12px ${c}50` : 'none',
+                    transform: newWs.color === c ? 'scale(1.05)' : undefined,
+                    transition: 'all 0.2s ease',
+                    padding: 0,
                   }}
                 />
               ))}
             </div>
           </div>
-          <div className="flex gap-3 pt-3" style={{ borderTop: '1px solid var(--glass-border-light)' }}>
-            <Button variant="secondary" type="button" className="flex-1" onClick={() => setShowCreate(false)}>
+
+          {/* Button row */}
+          <div style={{ display: 'flex', gap: '10px', marginTop: '20px', width: '100%', boxSizing: 'border-box' }}>
+            <button
+              type="button"
+              onClick={() => setShowCreate(false)}
+              style={{
+                flex: 1,
+                padding: '10px',
+                borderRadius: '12px',
+                background: 'rgba(255,255,255,0.06)',
+                border: '1px solid rgba(255,255,255,0.1)',
+                color: 'white',
+                cursor: 'pointer',
+                fontSize: '14px',
+                fontWeight: 500,
+              }}
+            >
               Cancel
-            </Button>
-            <Button type="submit" className="flex-1">
+            </button>
+            <button
+              type="submit"
+              style={{
+                flex: 1,
+                padding: '10px',
+                borderRadius: '12px',
+                background: '#6366f1',
+                border: 'none',
+                color: 'white',
+                fontWeight: 600,
+                cursor: 'pointer',
+                fontSize: '14px',
+              }}
+            >
               Create workspace
-            </Button>
+            </button>
           </div>
         </form>
       </Modal>
 
       <Modal isOpen={showJoin} onClose={() => setShowJoin(false)} title="Join workspace">
-        <form onSubmit={handleJoin} className="space-y-5">
-          <Input
-            label="Invite code"
-            placeholder="e.g. ABCD12"
-            value={joinCode}
-            onChange={(e) => setJoinCode(e.target.value)}
-            required
-          />
+        <form onSubmit={handleJoin} style={{ display: 'flex', flexDirection: 'column', gap: '16px', width: '100%', boxSizing: 'border-box' }}>
+          {/* Invite code */}
+          <div style={{ width: '100%', boxSizing: 'border-box' }}>
+            <label style={{ fontSize: '12px', fontWeight: 500, opacity: 0.6, marginBottom: '6px', marginTop: 0, display: 'block', color: 'white' }}>
+              Invite code
+            </label>
+            <input
+              type="text"
+              placeholder="e.g. ABCD12"
+              value={joinCode}
+              onChange={(e) => setJoinCode(e.target.value)}
+              required
+              style={{
+                letterSpacing: '0.08em',
+                fontSize: '15px',
+              }}
+            />
+          </div>
+
           {joinError && (
             <p
-              className="text-xs font-medium px-3 py-2 rounded-[var(--radius-md)]"
               style={{
+                fontSize: '12px',
+                fontWeight: 500,
+                padding: '8px 12px',
+                borderRadius: '12px',
                 color: '#f87171',
                 background: 'rgba(239,68,68,0.08)',
                 border: '1px solid rgba(239,68,68,0.2)',
+                width: '100%',
+                boxSizing: 'border-box',
+                margin: 0,
               }}
             >
               {joinError}
             </p>
           )}
-          <div className="flex gap-3 pt-3" style={{ borderTop: '1px solid var(--glass-border-light)' }}>
-            <Button variant="secondary" type="button" className="flex-1" onClick={() => setShowJoin(false)}>
+
+          {/* Button row */}
+          <div style={{ display: 'flex', gap: '10px', marginTop: '20px', width: '100%', boxSizing: 'border-box' }}>
+            <button
+              type="button"
+              onClick={() => setShowJoin(false)}
+              style={{
+                flex: 1,
+                padding: '10px',
+                borderRadius: '12px',
+                background: 'rgba(255,255,255,0.06)',
+                border: '1px solid rgba(255,255,255,0.1)',
+                color: 'white',
+                cursor: 'pointer',
+                fontSize: '14px',
+                fontWeight: 500,
+              }}
+            >
               Cancel
-            </Button>
-            <Button type="submit" className="flex-1" loading={joinLoading}>
-              Join workspace
-            </Button>
+            </button>
+            <button
+              type="submit"
+              disabled={joinLoading}
+              style={{
+                flex: 1,
+                padding: '10px',
+                borderRadius: '12px',
+                background: '#6366f1',
+                border: 'none',
+                color: 'white',
+                fontWeight: 600,
+                cursor: joinLoading ? 'not-allowed' : 'pointer',
+                fontSize: '14px',
+                opacity: joinLoading ? 0.6 : 1,
+              }}
+            >
+              {joinLoading ? 'Joining…' : 'Join workspace'}
+            </button>
           </div>
         </form>
       </Modal>

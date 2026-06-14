@@ -6,7 +6,7 @@ import TopBar from './TopBar';
 import { X, LayoutDashboard, FolderKanban, User, Sparkles, PhoneCall, PhoneOff } from 'lucide-react';
 import { useWorkspace } from '../../context/WorkspaceContext';
 
-const SIDEBAR_FULL = 280;
+const SIDEBAR_FULL = 220;
 
 function useKeyboardVisible() {
   const [visible, setVisible] = useState(false);
@@ -123,13 +123,13 @@ export default function AppLayout() {
               </div>
 
               {/* Nav — matches desktop sidebar */}
-              <nav style={{ flex: 1, padding: '16px 12px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <nav style={{ flex: 1, padding: '12px 10px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '4px' }}>
                 {/* Dashboard */}
                 <NavLink
                   to="/dashboard"
                   onClick={() => setMobileOpen(false)}
                   style={{
-                    display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 14px', borderRadius: '10px', overflow: 'hidden',
+                    display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 10px', borderRadius: '10px', overflow: 'hidden',
                     textDecoration: 'none', fontSize: '14px', transition: 'all 0.2s',
                     background: location.pathname === '/dashboard' ? 'rgba(255,255,255,0.1)' : 'transparent',
                     backdropFilter: location.pathname === '/dashboard' ? 'blur(12px)' : 'none',
@@ -147,7 +147,7 @@ export default function AppLayout() {
                   to="/profile"
                   onClick={() => setMobileOpen(false)}
                   style={{
-                    display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 14px', borderRadius: '10px', overflow: 'hidden',
+                    display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 10px', borderRadius: '10px', overflow: 'hidden',
                     textDecoration: 'none', fontSize: '14px', transition: 'all 0.2s',
                     background: location.pathname === '/profile' ? 'rgba(255,255,255,0.1)' : 'transparent',
                     border: location.pathname === '/profile' ? '1px solid rgba(255,255,255,0.15)' : '1px solid transparent',
@@ -174,7 +174,7 @@ export default function AppLayout() {
                             to={`/workspace/${ws.id}?tab=overview`}
                             onClick={() => setMobileOpen(false)}
                             style={{
-                              display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 14px', borderRadius: '10px',
+                              display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 10px', borderRadius: '10px',
                               overflow: 'hidden', textDecoration: 'none', fontSize: '13px', transition: 'all 0.2s',
                               background: isActive ? 'rgba(255,255,255,0.1)' : 'transparent',
                               border: isActive ? '1px solid rgba(255,255,255,0.12)' : '1px solid transparent',

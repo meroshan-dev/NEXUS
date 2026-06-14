@@ -1,16 +1,16 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Camera, Mail, Briefcase, MapPin, Bell, Monitor,
-  Smartphone, Shield, Globe, Trash2, Save, Pencil, Check, LogOut,
+  Camera, Mail, Briefcase, MapPin, Bell,
+  Smartphone, Shield, Trash2, Save, Pencil, Check, LogOut, Lock
 } from 'lucide-react';
 import Button from '../components/ui/Button';
-import Input from '../components/ui/Input';
 import Avatar from '../components/ui/Avatar';
 import Badge from '../components/ui/Badge';
+import Modal from '../components/ui/Modal';
 import { useAuth } from '../context/AuthContext';
-import { useTheme } from '../context/ThemeContext';
 import { useNavigate } from 'react-router-dom';
+import { supabase } from '../lib/supabase';
 
 function Toggle({ checked, onChange }) {
   return (
@@ -36,7 +36,13 @@ function SettingsCard({ title, description, children, delay = 0, danger }) {
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay, duration: 0.3 }}
       className="glass-card"
-      style={{ padding: '20px 24px', boxSizing: 'border-box', borderColor: danger ? 'rgba(239,68,68,0.2)' : undefined }}
+      style={{
+        borderRadius: '16px',
+        padding: '20px',
+        background: 'rgba(255,255,255,0.05)',
+        border: danger ? '1px solid rgba(239,68,68,0.25)' : '1px solid rgba(255,255,255,0.08)',
+        boxSizing: 'border-box',
+      }}
     >
       <h2
         className="section-label"
@@ -54,7 +60,6 @@ function SettingsCard({ title, description, children, delay = 0, danger }) {
 
 export default function ProfilePage() {
   const { user, signOut, updateProfile } = useAuth();
-  const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const [editing, setEditing] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -65,6 +70,14 @@ export default function ProfilePage() {
     bio: user?.bio || '',
     location: user?.location || '',
   }));
+
+  // Password change states
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmNewPassword, setConfirmNewPassword] = useState('');
+  const [errorMsg, setErrorMsg] = useState('');
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -91,7 +104,7 @@ export default function ProfilePage() {
     return () => clearTimeout(timer);
   }, [user]);
 
-  const [notifs, setNotifs] = useState({ email: true, push: true, desktop: false, digest: true });
+  const [notifs, setNotifs] = useState({ email: true, push: true, digest: true });
 
   const save = async () => {
     if (updateProfile) {
@@ -112,6 +125,52 @@ export default function ProfilePage() {
       setEditing(false);
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
+    }
+  };
+
+  const handlePasswordChange = async (e) => {
+    e.preventDefault();
+    setErrorMsg('');
+
+    if (newPassword !== confirmNewPassword) {
+      setErrorMsg('New passwords do not match');
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      setErrorMsg('Password must be at least 6 characters');
+      return;
+    }
+
+    setIsChangingPassword(true);
+    try {
+      const isSupabaseConfigured = !!import.meta.env.VITE_SUPABASE_URL && !!import.meta.env.VITE_SUPABASE_ANON_KEY;
+      if (isSupabaseConfigured) {
+        const { error } = await supabase.auth.updateUser({
+          password: newPassword
+        });
+        if (error) {
+          setErrorMsg(error.message);
+          alert(error.message);
+        } else {
+          alert('Password updated successfully');
+          setShowPasswordModal(false);
+          setCurrentPassword('');
+          setNewPassword('');
+          setConfirmNewPassword('');
+        }
+      } else {
+        alert('Password updated successfully (Demo Mode)');
+        setShowPasswordModal(false);
+        setCurrentPassword('');
+        setNewPassword('');
+        setConfirmNewPassword('');
+      }
+    } catch (err) {
+      setErrorMsg(err.message);
+      alert(err.message);
+    } finally {
+      setIsChangingPassword(false);
     }
   };
 
@@ -148,19 +207,91 @@ export default function ProfilePage() {
   };
 
   const settingRow = ({ key, icon: Icon, label, desc, action }) => (
-    <div key={key} className="flex items-center gap-3 py-1">
+    <div
+      key={key || label}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '12px',
+        padding: '10px 0',
+        borderBottom: '1px solid rgba(255,255,255,0.05)'
+      }}
+    >
       <div
-        className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 border border-[var(--border-color)] bg-[var(--bg-secondary)] text-[var(--text-secondary)]"
+        style={{
+          width: '34px',
+          height: '34px',
+          minWidth: '34px',
+          borderRadius: '10px',
+          background: 'rgba(255,255,255,0.06)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          flexShrink: 0
+        }}
       >
-        <Icon size={14} />
+        <Icon style={{ width: '15px', height: '15px', opacity: 0.65, color: 'white', flexShrink: 0 }} />
       </div>
-      <div className="flex-1 min-w-0">
-        <p className="text-xs font-semibold text-[var(--text-primary)]">{label}</p>
-        <p className="text-[10px] text-[var(--text-tertiary)] mt-0.5">{desc}</p>
+      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '2px' }}>
+        <p
+          style={{
+            fontSize: '13px',
+            fontWeight: 500,
+            color: 'var(--text-primary)',
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            margin: 0
+          }}
+        >
+          {label}
+        </p>
+        <p
+          style={{
+            fontSize: '11px',
+            opacity: 0.45,
+            color: 'var(--text-tertiary)',
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            margin: 0
+          }}
+        >
+          {desc}
+        </p>
       </div>
-      <div className="shrink-0">{action}</div>
+      <div style={{ flexShrink: 0, marginLeft: 'auto' }}>{action}</div>
     </div>
   );
+
+  const labelStyle = {
+    fontSize: '11px',
+    opacity: 0.5,
+    marginBottom: '6px',
+    display: 'block',
+    textTransform: 'uppercase',
+    letterSpacing: '0.06em',
+    color: 'white',
+    fontWeight: 500,
+  };
+
+  const inputStyle = {
+    width: '100%',
+    boxSizing: 'border-box',
+    padding: '10px 14px',
+    borderRadius: '12px',
+    background: 'rgba(255,255,255,0.06)',
+    border: '1px solid rgba(255,255,255,0.1)',
+    color: 'white',
+    fontSize: '14px',
+    outline: 'none',
+  };
+
+  const textareaStyle = {
+    ...inputStyle,
+    minHeight: '80px',
+    resize: 'vertical',
+  };
 
   return (
     <div className="page-stack pb-8 min-w-0">
@@ -186,126 +317,177 @@ export default function ProfilePage() {
         </h1>
       </header>
 
-      <div className="space-y-6 min-w-0">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', padding: '20px', boxSizing: 'border-box', minWidth: 0 }}>
+        {/* Profile form card */}
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
-          <div className="surface-panel overflow-hidden bg-[var(--bg-primary)] border-[var(--border-color)] shadow-sm">
-            {/* Simple colored flat header instead of massive glowing gradients */}
+          <div
+            className="glass-card"
+            style={{
+              borderRadius: '16px',
+              background: 'rgba(255,255,255,0.05)',
+              border: '1px solid rgba(255,255,255,0.08)',
+              boxSizing: 'border-box',
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden',
+            }}
+          >
+            {/* Profile Header Row */}
             <div
-              className="h-28 sm:h-32 relative border-b border-[var(--border-color)]"
-              style={{ background: 'var(--bg-secondary)' }}
-            />
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '16px',
+                padding: '24px',
+                borderBottom: '1px solid rgba(255,255,255,0.08)',
+              }}
+            >
+              <div className="relative" style={{ flexShrink: 0 }}>
+                <Avatar name={profile.name} size="xl" color="var(--accent)" />
+                <button
+                  className="absolute -bottom-1 -right-1 w-7.5 h-7.5 rounded-full flex items-center justify-center text-white transition-colors cursor-pointer"
+                  style={{ background: 'var(--accent)', boxShadow: 'var(--shadow-sm)', border: 'none' }}
+                >
+                  <Camera size={12} strokeWidth={2} />
+                </button>
+              </div>
 
-            <div className="px-6 sm:px-8 pb-8">
-              <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 -mt-10 mb-6">
-                <div className="relative">
-                  <Avatar name={profile.name} size="xl" color="var(--accent)" className="border-4 border-[var(--bg-primary)]" />
-                  <button
-                    className="absolute -bottom-1 -right-1 w-7.5 h-7.5 rounded-full flex items-center justify-center text-white transition-colors cursor-pointer"
-                    style={{ background: 'var(--accent)', boxShadow: 'var(--shadow-sm)' }}
-                  >
-                    <Camera size={12} strokeWidth={2} />
-                  </button>
-                </div>
-                <div className="flex gap-2">
-                  {editing ? (
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <h2 style={{ fontSize: '20px', fontWeight: 700, color: 'var(--text-primary)', margin: 0, lineHeight: 1.2 }}>
+                  {profile.name}
+                </h2>
+                <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '4px 12px', fontSize: '13px', opacity: 0.5, color: 'var(--text-secondary)', marginTop: '2px' }}>
+                  <span>{profile.role}</span>
+                  <span>•</span>
+                  <span className="flex items-center gap-1"><Mail size={12} />{profile.email}</span>
+                  {profile.location && (
                     <>
-                      <Button variant="secondary" size="sm" onClick={() => setEditing(false)}>
-                        Cancel
-                      </Button>
-                      <Button size="sm" icon={Save} onClick={save}>
-                        Save
-                      </Button>
+                      <span>•</span>
+                      <span className="flex items-center gap-1"><MapPin size={12} />{profile.location}</span>
                     </>
-                  ) : (
-                    <Button variant="secondary" size="sm" icon={Pencil} onClick={() => setEditing(true)}>
-                      Edit Profile
-                    </Button>
                   )}
                 </div>
               </div>
 
-              <div className="mb-6">
-                <h2 className="text-lg font-bold text-[var(--text-primary)] leading-tight">
-                  {profile.name}
-                </h2>
-                <p className="text-xs text-[var(--text-secondary)] mt-1 font-medium">
-                  {profile.role}
-                </p>
-                <div className="flex flex-wrap gap-4 mt-3">
-                  <span className="flex items-center gap-1.5 text-xs text-[var(--text-tertiary)]">
-                    <Mail size={12} />
-                    {profile.email}
-                  </span>
-                  <span className="flex items-center gap-1.5 text-xs text-[var(--text-tertiary)]">
-                    <MapPin size={12} />
-                    {profile.location || 'No location set'}
-                  </span>
-                </div>
+              <div style={{ marginLeft: 'auto', flexShrink: 0 }}>
+                {editing ? (
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <Button variant="secondary" size="sm" onClick={() => setEditing(false)}>
+                      Cancel
+                    </Button>
+                    <Button size="sm" icon={Save} onClick={save}>
+                      Save
+                    </Button>
+                  </div>
+                ) : (
+                  <Button variant="secondary" size="sm" icon={Pencil} onClick={() => setEditing(true)}>
+                    Edit Profile
+                  </Button>
+                )}
               </div>
+            </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                <Input
-                  label="Full name"
+            {/* Form grid */}
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: '1fr 1fr',
+                gap: '16px',
+                padding: '24px',
+              }}
+            >
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                <label style={labelStyle}>Full name</label>
+                <input
+                  type="text"
                   value={profile.name}
                   disabled={!editing}
+                  style={{ ...inputStyle, opacity: editing ? 1 : 0.7 }}
                   onChange={(e) => setProfile({ ...profile, name: e.target.value })}
                 />
-                <Input
-                  label="Email address"
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                <label style={labelStyle}>Email address</label>
+                <input
                   type="email"
                   value={profile.email}
                   disabled={!editing}
+                  style={{ ...inputStyle, opacity: editing ? 1 : 0.7 }}
                   onChange={(e) => setProfile({ ...profile, email: e.target.value })}
                 />
-                <Input
-                  label="Role"
-                  value={profile.role}
-                  disabled={!editing}
-                  icon={Briefcase}
-                  onChange={(e) => setProfile({ ...profile, role: e.target.value })}
-                />
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                <label style={labelStyle}>Role</label>
                 <div className="relative">
-                  <Input
-                    label="Location"
+                  <Briefcase size={14} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', opacity: 0.4, color: 'white' }} />
+                  <input
+                    type="text"
+                    value={profile.role}
+                    disabled={!editing}
+                    style={{ ...inputStyle, paddingLeft: '38px', opacity: editing ? 1 : 0.7 }}
+                    onChange={(e) => setProfile({ ...profile, role: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                <label style={labelStyle}>Location</label>
+                <div className="relative">
+                  <MapPin size={14} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', opacity: 0.4, color: 'white' }} />
+                  <input
+                    type="text"
                     value={profile.location}
                     disabled={!editing}
-                    icon={MapPin}
+                    style={{ ...inputStyle, paddingLeft: '38px', paddingRight: editing ? '60px' : '14px', opacity: editing ? 1 : 0.7 }}
                     onChange={(e) => setProfile({ ...profile, location: e.target.value })}
                   />
                   {editing && (
                     <button
                       type="button"
                       onClick={detectLocation}
-                      className="absolute right-3.5 bottom-2.5 text-[10px] text-[var(--accent)] hover:underline font-semibold cursor-pointer"
+                      style={{
+                        position: 'absolute',
+                        right: '14px',
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        fontSize: '10px',
+                        color: 'var(--accent)',
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        fontWeight: 600,
+                      }}
+                      className="hover:underline"
                     >
                       Detect
                     </button>
                   )}
                 </div>
-                <div className="md:col-span-2" style={{ gridColumn: '1 / -1' }}>
-                  <label className="block" style={{ fontSize: '12px', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-secondary)', marginBottom: '6px' }}>
-                    Bio
-                  </label>
-                  <textarea
-                    value={profile.bio}
-                    disabled={!editing}
-                    onChange={(e) => setProfile({ ...profile, bio: e.target.value })}
-                    className="input-base"
-                    style={{ height: 80, opacity: editing ? 1 : 0.8, width: '100%', boxSizing: 'border-box', resize: 'vertical' }}
-                  />
-                </div>
+              </div>
+
+              <div style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column' }}>
+                <label style={labelStyle}>Bio</label>
+                <textarea
+                  value={profile.bio}
+                  disabled={!editing}
+                  style={{ ...textareaStyle, opacity: editing ? 1 : 0.7 }}
+                  onChange={(e) => setProfile({ ...profile, bio: e.target.value })}
+                />
               </div>
             </div>
           </div>
         </motion.div>
 
+        {/* Bottom 2-column sections */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', alignItems: 'start', minWidth: 0 }}>
+          {/* Left Column - Notifications */}
           <SettingsCard title="Notifications" description="Manage how updates are sent to you" delay={0.06}>
-            <div className="space-y-4">
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
               {[
                 { key: 'email', icon: Mail, label: 'Email notifications', desc: 'Activity updates & weekly digests' },
                 { key: 'push', icon: Smartphone, label: 'Push alerts', desc: 'Notify on mobile devices' },
-                { key: 'desktop', icon: Monitor, label: 'Desktop alerts', desc: 'Browser notifications' },
                 { key: 'digest', icon: Bell, label: 'Weekly email digest', desc: 'Summary of task highlights' },
               ].map(({ key, icon, label, desc }) =>
                 settingRow({
@@ -319,113 +501,202 @@ export default function ProfilePage() {
             </div>
           </SettingsCard>
 
-          <SettingsCard title="Appearance" description="Select application layout theme" delay={0.1}>
-            <div className="space-y-4">
-              <div>
-                <p className="text-xs font-semibold text-[var(--text-secondary)] mb-2.5">
-                  Theme mode
-                </p>
-                <div className="grid grid-cols-2 gap-2.5">
-                  {[
-                    ['light', 'Light'],
-                    ['dark', 'Dark'],
-                  ].map(([t, label]) => (
-                    <button
-                      key={t}
-                      onClick={() => theme !== t && toggleTheme()}
-                      className="py-3 rounded-lg border text-xs font-semibold transition-all cursor-pointer"
+          {/* Right Column - Security and Danger Zone */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <SettingsCard title="Security" description="Account verification details" delay={0.1}>
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                {settingRow({
+                  icon: Shield,
+                  label: 'Two-factor auth',
+                  desc: 'Increase account protection',
+                  action: <Badge variant="warning">Disabled</Badge>,
+                })}
+                {settingRow({
+                  icon: Lock,
+                  label: 'Password changes',
+                  desc: 'Update your login password',
+                  action: (
+                    <Button variant="ghost" size="xs" onClick={() => setShowPasswordModal(true)}>
+                      Change
+                    </Button>
+                  ),
+                })}
+              </div>
+            </SettingsCard>
+
+            <SettingsCard title="Danger zone" description="Irreversible options" delay={0.14} danger>
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', padding: '10px 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                  <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                    <p
                       style={{
-                        borderColor: theme === t ? 'var(--border-focus)' : 'var(--border-color)',
-                        background: theme === t ? 'var(--bg-secondary)' : 'var(--bg-primary)',
-                        color: theme === t ? 'var(--accent)' : 'var(--text-secondary)',
+                        fontSize: '13px',
+                        fontWeight: 500,
+                        color: 'var(--text-primary)',
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        margin: 0
                       }}
                     >
-                      {label}
-                    </button>
-                  ))}
+                      Sign out
+                    </p>
+                    <p
+                      style={{
+                        fontSize: '11px',
+                        opacity: 0.45,
+                        color: 'var(--text-tertiary)',
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        margin: 0
+                      }}
+                    >
+                      Logout from current session
+                    </p>
+                  </div>
+                  <button
+                    onClick={async () => {
+                      await signOut();
+                      navigate('/login');
+                    }}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      padding: '8px 16px',
+                      borderRadius: '10px',
+                      background: 'rgba(255,255,255,0.08)',
+                      border: '1px solid rgba(255,255,255,0.12)',
+                      color: 'white',
+                      fontSize: '13px',
+                      fontWeight: 500,
+                      cursor: 'pointer',
+                      whiteSpace: 'nowrap'
+                    }}
+                  >
+                    <LogOut size={14} />
+                    Sign Out
+                  </button>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', padding: '10px 0' }}>
+                  <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                    <p
+                      style={{
+                        fontSize: '13px',
+                        fontWeight: 500,
+                        color: 'var(--color-danger)',
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        margin: 0
+                      }}
+                    >
+                      Delete account
+                    </p>
+                    <p
+                      style={{
+                        fontSize: '11px',
+                        opacity: 0.45,
+                        color: 'var(--text-tertiary)',
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        margin: 0
+                      }}
+                    >
+                      Permanently delete account info
+                    </p>
+                  </div>
+                  <button
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      padding: '8px 16px',
+                      borderRadius: '10px',
+                      background: 'rgba(239,68,68,0.12)',
+                      border: '1px solid rgba(239,68,68,0.3)',
+                      color: '#ef4444',
+                      fontSize: '13px',
+                      fontWeight: 500,
+                      cursor: 'pointer',
+                      whiteSpace: 'nowrap'
+                    }}
+                  >
+                    <Trash2 size={14} />
+                    Delete Account
+                  </button>
                 </div>
               </div>
-              <div>
-                <p className="text-xs font-semibold text-[var(--text-secondary)] mb-2">
-                  System language
-                </p>
-                <select className="input-base cursor-pointer">
-                  <option>English (US)</option>
-                  <option>English (UK)</option>
-                  <option>Hindi</option>
-                </select>
-              </div>
-            </div>
-          </SettingsCard>
-
-          <SettingsCard title="Security" description="Account verification details" delay={0.14}>
-            <div className="space-y-4">
-              {settingRow({
-                icon: Shield,
-                label: 'Two-factor auth',
-                desc: 'Increase account protection',
-                action: <Badge variant="warning">Disabled</Badge>,
-              })}
-              {settingRow({
-                icon: Globe,
-                label: 'Timezone configuration',
-                desc: 'EST (GMT -05:00)',
-                action: (
-                  <Button variant="ghost" size="xs">
-                    Configure
-                  </Button>
-                ),
-              })}
-              {settingRow({
-                icon: Briefcase,
-                label: 'Password changes',
-                desc: 'Last changed 3 months ago',
-                action: (
-                  <Button variant="ghost" size="xs">
-                    Change
-                  </Button>
-                ),
-              })}
-            </div>
-          </SettingsCard>
-
-          <SettingsCard title="Danger zone" description="Irreversible options" delay={0.18} danger>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between gap-4">
-                <div>
-                  <p className="text-xs font-semibold text-[var(--text-primary)]">
-                    Sign out
-                  </p>
-                  <p className="text-[10px] text-[var(--text-tertiary)] mt-0.5">Logout from current session</p>
-                </div>
-                <Button
-                  variant="secondary"
-                  size="xs"
-                  icon={LogOut}
-                  className="cursor-pointer"
-                  onClick={async () => {
-                    await signOut();
-                    navigate('/login');
-                  }}
-                >
-                  Sign Out
-                </Button>
-              </div>
-              <div className="pt-4 flex items-center justify-between gap-4 border-t border-[var(--border-light)]">
-                <div>
-                  <p className="text-xs font-bold text-[var(--color-danger)]">
-                    Delete account
-                  </p>
-                  <p className="text-[10px] text-[var(--text-tertiary)] mt-0.5">Permanently delete account info</p>
-                </div>
-                <Button variant="danger" size="xs" icon={Trash2} className="cursor-pointer">
-                  Delete Account
-                </Button>
-              </div>
-            </div>
-          </SettingsCard>
+            </SettingsCard>
+          </div>
         </div>
       </div>
+
+      {/* Change Password Modal */}
+      <Modal isOpen={showPasswordModal} onClose={() => setShowPasswordModal(false)} title="Change password">
+        <form onSubmit={handlePasswordChange} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            <label style={labelStyle}>Current password</label>
+            <input
+              type="password"
+              required
+              value={currentPassword}
+              style={inputStyle}
+              onChange={(e) => setCurrentPassword(e.target.value)}
+            />
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            <label style={labelStyle}>New password</label>
+            <input
+              type="password"
+              required
+              value={newPassword}
+              style={inputStyle}
+              onChange={(e) => setNewPassword(e.target.value)}
+            />
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            <label style={labelStyle}>Confirm new password</label>
+            <input
+              type="password"
+              required
+              value={confirmNewPassword}
+              style={inputStyle}
+              onChange={(e) => setConfirmNewPassword(e.target.value)}
+            />
+          </div>
+
+          {errorMsg && (
+            <p style={{ color: 'var(--color-danger)', fontSize: '12px', margin: 0, fontWeight: 500 }}>
+              {errorMsg}
+            </p>
+          )}
+
+          <div style={{ display: 'flex', gap: '12px', marginTop: '8px' }}>
+            <Button
+              variant="secondary"
+              type="button"
+              className="flex-1"
+              onClick={() => {
+                setShowPasswordModal(false);
+                setErrorMsg('');
+                setCurrentPassword('');
+                setNewPassword('');
+                setConfirmNewPassword('');
+              }}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" className="flex-1" disabled={isChangingPassword}>
+              {isChangingPassword ? 'Updating...' : 'Update password'}
+            </Button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 }

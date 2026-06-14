@@ -15,7 +15,7 @@ const navItemStyle = (collapsed, isActive) => ({
   display: 'flex',
   alignItems: 'center',
   gap: collapsed ? '0' : '10px',
-  padding: collapsed ? '8px' : '8px 12px',
+  padding: collapsed ? '8px' : '8px 10px',
   borderRadius: '10px',
   overflow: 'hidden',
   width: collapsed ? '38px' : '100%',
@@ -35,8 +35,8 @@ const navItemStyle = (collapsed, isActive) => ({
 });
 
 const navIconStyle = (isActive) => ({
-  width: '18px',
-  height: '18px',
+  width: '16px',
+  height: '16px',
   flexShrink: 0,
   opacity: isActive ? 1 : 0.7,
 });
@@ -79,18 +79,22 @@ export default function Sidebar({ collapsed, onToggle }) {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const W = collapsed ? 72 : 260;
+  const W = collapsed ? 72 : 220;
 
   return (
     <motion.aside
       animate={{ width: W, minWidth: W, maxWidth: W }}
       transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
       className="hidden lg:flex flex-col h-screen sticky top-0 shrink-0 overflow-hidden glass-sidebar"
-      style={{ zIndex: 40 }}
+      style={{ zIndex: 40, padding: '0' }}
     >
       <div
-        className="flex items-center gap-2 h-[var(--topbar-height)] px-4 shrink-0 min-w-0"
-        style={{ borderBottom: '1px solid var(--glass-border-light)' }}
+        style={{
+          display: 'flex', alignItems: 'center', gap: '10px',
+          padding: '8px 16px 16px 16px', flexShrink: 0, minWidth: 0,
+          borderBottom: '1px solid var(--glass-border-light)',
+          height: 'var(--topbar-height)', boxSizing: 'border-box',
+        }}
       >
         {activeWorkspace ? (
           <div className="relative flex-1 min-w-0 overflow-hidden" ref={switcherRef}>
@@ -178,8 +182,7 @@ export default function Sidebar({ collapsed, onToggle }) {
               <motion.span
                 initial={{ opacity: 0, x: -6 }}
                 animate={{ opacity: 1, x: 0 }}
-                className="ml-3 text-[15px] font-medium tracking-tight"
-                style={{ color: 'var(--text-primary)' }}
+                style={{ color: 'var(--text-primary)', fontSize: '16px', fontWeight: 700, letterSpacing: '-0.01em', marginLeft: '4px' }}
               >
                 Nexus
               </motion.span>
@@ -205,10 +208,10 @@ export default function Sidebar({ collapsed, onToggle }) {
         </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto overflow-x-hidden py-6 px-3 space-y-10">
-        <nav className="space-y-1">
+      <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', padding: collapsed ? '12px 6px' : '12px 10px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+        <nav style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
           {!collapsed && (
-            <p className="text-label px-3 mb-3">
+            <p style={{ fontSize: '10px', fontWeight: 500, letterSpacing: '0.1em', textTransform: 'uppercase', opacity: 0.4, color: 'var(--text-tertiary)', padding: '8px 4px 4px', margin: 0 }}>
               {activeWorkspace ? 'In workspace' : 'Menu'}
             </p>
           )}
@@ -277,19 +280,20 @@ export default function Sidebar({ collapsed, onToggle }) {
         </nav>
 
         {!collapsed && workspaces.length > 0 && (
-          <div className="space-y-2">
-            <div className="flex items-center justify-between px-3">
-              <p className="text-label">Workspaces</p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 4px 6px' }}>
+              <p style={{ fontSize: '10px', fontWeight: 500, letterSpacing: '0.1em', textTransform: 'uppercase', opacity: 0.4, color: 'var(--text-tertiary)', margin: 0 }}>Workspaces</p>
               <button
                 onClick={() => navigate('/dashboard')}
-                className="w-6 h-6 rounded-[var(--radius-sm)] flex items-center justify-center transition-all cursor-pointer hover:bg-[rgba(255,255,255,0.06)] icon-glow"
-                style={{ color: 'var(--text-tertiary)' }}
+                style={{ width: '22px', height: '22px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', background: 'transparent', border: 'none', color: 'var(--text-tertiary)', transition: 'all 0.2s' }}
                 title="Create workspace"
+                onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
               >
                 <Plus size={13} strokeWidth={2} />
               </button>
             </div>
-            <div className="space-y-0.5">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
               {workspaces.map((ws) => {
                 const active = ws.id === activeWorkspaceId;
                 const hasActiveCall = !!activeCalls[ws.id];
@@ -301,7 +305,7 @@ export default function Sidebar({ collapsed, onToggle }) {
                       display: 'flex',
                       alignItems: 'center',
                       gap: '10px',
-                      padding: '8px 12px',
+                      padding: '8px 10px',
                       borderRadius: '10px',
                       overflow: 'hidden',
                       minWidth: 0,
@@ -332,10 +336,10 @@ export default function Sidebar({ collapsed, onToggle }) {
         )}
       </div>
 
-      <div style={{ flexShrink: 0, padding: '12px', borderTop: '1px solid rgba(255,255,255,0.08)', overflow: 'hidden' }}>
+      <div style={{ flexShrink: 0, marginTop: 'auto', padding: '12px 16px', borderTop: '1px solid rgba(255,255,255,0.06)', overflow: 'hidden' }}>
         {collapsed ? (
           <div style={{ display: 'flex', justifyContent: 'center', padding: '4px 0' }}>
-            <button onClick={() => navigate('/profile')} className="cursor-pointer">
+            <button onClick={() => navigate('/profile')} style={{ cursor: 'pointer', background: 'none', border: 'none', padding: 0 }}>
               <Avatar name={user?.name} size="sm" status="online" />
             </button>
           </div>
@@ -348,10 +352,10 @@ export default function Sidebar({ collapsed, onToggle }) {
               onClick={() => navigate('/profile')}
               style={{ flex: 1, minWidth: 0, overflow: 'hidden', textAlign: 'left', cursor: 'pointer', background: 'none', border: 'none', padding: 0 }}
             >
-              <p style={{ fontSize: '14px', fontWeight: 500, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              <p style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', margin: 0 }}>
                 {user?.name}
               </p>
-              <p style={{ fontSize: '11px', color: 'var(--text-tertiary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: '2px' }}>
+              <p style={{ fontSize: '11px', opacity: 0.4, color: 'var(--text-tertiary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: '2px' }}>
                 {user?.email}
               </p>
             </button>

@@ -2,56 +2,139 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X } from 'lucide-react';
 
 export default function Modal({ isOpen, onClose, title, children, size = 'md' }) {
-  const sizes = { sm: 'max-w-md', md: 'max-w-lg', lg: 'max-w-2xl', xl: 'max-w-4xl' };
+  const maxWidths = { sm: '400px', md: '480px', lg: '640px', xl: '900px' };
 
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
+        <>
+          {/* Backdrop overlay */}
           <motion.div
+            key="modal-backdrop"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
             onClick={onClose}
-            className="absolute inset-0"
-            style={{ background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(8px)' }}
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: 'rgba(0,0,0,0.6)',
+              backdropFilter: 'blur(4px)',
+              WebkitBackdropFilter: 'blur(4px)',
+              zIndex: 999,
+            }}
           />
-          <motion.div
-            initial={{ opacity: 0, scale: 0.97, y: 10 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.97, y: 10 }}
-            transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
-            className={`relative w-full ${sizes[size]} overflow-hidden glass-card`}
+
+          {/* Centering wrapper */}
+          <div
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              zIndex: 1000,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '16px',
+              pointerEvents: 'none',
+            }}
           >
-            {title && (
+            {/* Animated outer shell — only handles size, shape, animation */}
+            <motion.div
+              key="modal-panel"
+              initial={{ opacity: 0, scale: 0.97, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.97, y: 10 }}
+              transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+              className="nexus-modal-panel"
+              style={{
+                pointerEvents: 'auto',
+                width: '90%',
+                maxWidth: maxWidths[size] || '480px',
+                maxHeight: '90vh',
+                overflowY: 'auto',
+              }}
+            >
+              {/* Inner content wrapper — handles ALL padding */}
               <div
-                className="flex items-center justify-between px-6 sm:px-7 py-5"
-                style={{ borderBottom: '1px solid var(--glass-border-light)' }}
+                style={{
+                  padding: '24px',
+                  width: '100%',
+                  boxSizing: 'border-box',
+                }}
               >
-                <h2 className="text-base font-medium tracking-tight" style={{ color: 'var(--text-primary)' }}>
-                  {title}
-                </h2>
-                <button
-                  onClick={onClose}
-                  className="w-8 h-8 rounded-[var(--radius-sm)] flex items-center justify-center transition-all cursor-pointer icon-glow"
-                  style={{ color: 'var(--text-tertiary)' }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = 'rgba(255,255,255,0.06)';
-                    e.currentTarget.style.color = 'var(--text-primary)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = 'transparent';
-                    e.currentTarget.style.color = 'var(--text-tertiary)';
+                {/* Title row with close button */}
+                {title && (
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      marginBottom: '20px',
+                      width: '100%',
+                      boxSizing: 'border-box',
+                    }}
+                  >
+                    <h2
+                      style={{
+                        fontSize: '18px',
+                        fontWeight: 600,
+                        color: 'white',
+                        margin: 0,
+                        padding: 0,
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                        flex: 1,
+                        minWidth: 0,
+                      }}
+                    >
+                      {title}
+                    </h2>
+                    <button
+                      onClick={onClose}
+                      type="button"
+                      style={{
+                        width: '28px',
+                        height: '28px',
+                        borderRadius: '8px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        background: 'transparent',
+                        border: 'none',
+                        color: 'rgba(255,255,255,0.4)',
+                        cursor: 'pointer',
+                        flexShrink: 0,
+                        marginLeft: '12px',
+                        padding: 0,
+                      }}
+                    >
+                      <X size={16} strokeWidth={1.5} />
+                    </button>
+                  </div>
+                )}
+
+                {/* Modal body */}
+                <div
+                  className="nexus-modal-body"
+                  style={{
+                    width: '100%',
+                    boxSizing: 'border-box',
                   }}
                 >
-                  <X size={16} strokeWidth={1.5} />
-                </button>
+                  {children}
+                </div>
               </div>
-            )}
-            <div className="p-6 sm:p-7">{children}</div>
-          </motion.div>
-        </div>
+            </motion.div>
+          </div>
+        </>
       )}
     </AnimatePresence>
   );

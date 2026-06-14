@@ -749,29 +749,22 @@ export function WorkspaceProvider({ children }) {
     }
 
     if (isSupabaseConfigured && user?.id) {
-      console.log(`[Realtime Sync] Creating global notifications channel for user ${user.id}`);
       const channel = supabase
-        .channel(`user_notifications:${user.id}`)
+        .channel('notifications')
         .on(
           'postgres_changes',
           {
-            event: '*',
+            event: 'INSERT',
             schema: 'public',
             table: 'notifications',
             filter: `user_id=eq.${user.id}`
           },
           (payload) => {
-            console.log('[Realtime Sync] Incoming Notification Event:', payload.eventType, payload);
-            if (payload.eventType === 'INSERT') {
-              setNotifications(prev => {
-                if (prev.some(n => n.id === payload.new.id)) return prev;
-                return [payload.new, ...prev];
-              });
-            } else if (payload.eventType === 'UPDATE') {
-              setNotifications(prev => prev.map(n => n.id === payload.new.id ? payload.new : n));
-            } else if (payload.eventType === 'DELETE') {
-              setNotifications(prev => prev.filter(n => n.id !== payload.old.id));
-            }
+            console.log('[Realtime Sync] Incoming Notification Event:', payload);
+            setNotifications(prev => {
+              if (prev.some(n => n.id === payload.new.id)) return prev;
+              return [payload.new, ...prev];
+            });
           }
         )
         .subscribe();
@@ -885,8 +878,8 @@ export function WorkspaceProvider({ children }) {
   };
 
   // Helper to create notifications
-  const createNotification = async (targetUserId, title, text, wsId) => {
-    if (!targetUserId || !wsId) return;
+  const createNotification = async (targetUserId, title, text, wsId, type = 'general') => {
+    if (!targetUserId) return;
     if (targetUserId === user?.id) return; // don't notify oneself
 
     if (isSupabaseConfigured) {
@@ -895,9 +888,9 @@ export function WorkspaceProvider({ children }) {
           .from('notifications')
           .insert({
             user_id: targetUserId,
-            workspace_id: wsId,
+            type,
             title,
-            text,
+            body: text,
             read: false
           });
         if (error) throw error;
@@ -908,9 +901,9 @@ export function WorkspaceProvider({ children }) {
       const newNotif = {
         id: `notif_${Date.now()}`,
         user_id: targetUserId,
-        workspace_id: wsId,
+        type,
         title,
-        text,
+        body: text,
         read: false,
         created_at: new Date().toISOString()
       };
@@ -1907,8 +1900,17 @@ export function WorkspaceProvider({ children }) {
             data.assignee,
             'Task Assigned',
             `${user.name} assigned task "${data.title}" to you`,
-            workspaceId
+            workspaceId,
+            'task_assigned'
           );
+          // Invoke Edge Function
+          supabase.functions.invoke('notify-task-assigned', {
+            body: {
+              assignedUserId: data.assignee,
+              taskName: data.title,
+              workspaceName: workspaces.find(w => w.id === workspaceId)?.name || 'Workspace'
+            }
+          }).catch(err => console.warn('Edge function error:', err));
         }
 
         setWorkspaces(prev =>
@@ -2067,10 +2069,12 @@ export function WorkspaceProvider({ children }) {
           [workspaceId]: [...(prev[workspaceId] || []), formattedMsg]
         }));
 
-        // Parse @mentions
+        // Create notifications for all workspace members except the sender
         const members = workspaceMembers[workspaceId] || [];
-        members.forEach(member => {
-          if (member.id !== user.id) {
+        const workspaceName = workspaces.find(w => w.id === workspaceId)?.name || 'workspace';
+        const notificationPromises = members
+          .filter(m => m.id !== user.id)
+          .map(member => {
             const nameTag = `@${member.name}`;
             const firstNameTag = `@${member.name.split(' ')[0]}`;
             const emailTag = `@${member.email.split('@')[0]}`;
@@ -2080,16 +2084,16 @@ export function WorkspaceProvider({ children }) {
               text.toLowerCase().includes(firstNameTag.toLowerCase()) ||
               text.toLowerCase().includes(emailTag.toLowerCase());
 
-            if (containsMention) {
-              createNotification(
-                member.id,
-                'Chat Mention',
-                `${user.name} mentioned you in #${workspaces.find(w => w.id === workspaceId)?.name || 'workspace'}`,
-                workspaceId
-              );
-            }
-          }
-        });
+            const title = containsMention ? 'Chat Mention' : `New Message in #${workspaceName}`;
+            return createNotification(
+              member.id,
+              title,
+              text,
+              workspaceId,
+              'chat_message'
+            );
+          });
+        await Promise.all(notificationPromises);
 
         setWorkspaces(prev =>
           prev.map(ws => (ws.id === workspaceId ? { ...ws, lastActivity: '1 min ago' } : ws))
@@ -2429,14 +2433,35 @@ export function WorkspaceProvider({ children }) {
           await logActivity(workspaceId, 'edited_task', `updated task "${updatedFields.title}"`);
         }
         if (updatedFields.assignee) {
+          let taskTitle = updatedFields.title;
+          if (!taskTitle && tasks[workspaceId]) {
+            const allTasks = [
+              ...(tasks[workspaceId].todo || []),
+              ...(tasks[workspaceId].inProgress || []),
+              ...(tasks[workspaceId].done || [])
+            ];
+            const foundTask = allTasks.find(t => t.id === taskId);
+            if (foundTask) taskTitle = foundTask.title;
+          }
+          const finalTaskTitle = taskTitle || 'task';
+
           const assigneeProfile = workspaceMembers[workspaceId]?.find(m => m.id === updatedFields.assignee);
-          await logActivity(workspaceId, 'assigned', `assigned task "${updatedFields.title || 'task'}" to ${assigneeProfile?.name || 'a member'}`);
+          await logActivity(workspaceId, 'assigned', `assigned task "${finalTaskTitle}" to ${assigneeProfile?.name || 'a member'}`);
           await createNotification(
             updatedFields.assignee,
             'Task Assigned',
-            `${user.name} assigned task "${updatedFields.title || 'task'}" to you`,
-            workspaceId
+            `${user.name} assigned task "${finalTaskTitle}" to you`,
+            workspaceId,
+            'task_assigned'
           );
+          // Invoke Edge Function
+          supabase.functions.invoke('notify-task-assigned', {
+            body: {
+              assignedUserId: updatedFields.assignee,
+              taskName: finalTaskTitle,
+              workspaceName: workspaces.find(w => w.id === workspaceId)?.name || 'Workspace'
+            }
+          }).catch(err => console.warn('Edge function error:', err));
         }
       } catch (err) {
         console.error('Error updating task details:', err);

@@ -9,7 +9,7 @@ const sizeMap = {
   sm:  { wrap: 'w-8 h-8',   text: 'text-xs',     ring: 'ring-2',       dot: 'w-2.5 h-2.5 border-[1.5px]' },
   md:  { wrap: 'w-9 h-9',   text: 'text-sm',     ring: 'ring-2',       dot: 'w-3 h-3 border-2' },
   lg:  { wrap: 'w-11 h-11', text: 'text-base',   ring: 'ring-2',       dot: 'w-3.5 h-3.5 border-2' },
-  xl:  { wrap: 'w-14 h-14', text: 'text-lg',     ring: 'ring-2',       dot: 'w-4 h-4 border-2' },
+  xl:  { wrap: 'w-16 h-16', text: 'text-lg',     ring: 'ring-2',       dot: 'w-4 h-4 border-2' },
   '2xl': { wrap: 'w-20 h-20', text: 'text-2xl',  ring: 'ring-2',       dot: 'w-5 h-5 border-2' },
 };
 

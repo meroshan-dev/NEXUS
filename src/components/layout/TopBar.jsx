@@ -28,7 +28,16 @@ export default function TopBar({ onMobileMenuToggle }) {
 
   return (
     <header
-      className="h-[var(--topbar-height)] flex items-center justify-between px-4 sm:px-6 sticky top-0 z-30 shrink-0 glass-topbar"
+      className="h-[var(--topbar-height)] sticky top-0 z-30 shrink-0 glass-topbar"
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        padding: '0 16px',
+        gap: '8px',
+        boxSizing: 'border-box',
+        width: '100%',
+        overflow: 'visible',
+      }}
     >
       <div className="flex items-center gap-2">
         <button
@@ -71,12 +80,29 @@ export default function TopBar({ onMobileMenuToggle }) {
         </div>
       </div>
 
-      <div className="flex items-center gap-2">
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          flexShrink: 0,
+          marginLeft: 'auto',
+          paddingRight: '4px',
+        }}
+      >
         <div className="relative">
           <button
             onClick={() => setShowNotifications(!showNotifications)}
-            className="relative w-8.5 h-8.5 rounded-[var(--radius-md)] flex items-center justify-center transition-all cursor-pointer icon-glow"
+            className="relative transition-all cursor-pointer icon-glow"
             style={{
+              width: '36px',
+              height: '36px',
+              borderRadius: '50%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0,
+              overflow: 'visible',
               background: 'rgba(255,255,255,0.06)',
               border: '1px solid var(--glass-border-light)',
               color: 'var(--text-secondary)',
@@ -155,7 +181,7 @@ export default function TopBar({ onMobileMenuToggle }) {
                             {notif.title}
                           </p>
                           <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.75)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: '3px' }}>
-                            {notif.text}
+                            {notif.body || notif.text}
                           </p>
                           <span style={{ fontSize: '10px', color: 'rgba(255,255,255,0.35)', display: 'block', marginTop: '5px' }}>
                             {formatTime(notif.created_at)}
@@ -190,8 +216,24 @@ export default function TopBar({ onMobileMenuToggle }) {
           )}
         </div>
 
-        <button onClick={() => navigate('/profile')} className="ml-0.5 rounded-full cursor-pointer">
-          <Avatar name={user?.name} size="sm" status="online" />
+        <button
+          onClick={() => navigate('/profile')}
+          className="cursor-pointer"
+          style={{
+            width: '36px',
+            height: '36px',
+            borderRadius: '50%',
+            flexShrink: 0,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 0,
+            border: 'none',
+            background: 'transparent',
+            overflow: 'visible',
+          }}
+        >
+          <Avatar name={user?.name} size="md" status="online" />
         </button>
       </div>
     </header>

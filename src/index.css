@@ -244,7 +244,7 @@ body {
   --radius-xl: 20px;
   --radius-pill: 999px;
 
-  --sidebar-width: 260px;
+  --sidebar-width: 220px;
   --sidebar-collapsed: 72px;
   --topbar-height: 56px;
   --page-padding-x: 32px;
@@ -704,9 +704,16 @@ body {
   width: 100%;
 }
 
+/* Scrollbar — Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.08) transparent;
+}
+
+/* Scrollbar — Webkit */
 ::-webkit-scrollbar {
-  width: 5px;
-  height: 5px;
+  width: 3px;
+  height: 3px;
 }
 
 ::-webkit-scrollbar-track {
@@ -714,12 +721,12 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--scrollbar-thumb);
+  background: rgba(255, 255, 255, 0.08);
   border-radius: var(--radius-pill);
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background-color: rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.15);
 }
 
 /* ===== Text Safety ===== */
@@ -936,4 +943,64 @@ body {
   .glass-card {
     border-radius: 12px;
   }
+}
+
+/* ===== Modal Panel — Liquid Glass ===== */
+.nexus-modal-panel {
+  background: rgba(10, 10, 30, 0.92) !important;
+  backdrop-filter: blur(40px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(40px) saturate(180%) !important;
+  border-radius: 20px !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  box-shadow:
+    0 24px 64px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08) !important;
+  box-sizing: border-box !important;
+}
+
+/* All modal children: border-box + max-width */
+.nexus-modal-body *,
+.nexus-modal-body *::before,
+.nexus-modal-body *::after {
+  box-sizing: border-box;
+  max-width: 100%;
+}
+
+/* Labels: no negative margin, no bleed */
+.nexus-modal-body label {
+  display: block;
+  font-size: 12px;
+  font-weight: 500;
+  opacity: 0.6;
+  margin-bottom: 6px;
+  margin-top: 0;
+  padding: 0;
+  color: white;
+}
+
+/* Inputs, textareas, selects */
+.nexus-modal-body input,
+.nexus-modal-body textarea,
+.nexus-modal-body select {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: white;
+  font-size: 14px;
+  font-family: inherit;
+  outline: none;
+}
+
+.nexus-modal-body input::placeholder,
+.nexus-modal-body textarea::placeholder {
+  color: rgba(255, 255, 255, 0.3);
+}
+
+.nexus-modal-body input:focus,
+.nexus-modal-body textarea:focus {
+  border-color: rgba(139, 92, 246, 0.6);
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.15);
 }
