@@ -1004,3 +1004,51 @@ body {
   border-color: rgba(139, 92, 246, 0.6);
   box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.15);
 }
+
+/* Profile Page Mobile Responsiveness Breakpoints */
+@media (max-width: 768px) {
+  /* Stack all cards to single column */
+  .profile-bottom-grid {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 16px !important;
+  }
+
+  /* Form fields single column */
+  .profile-form-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Buttons full width */
+  .danger-zone-row {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 8px !important;
+  }
+
+  .sign-out-btn,
+  .delete-account-btn {
+    width: 100% !important;
+    justify-content: center !important;
+  }
+
+  /* Email input text clip */
+  input[type="email"] {
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+  }
+
+  /* Notifications card full width */
+  .notifications-card,
+  .security-card,
+  .danger-zone-card {
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  /* Main content padding */
+  .profile-content {
+    padding: 12px !important;
+  }
+}

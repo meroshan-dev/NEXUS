@@ -29,13 +29,13 @@ function Toggle({ checked, onChange }) {
   );
 }
 
-function SettingsCard({ title, description, children, delay = 0, danger }) {
+function SettingsCard({ title, description, children, delay = 0, danger, className }) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay, duration: 0.3 }}
-      className="glass-card"
+      className={`glass-card ${className || ''}`}
       style={{
         borderRadius: '16px',
         padding: '20px',
@@ -317,7 +317,7 @@ export default function ProfilePage() {
         </h1>
       </header>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', padding: '20px', boxSizing: 'border-box', minWidth: 0 }}>
+      <div className="profile-content" style={{ display: 'flex', flexDirection: 'column', gap: '16px', padding: '20px', boxSizing: 'border-box', minWidth: 0 }}>
         {/* Profile form card */}
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
           <div
@@ -389,6 +389,7 @@ export default function ProfilePage() {
 
             {/* Form grid */}
             <div
+              className="profile-form-grid"
               style={{
                 display: 'grid',
                 gridTemplateColumns: '1fr 1fr',
@@ -481,9 +482,9 @@ export default function ProfilePage() {
         </motion.div>
 
         {/* Bottom 2-column sections */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', alignItems: 'start', minWidth: 0 }}>
+        <div className="profile-bottom-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', alignItems: 'start', minWidth: 0 }}>
           {/* Left Column - Notifications */}
-          <SettingsCard title="Notifications" description="Manage how updates are sent to you" delay={0.06}>
+          <SettingsCard className="notifications-card" title="Notifications" description="Manage how updates are sent to you" delay={0.06}>
             <div style={{ display: 'flex', flexDirection: 'column' }}>
               {[
                 { key: 'email', icon: Mail, label: 'Email notifications', desc: 'Activity updates & weekly digests' },
@@ -503,7 +504,7 @@ export default function ProfilePage() {
 
           {/* Right Column - Security and Danger Zone */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <SettingsCard title="Security" description="Account verification details" delay={0.1}>
+            <SettingsCard className="security-card" title="Security" description="Account verification details" delay={0.1}>
               <div style={{ display: 'flex', flexDirection: 'column' }}>
                 {settingRow({
                   icon: Shield,
@@ -524,9 +525,9 @@ export default function ProfilePage() {
               </div>
             </SettingsCard>
 
-            <SettingsCard title="Danger zone" description="Irreversible options" delay={0.14} danger>
+            <SettingsCard className="danger-zone-card" title="Danger zone" description="Irreversible options" delay={0.14} danger>
               <div style={{ display: 'flex', flexDirection: 'column' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', padding: '10px 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                <div className="danger-zone-row" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', padding: '10px 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
                   <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '2px' }}>
                     <p
                       style={{
@@ -556,6 +557,7 @@ export default function ProfilePage() {
                     </p>
                   </div>
                   <button
+                    className="sign-out-btn"
                     onClick={async () => {
                       await signOut();
                       navigate('/login');
@@ -579,7 +581,7 @@ export default function ProfilePage() {
                     Sign Out
                   </button>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', padding: '10px 0' }}>
+                <div className="danger-zone-row" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', padding: '10px 0' }}>
                   <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '2px' }}>
                     <p
                       style={{
@@ -609,6 +611,7 @@ export default function ProfilePage() {
                     </p>
                   </div>
                   <button
+                    className="delete-account-btn"
                     style={{
                       display: 'flex',
                       alignItems: 'center',

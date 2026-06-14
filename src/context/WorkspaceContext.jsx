@@ -730,6 +730,10 @@ export function WorkspaceProvider({ children }) {
       }
       loadWorkspaces();
       loadNotifications();
+      const storedLastWs = localStorage.getItem(`nexus_last_workspace_${user.id}`);
+      if (storedLastWs) {
+        setActiveWorkspaceId(storedLastWs);
+      }
     }, 0);
     
     // Clean up channels on logout or user change
@@ -955,6 +959,9 @@ export function WorkspaceProvider({ children }) {
     // Save previous active workspace ID for offline database marking
     const prevWsId = activeWorkspaceId;
     setActiveWorkspaceId(workspaceId);
+    if (user?.id) {
+      localStorage.setItem(`nexus_last_workspace_${user.id}`, workspaceId);
+    }
 
     if (isSupabaseConfigured) {
       // Mark offline for previous workspace in database
@@ -2610,6 +2617,8 @@ export function WorkspaceProvider({ children }) {
     <WorkspaceContext.Provider
       value={{
         workspaces,
+        activeWorkspaceId,
+        setActiveWorkspaceId,
         tasks,
         chatMessages,
         files,

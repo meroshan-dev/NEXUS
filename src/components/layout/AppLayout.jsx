@@ -54,10 +54,11 @@ export default function AppLayout() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const location = useLocation();
   const isKeyboardVisible = useKeyboardVisible();
-  const { incomingCall, joinCall, declineCall, activeCall, leaveCall, workspaces = [] } = useWorkspace();
+  const { incomingCall, joinCall, declineCall, activeCall, leaveCall, workspaces = [], activeWorkspaceId: lastActiveWorkspaceId } = useWorkspace();
 
   const match = location.pathname.match(/^\/workspace\/([^/]+)/);
   const activeWorkspaceId = match ? match[1] : null;
+  const targetWorkspaceId = activeWorkspaceId || lastActiveWorkspaceId || (workspaces[0] ? workspaces[0].id : null);
 
   return (
     <div className="flex h-screen overflow-hidden min-w-0 relative mesh-bg">
@@ -238,21 +239,23 @@ export default function AppLayout() {
             to="/dashboard"
             style={{
               display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '2px',
-              width: '48px', height: '48px', borderRadius: '12px', textDecoration: 'none',
-              color: location.pathname === '/dashboard' ? 'var(--accent)' : 'var(--text-tertiary)',
-              background: location.pathname === '/dashboard' ? 'rgba(129,140,248,0.15)' : 'transparent',
+              padding: '6px 16px', borderRadius: '12px', textDecoration: 'none',
+              color: location.pathname === '/dashboard' ? 'white' : 'var(--text-tertiary)',
+              background: location.pathname === '/dashboard' ? 'rgba(255,255,255,0.1)' : 'transparent',
+              transition: 'all 0.15s ease'
             }}
           >
             <LayoutDashboard size={20} strokeWidth={1.5} />
             <span style={{ fontSize: '9px', fontWeight: 500 }}>Home</span>
           </NavLink>
           <NavLink
-            to={activeWorkspaceId && activeWorkspaceId !== 'ws_001' ? `/workspace/${activeWorkspaceId}?tab=overview` : (workspaces[0] ? `/workspace/${workspaces[0].id}?tab=overview` : '/dashboard')}
+            to={targetWorkspaceId ? `/workspace/${targetWorkspaceId}?tab=overview` : '/dashboard'}
             style={{
               display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '2px',
-              width: '48px', height: '48px', borderRadius: '12px', textDecoration: 'none',
-              color: location.pathname.startsWith('/workspace/') ? 'var(--accent)' : 'var(--text-tertiary)',
-              background: location.pathname.startsWith('/workspace/') ? 'rgba(129,140,248,0.15)' : 'transparent',
+              padding: '6px 16px', borderRadius: '12px', textDecoration: 'none',
+              color: location.pathname.startsWith('/workspace/') ? 'white' : 'var(--text-tertiary)',
+              background: location.pathname.startsWith('/workspace/') ? 'rgba(255,255,255,0.1)' : 'transparent',
+              transition: 'all 0.15s ease'
             }}
           >
             <FolderKanban size={20} strokeWidth={1.5} />
@@ -262,9 +265,10 @@ export default function AppLayout() {
             to="/profile"
             style={{
               display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '2px',
-              width: '48px', height: '48px', borderRadius: '12px', textDecoration: 'none',
-              color: location.pathname === '/profile' ? 'var(--accent)' : 'var(--text-tertiary)',
-              background: location.pathname === '/profile' ? 'rgba(129,140,248,0.15)' : 'transparent',
+              padding: '6px 16px', borderRadius: '12px', textDecoration: 'none',
+              color: location.pathname === '/profile' ? 'white' : 'var(--text-tertiary)',
+              background: location.pathname === '/profile' ? 'rgba(255,255,255,0.1)' : 'transparent',
+              transition: 'all 0.15s ease'
             }}
           >
             <User size={20} strokeWidth={1.5} />
