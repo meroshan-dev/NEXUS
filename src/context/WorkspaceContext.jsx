@@ -164,14 +164,21 @@ export function WorkspaceProvider({ children }) {
           setActiveCall(prev => (prev && prev.workspaceId === ws.id ? null : prev));
         })
         .on('broadcast', { event: 'call-ping' }, ({ payload }) => {
-          setActiveCalls(prev => ({
-            ...prev,
-            [ws.id]: {
-              callerId: payload.callerId,
-              callerName: payload.callerName,
-              participants: payload.participants || []
-            }
-          }));
+          // IMPORTANT: preserve roomUrl — do not overwrite with undefined
+          setActiveCalls(prev => {
+            const existing = prev[ws.id];
+            const preservedRoomUrl = payload.roomUrl || existing?.roomUrl;
+            console.log(`[Huddle] call-ping received for ${ws.name}, roomUrl:`, preservedRoomUrl);
+            return {
+              ...prev,
+              [ws.id]: {
+                callerId: payload.callerId,
+                callerName: payload.callerName,
+                participants: payload.participants || [],
+                roomUrl: preservedRoomUrl
+              }
+            };
+          });
         })
         .subscribe();
 
@@ -282,7 +289,7 @@ export function WorkspaceProvider({ children }) {
     return () => window.removeEventListener('storage', handleStorage);
   }, [user?.id, workspaces, activeCall]);
 
-  // Periodic call pinger to notify newly joined members about existing calls
+  // Periodic call pinger — also re-broadcasts roomUrl so late joiners get it
   useEffect(() => {
     if (!activeCall || activeCall.callerId !== user?.id) return;
 
@@ -290,13 +297,15 @@ export function WorkspaceProvider({ children }) {
       if (isSupabaseConfigured) {
         const ch = huddleChannelsRef.current[activeCall.workspaceId];
         if (ch) {
+          console.log('[Huddle] Sending call-ping with roomUrl:', activeCall.roomUrl);
           ch.send({
             type: 'broadcast',
             event: 'call-ping',
             payload: {
               callerId: activeCall.callerId,
               callerName: activeCall.callerName,
-              participants: activeCall.participants
+              participants: activeCall.participants,
+              roomUrl: activeCall.roomUrl   // ← include roomUrl in every ping
             }
           });
         }
@@ -321,12 +330,19 @@ export function WorkspaceProvider({ children }) {
     let roomUrl = null;
     let roomName = null;
     try {
+      console.log('[Huddle] Creating Daily room for workspace:', workspaceId);
       const room = await createDailyRoom(workspaceId);
       roomUrl = room.roomUrl;
       roomName = room.roomName;
-      console.log('[Huddle] Daily room created:', roomUrl);
+      console.log('[Huddle] ✓ Daily room created:', roomUrl);
+      // Persist roomUrl so joiners can always recover it
+      try {
+        localStorage.setItem(`nexus_huddle_url_${workspaceId}`, roomUrl);
+        console.log('[Huddle] ✓ roomUrl saved to localStorage');
+      } catch (_) { /* ignore */ }
     } catch (err) {
-      console.error('[Huddle] Failed to create Daily room:', err);
+      console.error('[Huddle] ✗ Failed to create Daily room:', err);
+      roomUrl = null;
     }
 
     const callId = generateCallId();
@@ -390,7 +406,10 @@ export function WorkspaceProvider({ children }) {
   const joinCall = (workspaceId) => {
     if (!user) return;
     const callInfo = activeCalls[workspaceId];
-    if (!callInfo) return;
+    if (!callInfo) {
+      console.warn('[Huddle] joinCall: no callInfo found for workspace', workspaceId);
+      return;
+    }
 
     const participantDetails = {
       id: user.id,
@@ -402,6 +421,27 @@ export function WorkspaceProvider({ children }) {
       ? callInfo.participants
       : [...callInfo.participants, participantDetails];
 
+    // Multi-layer roomUrl fallback:
+    // 1. activeCalls (set from call-start broadcast)
+    // 2. incomingCall (set from call-start notification)
+    // 3. localStorage (persisted when caller created the room)
+    const roomUrl =
+      callInfo.roomUrl ||
+      incomingCall?.roomUrl ||
+      localStorage.getItem(`nexus_huddle_url_${workspaceId}`) ||
+      null;
+
+    console.log('[Huddle] joinCall — resolving roomUrl:',
+      '\n  callInfo.roomUrl:', callInfo.roomUrl,
+      '\n  incomingCall.roomUrl:', incomingCall?.roomUrl,
+      '\n  localStorage:', localStorage.getItem(`nexus_huddle_url_${workspaceId}`),
+      '\n  → resolved:', roomUrl
+    );
+
+    if (!roomUrl) {
+      console.error('[Huddle] ✗ joinCall: no roomUrl available from any source!');
+    }
+
     setActiveCall({
       workspaceId,
       workspaceName: workspaces.find(w => w.id === workspaceId)?.name || 'Workspace',
@@ -409,7 +449,7 @@ export function WorkspaceProvider({ children }) {
       callerName: callInfo.callerName,
       localUserName: participantDetails.name,
       participants: updatedParticipants,
-      roomUrl: callInfo.roomUrl  // ← carry the Daily room URL
+      roomUrl
     });
 
     setIncomingCall(null);
