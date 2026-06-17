@@ -1,5 +1,5 @@
 /* eslint-disable react-refresh/only-export-components */
-import { createContext, useState, useContext, useEffect, useRef } from 'react';
+import { createContext, useState, useContext, useEffect, useRef, useCallback } from 'react';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { useAuth } from './AuthContext';
 import { createDailyRoom } from '../lib/daily';
@@ -28,7 +28,12 @@ export function WorkspaceProvider({ children }) {
   }
 
   // Upgraded states
-  const [activeWorkspaceId, setActiveWorkspaceId] = useState(null);
+  const [activeWorkspaceId, _setActiveWorkspaceId] = useState(null);
+  const activeWorkspaceIdRef = useRef(null);
+  const setActiveWorkspaceId = useCallback((id) => {
+    activeWorkspaceIdRef.current = id;
+    _setActiveWorkspaceId(id);
+  }, []);
   const [taskComments, setTaskComments] = useState({});
   const [notifications, setNotifications] = useState([]);
   const [activityFeed, setActivityFeed] = useState({});
@@ -51,6 +56,10 @@ export function WorkspaceProvider({ children }) {
   });
 
   const huddleChannelsRef = useRef({});
+
+  // callError: shown in workspace UI when Daily room creation fails
+  const [callError, setCallError] = useState(null);
+  const clearCallError = () => setCallError(null);
 
   // Sync missed calls to localStorage
   useEffect(() => {
@@ -327,6 +336,7 @@ export function WorkspaceProvider({ children }) {
     };
 
     // ── Create a real Daily.co room ──
+    setCallError(null); // clear any previous error
     let roomUrl = null;
     let roomName = null;
     try {
@@ -342,7 +352,13 @@ export function WorkspaceProvider({ children }) {
       } catch (_) { /* ignore */ }
     } catch (err) {
       console.error('[Huddle] ✗ Failed to create Daily room:', err);
-      roomUrl = null;
+      setCallError(err.message || 'Failed to create call room. Check console for details.');
+      return; // ← DO NOT open call screen if room creation failed
+    }
+
+    if (!roomUrl) {
+      setCallError('Room was created but returned no URL. Please try again.');
+      return;
     }
 
     const callId = generateCallId();
@@ -564,7 +580,7 @@ export function WorkspaceProvider({ children }) {
   };
 
 
-  const refetchTasks = async (wsId) => {
+  const refetchTasks = useCallback(async (wsId) => {
     if (!isSupabaseConfigured) return;
     try {
       const { data, error } = await supabase
@@ -592,9 +608,9 @@ export function WorkspaceProvider({ children }) {
     } catch (err) {
       console.error('Error refetching tasks:', err);
     }
-  };
+  }, []);
 
-  const refetchComments = async (wsId) => {
+  const refetchComments = useCallback(async (wsId) => {
     if (!isSupabaseConfigured) return;
     try {
       const { data: tasksData } = await supabase
@@ -631,7 +647,7 @@ export function WorkspaceProvider({ children }) {
     } catch (err) {
       console.error('Error refetching comments:', err);
     }
-  };
+  }, []);
 
   const loadNotifications = async () => {
     if (!user?.id) return;
@@ -1020,11 +1036,11 @@ export function WorkspaceProvider({ children }) {
   };
 
   // Load details (tasks, chat, files, members, activities, comments, presence) for a specific workspace on demand
-  const fetchWorkspaceDetails = async (workspaceId) => {
+  const fetchWorkspaceDetails = useCallback(async (workspaceId) => {
     if (!workspaceId || !user?.id) return;
 
     // Save previous active workspace ID for offline database marking
-    const prevWsId = activeWorkspaceId;
+    const prevWsId = activeWorkspaceIdRef.current;
     setActiveWorkspaceId(workspaceId);
     if (user?.id) {
       localStorage.setItem(`nexus_last_workspace_${user.id}`, workspaceId);
@@ -1521,7 +1537,7 @@ export function WorkspaceProvider({ children }) {
         setWorkspaceMembers(prev => ({ ...prev, [workspaceId]: defaultMembers }));
       }
     }
-  };
+  }, [user, refetchTasks, refetchComments]);
 
   // Action: Create a Workspace
   const createWorkspace = async (name, description, color, icon = '💼') => {
@@ -2722,11 +2738,13 @@ export function WorkspaceProvider({ children }) {
         incomingCall,
         activeCalls,
         missedCalls,
+        callError,
         startCall,
         joinCall,
         declineCall,
         leaveCall,
         clearMissedCalls,
+        clearCallError,
 
         // Task fetching for dashboard
         refetchTasks

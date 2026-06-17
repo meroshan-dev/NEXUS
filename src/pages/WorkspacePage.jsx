@@ -87,6 +87,8 @@ export default function WorkspacePage() {
     activeCalls = {},
     startCall,
     joinCall,
+    callError,
+    clearCallError,
     // Task operations
     addTask,
     updateTasks,
@@ -728,6 +730,27 @@ export default function WorkspacePage() {
                     <Button variant="secondary" size="sm" icon={PhoneCall} className="shrink-0" onClick={() => startCall(workspace.id)}>
                       Start Call
                     </Button>
+                  </div>
+                )}
+
+                {/* Call error banner */}
+                {callError && (
+                  <div style={{
+                    padding: '12px 16px', borderRadius: '12px',
+                    background: 'rgba(239,68,68,0.1)',
+                    border: '1px solid rgba(239,68,68,0.25)',
+                    display: 'flex', alignItems: 'flex-start', gap: '10px',
+                  }}>
+                    <span style={{ fontSize: '16px', lineHeight: 1, flexShrink: 0, marginTop: '1px' }}>⚠️</span>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ fontSize: '12px', fontWeight: 700, color: '#fca5a5', marginBottom: '3px' }}>Call failed to start</p>
+                      <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.55)', lineHeight: 1.6, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{callError}</p>
+                    </div>
+                    <button
+                      onClick={clearCallError}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.4)', fontSize: '16px', lineHeight: 1, padding: '0', flexShrink: 0 }}
+                      title="Dismiss"
+                    >×</button>
                   </div>
                 )}
 
