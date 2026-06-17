@@ -2,6 +2,7 @@
 import { createContext, useState, useContext, useEffect, useRef } from 'react';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { useAuth } from './AuthContext';
+import { createDailyRoom } from '../lib/daily';
 
 const WorkspaceContext = createContext();
 
@@ -85,7 +86,8 @@ export function WorkspaceProvider({ children }) {
               workspaceName: ws.name,
               callerId: payload.callerId,
               callerName: payload.callerName,
-              callId: payload.callId
+              callId: payload.callId,
+              roomUrl: payload.roomUrl
             });
           }
           setActiveCalls(prev => ({
@@ -93,7 +95,8 @@ export function WorkspaceProvider({ children }) {
             [ws.id]: {
               callerId: payload.callerId,
               callerName: payload.callerName,
-              participants: payload.participants || []
+              participants: payload.participants || [],
+              roomUrl: payload.roomUrl
             }
           }));
         })
@@ -204,7 +207,8 @@ export function WorkspaceProvider({ children }) {
                 workspaceName: ws.name,
                 callerId: payload.callerId,
                 callerName: payload.callerName,
-                callId: payload.callId
+                callId: payload.callId,
+                roomUrl: payload.roomUrl
               });
             }
             setActiveCalls(prev => ({
@@ -212,7 +216,8 @@ export function WorkspaceProvider({ children }) {
               [wsId]: {
                 callerId: payload.callerId,
                 callerName: payload.callerName,
-                participants: payload.participants || []
+                participants: payload.participants || [],
+                roomUrl: payload.roomUrl
               }
             }));
           } else if (event === 'call-join') {
@@ -301,7 +306,7 @@ export function WorkspaceProvider({ children }) {
     return () => clearInterval(interval);
   }, [activeCall, user?.id]);
 
-  const startCall = (workspaceId) => {
+  const startCall = async (workspaceId) => {
     if (!user) return;
     const ws = workspaces.find(w => w.id === workspaceId);
     if (!ws) return;
@@ -312,13 +317,30 @@ export function WorkspaceProvider({ children }) {
       avatar: user.avatar || null
     };
 
+    // ── Create a real Daily.co room ──
+    let roomUrl = null;
+    let roomName = null;
+    try {
+      const room = await createDailyRoom(workspaceId);
+      roomUrl = room.roomUrl;
+      roomName = room.roomName;
+      console.log('[Huddle] Daily room created:', roomUrl);
+    } catch (err) {
+      console.error('[Huddle] Failed to create Daily room:', err);
+    }
+
+    const callId = generateCallId();
+
     const newCall = {
       workspaceId,
       workspaceName: ws.name,
       callerId: user.id,
       callerName: callerDetails.name,
-      callId: generateCallId(),
-      participants: [callerDetails]
+      localUserName: callerDetails.name,
+      callId,
+      participants: [callerDetails],
+      roomUrl,
+      roomName
     };
 
     setActiveCall(newCall);
@@ -327,7 +349,8 @@ export function WorkspaceProvider({ children }) {
       [workspaceId]: {
         callerId: user.id,
         callerName: callerDetails.name,
-        participants: [callerDetails]
+        participants: [callerDetails],
+        roomUrl
       }
     }));
 
@@ -341,8 +364,9 @@ export function WorkspaceProvider({ children }) {
             callerId: user.id,
             callerName: callerDetails.name,
             workspaceName: ws.name,
-            callId: newCall.callId,
-            participants: [callerDetails]
+            callId,
+            participants: [callerDetails],
+            roomUrl
           }
         });
       }
@@ -354,8 +378,9 @@ export function WorkspaceProvider({ children }) {
           callerId: user.id,
           callerName: callerDetails.name,
           workspaceName: ws.name,
-          callId: newCall.callId,
-          participants: [callerDetails]
+          callId,
+          participants: [callerDetails],
+          roomUrl
         }
       }));
     }
@@ -382,7 +407,9 @@ export function WorkspaceProvider({ children }) {
       workspaceName: workspaces.find(w => w.id === workspaceId)?.name || 'Workspace',
       callerId: callInfo.callerId,
       callerName: callInfo.callerName,
-      participants: updatedParticipants
+      localUserName: participantDetails.name,
+      participants: updatedParticipants,
+      roomUrl: callInfo.roomUrl  // ← carry the Daily room URL
     });
 
     setIncomingCall(null);

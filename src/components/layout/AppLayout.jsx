@@ -3,8 +3,9 @@ import { Outlet, NavLink, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import Sidebar from './Sidebar';
 import TopBar from './TopBar';
-import { X, LayoutDashboard, FolderKanban, User, Sparkles, PhoneCall, PhoneOff } from 'lucide-react';
+import { X, LayoutDashboard, FolderKanban, User, Sparkles, PhoneCall } from 'lucide-react';
 import { useWorkspace } from '../../context/WorkspaceContext';
+import DailyCallScreen from '../ui/DailyCallScreen';
 
 const SIDEBAR_FULL = 220;
 
@@ -344,33 +345,12 @@ export default function AppLayout() {
         )}
       </AnimatePresence>
 
-      {/* Global Active Call Widget */}
+      {/* Global Active Call — Daily.co full-screen call */}
       {activeCall && (
-        <div className="fixed bottom-6 right-6 z-[90] glass-card p-4 flex items-center gap-4 max-w-md" style={{ borderColor: 'var(--border-focus)' }}>
-          <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0" style={{ background: 'rgba(16,185,129,0.15)', color: '#34d399' }}>
-            <PhoneCall size={18} className="animate-pulse" strokeWidth={1.5} />
-          </div>
-          <div className="min-w-0 flex-1">
-            <p className="text-xs font-medium leading-tight truncate" style={{ color: 'var(--text-primary)' }}>
-              Connected in Huddle
-            </p>
-            <p className="text-[10px] mt-0.5 truncate" style={{ color: 'var(--text-secondary)' }}>
-              {activeCall.workspaceName} ({activeCall.participants?.length || 1} participant{activeCall.participants?.length !== 1 ? 's' : ''})
-            </p>
-          </div>
-          <button
-            onClick={() => leaveCall(activeCall.workspaceId)}
-            className="w-9 h-9 rounded-[var(--radius-md)] flex items-center justify-center transition-all cursor-pointer shrink-0"
-            style={{
-              color: '#f87171',
-              background: 'rgba(239,68,68,0.1)',
-              border: '1px solid rgba(239,68,68,0.15)',
-            }}
-            title="Leave huddle"
-          >
-            <PhoneOff size={15} strokeWidth={1.5} />
-          </button>
-        </div>
+        <DailyCallScreen
+          activeCall={activeCall}
+          onLeave={() => leaveCall(activeCall.workspaceId)}
+        />
       )}
     </div>
   );
