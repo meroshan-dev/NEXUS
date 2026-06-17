@@ -2,7 +2,6 @@
 import { createContext, useState, useContext, useEffect, useRef, useCallback } from 'react';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { useAuth } from './AuthContext';
-import { createDailyRoom } from '../lib/daily';
 
 const WorkspaceContext = createContext();
 
@@ -335,31 +334,16 @@ export function WorkspaceProvider({ children }) {
       avatar: user.avatar || null
     };
 
-    // ── Create a real Daily.co room ──
-    setCallError(null); // clear any previous error
-    let roomUrl = null;
-    let roomName = null;
+    // ── Generate Jitsi Meet room URL ──
+    setCallError(null);
+    const safeWsId = workspaceId.replace(/[^a-z0-9]/gi, '').toLowerCase().slice(0, 24);
+    const roomName = `nexus-huddle-${safeWsId}`;
+    const roomUrl = `https://meet.jit.si/${roomName}`;
+    console.log('[Huddle] ✓ Jitsi room generated:', roomUrl);
     try {
-      console.log('[Huddle] Creating Daily room for workspace:', workspaceId);
-      const room = await createDailyRoom(workspaceId);
-      roomUrl = room.roomUrl;
-      roomName = room.roomName;
-      console.log('[Huddle] ✓ Daily room created:', roomUrl);
-      // Persist roomUrl so joiners can always recover it
-      try {
-        localStorage.setItem(`nexus_huddle_url_${workspaceId}`, roomUrl);
-        console.log('[Huddle] ✓ roomUrl saved to localStorage');
-      } catch (_) { /* ignore */ }
-    } catch (err) {
-      console.error('[Huddle] ✗ Failed to create Daily room:', err);
-      setCallError(err.message || 'Failed to create call room. Check console for details.');
-      return; // ← DO NOT open call screen if room creation failed
-    }
-
-    if (!roomUrl) {
-      setCallError('Room was created but returned no URL. Please try again.');
-      return;
-    }
+      localStorage.setItem(`nexus_huddle_url_${workspaceId}`, roomUrl);
+      console.log('[Huddle] ✓ Jitsi roomUrl saved to localStorage');
+    } catch (_) { /* ignore */ }
 
     const callId = generateCallId();
 
