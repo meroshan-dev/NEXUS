@@ -1052,3 +1052,13 @@ body {
     padding: 12px !important;
   }
 }
+
+/* ===== Profile Camera Button ===== */
+.profile-camera-btn {
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.profile-camera-btn:hover {
+  background: rgba(99,102,241,1) !important;
+  transform: scale(1.05);
+}

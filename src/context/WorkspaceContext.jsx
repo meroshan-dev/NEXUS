@@ -334,15 +334,16 @@ export function WorkspaceProvider({ children }) {
       avatar: user.avatar || null
     };
 
-    // ── Generate Jitsi Meet room URL ──
+    // ── Generate Jitsi Meet room (100% free — no API key, no billing) ──
+    // Rooms on meet.jit.si are created on-the-fly when anyone joins the URL.
     setCallError(null);
     const safeWsId = workspaceId.replace(/[^a-z0-9]/gi, '').toLowerCase().slice(0, 24);
-    const roomName = `nexus-huddle-${safeWsId}`;
+    const roomName = `NexusHuddle${safeWsId}`;
     const roomUrl = `https://meet.jit.si/${roomName}`;
-    console.log('[Huddle] ✓ Jitsi room generated:', roomUrl);
+    console.log('[Huddle] ✓ Room URL:', roomUrl, '(free Jitsi — no API calls needed)');
+
     try {
       localStorage.setItem(`nexus_huddle_url_${workspaceId}`, roomUrl);
-      console.log('[Huddle] ✓ Jitsi roomUrl saved to localStorage');
     } catch (_) { /* ignore */ }
 
     const callId = generateCallId();

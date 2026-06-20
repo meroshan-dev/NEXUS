@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Camera, Mail, Briefcase, MapPin, Bell,
-  Smartphone, Shield, Trash2, Save, Pencil, Check, LogOut, Lock
+  Smartphone, Shield, Trash2, Save, Pencil, Check, LogOut, Lock, ChevronDown
 } from 'lucide-react';
 import Button from '../components/ui/Button';
 import Avatar from '../components/ui/Avatar';
@@ -345,10 +345,21 @@ export default function ProfilePage() {
               <div className="relative" style={{ flexShrink: 0 }}>
                 <Avatar name={profile.name} size="xl" color="var(--accent)" />
                 <button
-                  className="absolute -bottom-1 -right-1 w-7.5 h-7.5 rounded-full flex items-center justify-center text-white transition-colors cursor-pointer"
-                  style={{ background: 'var(--accent)', boxShadow: 'var(--shadow-sm)', border: 'none' }}
+                  className="profile-camera-btn absolute -bottom-1 -right-1 rounded-full flex items-center justify-center text-white cursor-pointer"
+                  style={{
+                    width: '24px',
+                    height: '24px',
+                    borderRadius: '50%',
+                    background: 'rgba(99,102,241,0.9)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'pointer',
+                    border: '2px solid rgba(15,15,35,1)',
+                    padding: 0,
+                  }}
                 >
-                  <Camera size={12} strokeWidth={2} />
+                  <Camera size={11} strokeWidth={2} />
                 </button>
               </div>
 
@@ -410,25 +421,70 @@ export default function ProfilePage() {
 
               <div style={{ display: 'flex', flexDirection: 'column' }}>
                 <label style={labelStyle}>Email address</label>
-                <input
-                  type="email"
-                  value={profile.email}
-                  disabled={!editing}
-                  style={{ ...inputStyle, opacity: editing ? 1 : 0.7 }}
-                  onChange={(e) => setProfile({ ...profile, email: e.target.value })}
-                />
+                <div className="relative">
+                  <input
+                    type="email"
+                    value={profile.email}
+                    readOnly
+                    style={{
+                      ...inputStyle,
+                      background: 'rgba(255,255,255,0.03)',
+                      cursor: 'not-allowed',
+                      opacity: 0.6,
+                      paddingRight: '36px',
+                    }}
+                  />
+                  <Lock
+                    size={14}
+                    style={{
+                      position: 'absolute',
+                      right: '12px',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      opacity: 0.4,
+                      color: 'white',
+                      width: '14px',
+                      height: '14px',
+                    }}
+                  />
+                </div>
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column' }}>
                 <label style={labelStyle}>Role</label>
                 <div className="relative">
-                  <Briefcase size={14} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', opacity: 0.4, color: 'white' }} />
-                  <input
-                    type="text"
+                  <Briefcase size={14} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', opacity: 0.4, color: 'white', pointerEvents: 'none', zIndex: 1 }} />
+                  <select
                     value={profile.role}
                     disabled={!editing}
-                    style={{ ...inputStyle, paddingLeft: '38px', opacity: editing ? 1 : 0.7 }}
+                    style={{
+                      ...inputStyle,
+                      paddingLeft: '38px',
+                      paddingRight: '36px',
+                      opacity: editing ? 1 : 0.7,
+                      appearance: 'none',
+                      WebkitAppearance: 'none',
+                      MozAppearance: 'none',
+                      cursor: editing ? 'pointer' : 'not-allowed',
+                    }}
                     onChange={(e) => setProfile({ ...profile, role: e.target.value })}
+                  >
+                    <option value="Owner" style={{ background: '#1a1a2e', color: 'white' }}>Owner</option>
+                    <option value="Admin" style={{ background: '#1a1a2e', color: 'white' }}>Admin</option>
+                    <option value="Member" style={{ background: '#1a1a2e', color: 'white' }}>Member</option>
+                    <option value="Viewer" style={{ background: '#1a1a2e', color: 'white' }}>Viewer</option>
+                  </select>
+                  <ChevronDown
+                    size={14}
+                    style={{
+                      position: 'absolute',
+                      right: '14px',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      opacity: 0.5,
+                      color: 'white',
+                      pointerEvents: 'none',
+                    }}
                   />
                 </div>
               </div>

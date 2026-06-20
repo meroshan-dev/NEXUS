@@ -1,11 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Outlet, NavLink, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import Sidebar from './Sidebar';
 import TopBar from './TopBar';
 import { X, LayoutDashboard, FolderKanban, User, Sparkles, PhoneCall } from 'lucide-react';
 import { useWorkspace } from '../../context/WorkspaceContext';
-import JitsiCallScreen from '../ui/JitsiCallScreen';
+import DailyCallScreen from '../ui/DailyCallScreen';
 
 const SIDEBAR_FULL = 220;
 
@@ -56,6 +56,11 @@ export default function AppLayout() {
   const location = useLocation();
   const isKeyboardVisible = useKeyboardVisible();
   const { incomingCall, joinCall, declineCall, activeCall, leaveCall, workspaces = [], activeWorkspaceId: lastActiveWorkspaceId } = useWorkspace();
+
+  // Memoize onLeave so JitsiCallScreen's useEffect doesn't re-trigger on every render
+  const handleLeaveCall = useCallback(() => {
+    if (activeCall?.workspaceId) leaveCall(activeCall.workspaceId);
+  }, [activeCall?.workspaceId, leaveCall]);
 
   const match = location.pathname.match(/^\/workspace\/([^/]+)/);
   const activeWorkspaceId = match ? match[1] : null;
@@ -345,11 +350,11 @@ export default function AppLayout() {
         )}
       </AnimatePresence>
 
-      {/* Global Active Call — Jitsi Meet full-screen call */}
+      {/* Global Active Call — Daily.co Prebuilt full-screen call */}
       {activeCall && (
-        <JitsiCallScreen
+        <DailyCallScreen
           activeCall={activeCall}
-          onLeave={() => leaveCall(activeCall.workspaceId)}
+          onLeave={handleLeaveCall}
         />
       )}
     </div>
