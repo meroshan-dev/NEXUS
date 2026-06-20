@@ -1,4 +1,4 @@
-export default function Badge({ children, variant = 'default', dot, className = '' }) {
+export default function Badge({ children, variant = 'default', dot, className = '', ...props }) {
   const variants = {
     default: 'bg-[var(--bg-secondary)] text-[var(--text-secondary)] border border-[var(--border-color)]',
     brand:   'bg-[var(--accent-muted)] text-[var(--text-brand)] border border-[var(--border-focus)]',
@@ -13,7 +13,7 @@ export default function Badge({ children, variant = 'default', dot, className = 
   };
 
   return (
-    <span className={`badge-base ${variants[variant]} ${className}`}>
+    <span className={`badge-base ${variants[variant]} ${className}`} {...props}>
       {dot && <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${dotColors[variant]}`} />}
       {children}
     </span>
@@ -33,9 +33,26 @@ export function StatusBadge({ status }) {
 export function PriorityBadge({ priority }) {
   const map = {
     high:   { variant: 'danger',  label: 'High' },
-    medium: { variant: 'warning', label: 'Medium' },
+    medium: { variant: 'warning', label: 'Medium', style: { background: 'rgba(251,191,36,0.18)', border: '1px solid rgba(251,191,36,0.3)', color: '#fbbf24' } },
     low:    { variant: 'info',    label: 'Low' },
   };
-  const { variant, label } = map[priority] || map.medium;
-  return <Badge variant={variant}>{label}</Badge>;
+  const { variant, label, style } = map[priority] || map.medium;
+  return (
+    <Badge
+      variant={variant}
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        fontSize: '10px',
+        padding: '3px 10px',
+        borderRadius: '999px',
+        fontWeight: '500',
+        whiteSpace: 'nowrap',
+        ...style
+      }}
+    >
+      {label}
+    </Badge>
+  );
 }
+

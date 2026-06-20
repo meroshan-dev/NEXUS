@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
-import { Plus, Calendar, Trash2, Clock, CheckSquare } from 'lucide-react';
+import { Plus, Calendar, Trash2, Clock, CheckSquare, X, MessageSquare } from 'lucide-react';
 import Button from '../components/ui/Button';
 import Avatar from '../components/ui/Avatar';
 import Badge, { PriorityBadge } from '../components/ui/Badge';
@@ -10,6 +10,7 @@ import Modal from '../components/ui/Modal';
 import Input from '../components/ui/Input';
 import EmptyState from '../components/ui/EmptyState';
 import LoadingState from '../components/ui/LoadingState';
+import CustomSelect from '../components/ui/CustomSelect';
 import { useWorkspace } from '../context/WorkspaceContext';
 import { useAuth } from '../context/AuthContext';
 
@@ -138,8 +139,8 @@ export default function TasksPage() {
   };
 
   return (
-    <div className="pb-8 min-w-0">
-      <header className="page-header flex flex-col sm:flex-row sm:items-end justify-between gap-5">
+    <div className="pb-8 min-w-0" style={{ overflowX: 'hidden', width: '100%', paddingRight: '24px', boxSizing: 'border-box' }}>
+      <header className="page-header mb-2">
         <div className="min-w-0">
           <p className="page-eyebrow">Tasks</p>
           <h1 className="text-xl font-bold tracking-tight text-[var(--text-primary)]">
@@ -149,49 +150,65 @@ export default function TasksPage() {
             {totalTasks} task{totalTasks !== 1 ? 's' : ''} in this view · drag to update progress
           </p>
         </div>
+      </header>
+
+      {/* Tabs list and Create Task button row */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '20px 24px', gap: '16px', boxSizing: 'border-box', width: '100%' }}>
+        <div style={{ display: 'flex', gap: '4px', padding: '4px', background: 'rgba(255,255,255,0.05)', backdropFilter: 'blur(16px) saturate(160%)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '10px', width: 'fit-content', flexShrink: 1, minWidth: 0 }}>
+          {[
+            { id: 'all', label: 'All Tasks' },
+            { id: 'my', label: 'My Tasks' },
+            { id: 'completed', label: 'Completed' },
+            { id: 'overdue', label: 'Overdue' }
+          ].map(t => {
+            const active = activeTab === t.id;
+            return (
+              <button
+                key={t.id}
+                onClick={() => setActiveTab(t.id)}
+                style={{
+                  padding: '6px 14px',
+                  borderRadius: '8px',
+                  fontSize: '13px',
+                  whiteSpace: 'nowrap',
+                  cursor: 'pointer',
+                  opacity: active ? 1 : 0.6,
+                  background: active ? 'rgba(255,255,255,0.12)' : 'transparent',
+                  backdropFilter: active ? 'blur(10px)' : 'none',
+                  border: active ? '1px solid rgba(255,255,255,0.15)' : '1px solid transparent',
+                  fontWeight: active ? 500 : 400,
+                  transition: 'all 0.2s',
+                  outline: 'none',
+                  color: 'var(--text-primary)',
+                }}
+              >
+                {t.label}
+              </button>
+            );
+          })}
+        </div>
         {isOwner && (
-          <Button icon={Plus} size="sm" onClick={() => setShowCreate(true)}>
+          <Button
+            icon={Plus}
+            size="sm"
+            onClick={() => setShowCreate(true)}
+            style={{
+              flexShrink: 0,
+              whiteSpace: 'nowrap',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '9px 18px',
+              borderRadius: '10px',
+              background: 'rgba(99,102,241,0.85)',
+              backdropFilter: 'blur(10px)',
+              border: '1px solid rgba(255,255,255,0.15)',
+              boxShadow: '0 4px 16px rgba(99,102,241,0.3)'
+            }}
+          >
             New task
           </Button>
         )}
-      </header>
-
-      {/* Tabs list */}
-      <div className="flex gap-1 p-1 rounded-lg bg-[var(--bg-secondary)] border border-[var(--border-color)] self-start shadow-sm mb-6 relative">
-        {[
-          { id: 'all', label: 'All Tasks' },
-          { id: 'my', label: 'My Tasks' },
-          { id: 'completed', label: 'Completed' },
-          { id: 'overdue', label: 'Overdue' }
-        ].map(t => {
-          const active = activeTab === t.id;
-          return (
-            <button
-              key={t.id}
-              onClick={() => setActiveTab(t.id)}
-              className="relative px-3 py-1.5 rounded-md text-xs font-semibold transition-colors duration-150 cursor-pointer"
-              style={{
-                color: active ? 'var(--text-primary)' : 'var(--text-secondary)',
-                zIndex: 1
-              }}
-            >
-              {active && (
-                <motion.div
-                  layoutId="activeTaskTabGlow"
-                  className="absolute inset-0 rounded-md border"
-                  style={{
-                    background: 'var(--bg-primary)',
-                    borderColor: 'var(--border-color)',
-                    boxShadow: 'var(--shadow-xs)',
-                    zIndex: -1
-                  }}
-                  transition={{ type: 'spring', stiffness: 450, damping: 32 }}
-                />
-              )}
-              <span className="relative z-10">{t.label}</span>
-            </button>
-          );
-        })}
       </div>
 
       {totalTasks === 0 ? (
@@ -202,31 +219,79 @@ export default function TasksPage() {
           actionLabel={isOwner ? "Create task" : undefined}
           actionIcon={isOwner ? Plus : undefined}
           onAction={isOwner ? () => setShowCreate(true) : undefined}
+          style={{
+            padding: '48px 24px',
+            boxSizing: 'border-box',
+            textAlign: 'center',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '8px',
+            overflow: 'hidden'
+          }}
+          iconStyle={{
+            width: '48px',
+            height: '48px',
+            borderRadius: '12px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            marginBottom: '4px'
+          }}
+          titleStyle={{
+            fontSize: '16px',
+            fontWeight: 600,
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            maxWidth: '100%',
+            margin: 0
+          }}
+          descStyle={{
+            fontSize: '13px',
+            opacity: 0.55,
+            maxWidth: '320px',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'normal',
+            padding: 0,
+            margin: 0
+          }}
+          buttonStyle={{
+            marginTop: '8px',
+            whiteSpace: 'nowrap',
+            padding: '9px 20px'
+          }}
         />
       ) : (
         <DragDropContext onDragEnd={onDragEnd}>
-          <div
-            className="flex gap-5 overflow-x-auto pb-4 no-scrollbar snap-x snap-mandatory"
-            style={{ minHeight: 'clamp(350px, calc(100vh - 280px), 680px)' }}
-          >
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', padding: '0 24px 24px', boxSizing: 'border-box' }}>
             {Object.entries(COLS).map(([colId, cfg]) => {
               const columnTasks = colId === 'todo' ? todoList : colId === 'inProgress' ? inProgressList : doneList;
               return (
-                <div key={colId} className="flex flex-col shrink-0 w-[min(88vw,280px)] sm:w-[280px] snap-start">
-                  <div className="flex items-center justify-between mb-3.5 px-1">
-                    <div className="flex items-center gap-2">
-                      <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: cfg.dotColor }} />
-                      <span className="text-xs font-semibold uppercase tracking-wider text-[var(--text-secondary)]">
-                        {cfg.title}
-                      </span>
-                      <span className="px-1.5 py-0.5 rounded-full text-[9px] font-bold border border-[var(--border-color)] bg-[var(--bg-secondary)] text-[var(--text-secondary)]">
+                <div key={colId} style={{ width: '100%', boxSizing: 'border-box', display: 'flex', flexDirection: 'column' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 4px 12px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: 600, letterSpacing: '0.03em', color: 'var(--text-primary)' }}>
+                      <span style={{ width: '8px', height: '8px', borderRadius: '50%', flexShrink: 0, background: cfg.dotColor }} />
+                      <span style={{ textTransform: 'uppercase' }}>{cfg.title}</span>
+                      <span style={{ fontSize: '11px', opacity: 0.5, fontWeight: 400, marginLeft: '4px' }}>
                         {columnTasks.length}
                       </span>
                     </div>
                     {isOwner && (
                       <button
                         onClick={() => setShowCreate(true)}
-                        className="w-6 h-6 rounded-md flex items-center justify-center border border-[var(--border-color)] transition-colors cursor-pointer text-[var(--text-tertiary)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)]"
+                        className="transition-colors cursor-pointer text-[var(--text-tertiary)] hover:text-[var(--text-primary)]"
+                        style={{
+                          width: '24px',
+                          height: '24px',
+                          borderRadius: '6px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          border: '1px solid rgba(255,255,255,0.08)',
+                          background: 'rgba(255,255,255,0.04)',
+                          outline: 'none',
+                        }}
                       >
                         <Plus size={12} />
                       </button>
@@ -238,13 +303,21 @@ export default function TasksPage() {
                       <div
                         ref={provided.innerRef}
                         {...provided.droppableProps}
-                        className="flex-1 rounded-[var(--radius-lg)] space-y-3.5 p-3 transition-all duration-200"
                         style={{
-                          background: snapshot.isDraggingOver ? cfg.accent : 'var(--bg-secondary)',
-                          border: snapshot.isDraggingOver
-                            ? `1px dashed ${cfg.dotColor}55`
-                            : '1px solid var(--border-color)',
-                          minHeight: 180,
+                          width: '100%',
+                          boxSizing: 'border-box',
+                          minHeight: '320px',
+                          borderRadius: '16px',
+                          padding: '12px',
+                          background: snapshot.isDraggingOver ? cfg.accent : 'rgba(255,255,255,0.04)',
+                          backdropFilter: 'blur(20px) saturate(160%)',
+                          WebkitBackdropFilter: 'blur(20px) saturate(160%)',
+                          border: snapshot.isDraggingOver ? `1px dashed ${cfg.dotColor}55` : '1px solid rgba(255,255,255,0.08)',
+                          boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.06)',
+                          overflow: 'hidden',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '10px'
                         }}
                       >
                         {columnTasks.map((task, i) => {
@@ -257,9 +330,9 @@ export default function TasksPage() {
                                   <motion.div
                                     layout
                                     onClick={() => setSelectedTask({ ...task, status: colId })}
-                                    className="group bg-[var(--bg-primary)] border border-[var(--border-color)] hover:border-[var(--accent)] rounded-lg p-4 cursor-pointer transition-all duration-200 hover:shadow-sm"
+                                    className="glass-kanban-card"
                                     style={{
-                                      boxShadow: snap.isDragging ? 'var(--shadow-md)' : 'var(--shadow-card)',
+                                      boxShadow: snap.isDragging ? 'var(--shadow-md)' : undefined,
                                       opacity: isDragDisabled ? 0.8 : 1
                                     }}
                                     whileHover={{ y: -1 }}
@@ -272,18 +345,28 @@ export default function TasksPage() {
                                       </div>
                                     )}
 
-                                    <h3 className="text-xs font-semibold leading-snug mb-1.5 text-[var(--text-primary)] group-hover:text-[var(--accent)] transition-colors break-words">
+                                    <h3 style={{ fontSize: '14px', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: '4px', color: 'var(--text-primary)' }}>
                                       {task.title}
                                     </h3>
                                     {task.description && (
-                                      <p className="text-[10px] leading-relaxed line-clamp-2 mb-3 text-[var(--text-tertiary)]">
+                                      <p
+                                        style={{
+                                          fontSize: '12px',
+                                          opacity: 0.5,
+                                          display: '-webkit-box',
+                                          WebkitLineClamp: 2,
+                                          WebkitBoxOrient: 'vertical',
+                                          overflow: 'hidden',
+                                          marginBottom: '10px',
+                                          color: 'var(--text-primary)',
+                                          lineHeight: '1.5'
+                                        }}
+                                      >
                                         {task.description}
                                       </p>
                                     )}
 
-                                    <div
-                                      className="flex items-center justify-between gap-2 pt-2.5 border-t border-[var(--border-light)]"
-                                    >
+                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', paddingTop: '8px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
                                       <div className="flex items-center gap-2 min-w-0">
                                         {assignee && (
                                           <Avatar
@@ -320,9 +403,9 @@ export default function TasksPage() {
                         })}
                         {provided.placeholder}
 
-                        {columnTasks.length === 0 && !snapshot.isDraggingOver && (
-                          <div className="flex flex-col items-center justify-center py-10 text-center">
-                            <p className="text-[10px] text-[var(--text-tertiary)] font-medium">No tasks here</p>
+                        {columnTasks.length === 0 && (
+                          <div style={{ textAlign: 'center', padding: '40px 16px', opacity: 0.4, fontSize: '13px', color: 'var(--text-primary)' }}>
+                            No tasks
                           </div>
                         )}
                       </div>
@@ -340,225 +423,371 @@ export default function TasksPage() {
         <Modal
           isOpen={!!selectedTask}
           onClose={() => setSelectedTask(null)}
-          title={isOwner ? "Edit Task" : "Task Details"}
+          noPadding={true}
           size="lg"
         >
-          <form onSubmit={(e) => {
-            e.preventDefault();
-            if (isOwner) {
-              updateTaskDetails(workspaceId, selectedTask.id, {
-                title: selectedTask.title,
-                description: selectedTask.description,
-                assignee: selectedTask.assignee,
-                priority: selectedTask.priority,
-                dueDate: selectedTask.dueDate,
-                status: selectedTask.status === 'inProgress' ? 'in_progress' : selectedTask.status
-              });
-              setSelectedTask(null);
-            }
-          }} className="space-y-5">
-            <div className="flex items-center justify-between pb-3.5 border-b border-[var(--border-color)]">
-              <PriorityBadge priority={selectedTask.priority} />
-              {isOwner && (
-                <Button
-                  variant="ghost"
-                  type="button"
-                  icon={Trash2}
-                  className="!text-[var(--color-danger)] hover:bg-red-500/5 transition-colors text-xs font-semibold px-2"
-                  onClick={() => {
-                    if (window.confirm("Delete this task permanently?")) {
-                      deleteTask(workspaceId, selectedTask.id);
-                      setSelectedTask(null);
-                    }
-                  }}
-                >
-                  Delete Task
-                </Button>
-              )}
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (!selectedTask?.title.trim()) return;
+              if (isOwner || selectedTask.assignee === user?.id) {
+                updateTaskDetails(workspaceId, selectedTask.id, {
+                  title: selectedTask.title,
+                  description: selectedTask.description,
+                  assignee: selectedTask.assignee,
+                  priority: selectedTask.priority,
+                  dueDate: selectedTask.dueDate,
+                  status: selectedTask.status === 'inProgress' ? 'in_progress' : selectedTask.status
+                });
+                setSelectedTask(null);
+              }
+            }}
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '18px',
+              padding: '24px',
+              boxSizing: 'border-box'
+            }}
+          >
+            {/* Header */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', margin: 0 }}>
+              <h2 style={{ fontSize: '18px', fontWeight: 600, color: 'white', margin: 0, flex: 1 }}>
+                {isOwner ? "Edit Task" : "Task Details"}
+              </h2>
+              <button
+                onClick={() => setSelectedTask(null)}
+                type="button"
+                style={{
+                  width: '28px',
+                  height: '28px',
+                  borderRadius: '8px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  background: 'transparent',
+                  border: 'none',
+                  color: 'rgba(255,255,255,0.4)',
+                  cursor: 'pointer',
+                  flexShrink: 0,
+                  padding: 0,
+                }}
+              >
+                <X size={16} strokeWidth={1.5} />
+              </button>
             </div>
 
-            <Input
-              label="Task title"
-              value={selectedTask.title}
-              onChange={(e) => isOwner && setSelectedTask({ ...selectedTask, title: e.target.value })}
-              required
-              disabled={!isOwner}
-            />
+            {/* Two-column layout grid */}
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: '1fr 280px',
+                gap: '24px',
+                alignItems: 'start'
+              }}
+            >
+              {/* Left Column */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '18px', minWidth: 0 }}>
+                {/* Title */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <label style={{ fontSize: '11px', opacity: 0.5, textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0, color: 'var(--text-primary)' }}>
+                    Title
+                  </label>
+                  <input
+                    type="text"
+                    value={selectedTask.title}
+                    onChange={(e) => isOwner && setSelectedTask({ ...selectedTask, title: e.target.value })}
+                    disabled={!isOwner}
+                    required
+                    className="input-base"
+                    style={{ width: '100%', boxSizing: 'border-box', padding: '10px 14px', borderRadius: '12px', margin: 0 }}
+                  />
+                </div>
 
-            <div className="space-y-1.5">
-              <label className="block text-xs font-semibold uppercase tracking-wider text-[var(--text-secondary)]">
-                Description
-              </label>
-              <textarea
-                placeholder="Add task description..."
-                value={selectedTask.description || ''}
-                onChange={(e) => isOwner && setSelectedTask({ ...selectedTask, description: e.target.value })}
-                className="input-base resize-none focus:ring-2 focus:ring-[var(--accent-muted)] transition-all"
-                style={{ height: 80 }}
-                disabled={!isOwner}
-              />
-            </div>
+                {/* Description */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <label style={{ fontSize: '11px', opacity: 0.5, textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0, color: 'var(--text-primary)' }}>
+                    Description
+                  </label>
+                  <textarea
+                    value={selectedTask.description || ''}
+                    onChange={(e) => isOwner && setSelectedTask({ ...selectedTask, description: e.target.value })}
+                    disabled={!isOwner}
+                    placeholder="Add task description..."
+                    className="input-base resize-none h-20"
+                    style={{ width: '100%', boxSizing: 'border-box', padding: '10px 14px', borderRadius: '12px', margin: 0 }}
+                  />
+                </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <label className="block text-xs font-semibold uppercase tracking-wider text-[var(--text-secondary)]">
-                  Assignee
-                </label>
-                <select
-                  value={selectedTask.assignee || ''}
-                  onChange={(e) => isOwner && setSelectedTask({ ...selectedTask, assignee: e.target.value })}
-                  className="input-base focus:ring-2 focus:ring-[var(--accent-muted)] transition-all"
-                  disabled={!isOwner}
-                >
-                  <option value="">Unassigned</option>
-                  {members.map((m) => (
-                    <option key={m.id} value={m.id}>
-                      {m.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
+                {/* Discussion Stream */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '4px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', opacity: 0.5, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-primary)' }}>
+                    <MessageSquare size={10} />
+                    <span>Discussion Stream</span>
+                  </div>
 
-              <div className="space-y-1.5">
-                <label className="block text-xs font-semibold uppercase tracking-wider text-[var(--text-secondary)]">
-                  Priority
-                </label>
-                <select
-                  value={selectedTask.priority}
-                  onChange={(e) => isOwner && setSelectedTask({ ...selectedTask, priority: e.target.value })}
-                  className="input-base focus:ring-2 focus:ring-[var(--accent-muted)] transition-all"
-                  disabled={!isOwner}
-                >
-                  <option value="low">Low</option>
-                  <option value="medium">Medium</option>
-                  <option value="high">High</option>
-                </select>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Input
-                label="Due date"
-                type="date"
-                icon={Calendar}
-                value={selectedTask.dueDate || ''}
-                onChange={(e) => isOwner && setSelectedTask({ ...selectedTask, dueDate: e.target.value })}
-                disabled={!isOwner}
-              />
-
-              <div className="space-y-1.5">
-                <label className="block text-xs font-semibold uppercase tracking-wider text-[var(--text-secondary)]">
-                  Status
-                </label>
-                <select
-                  value={selectedTask.status || 'todo'}
-                  onChange={(e) => isOwner && setSelectedTask({ ...selectedTask, status: e.target.value })}
-                  className="input-base focus:ring-2 focus:ring-[var(--accent-muted)] transition-all"
-                  disabled={!isOwner}
-                >
-                  <option value="todo">To Do</option>
-                  <option value="inProgress">In Progress</option>
-                  <option value="done">Done</option>
-                </select>
-              </div>
-            </div>
-
-            <div className="flex gap-2 justify-end pt-3 border-t border-[var(--border-light)]">
-              <Button variant="secondary" type="button" size="sm" onClick={() => setSelectedTask(null)}>
-                Cancel
-              </Button>
-              {isOwner && (
-                <Button type="submit" size="sm">
-                  Save Changes
-                </Button>
-              )}
-            </div>
-
-            {/* Comments Section */}
-            <div className="border-t pt-5 border-[var(--border-color)]">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-[var(--text-secondary)] mb-3">Comments</h4>
-              
-              <div className="flex gap-2.5 mb-4">
-                <Input
-                  placeholder="Write a comment..."
-                  value={commentText}
-                  onChange={(e) => setCommentText(e.target.value)}
-                  className="flex-1"
-                />
-                <Button
-                  type="button"
-                  size="sm"
-                  onClick={() => {
-                    if (commentText.trim()) {
-                      addTaskComment(selectedTask.id, commentText);
-                      setCommentText('');
-                    }
-                  }}
-                >
-                  Comment
-                </Button>
-              </div>
-
-              <div className="space-y-2.5 max-h-44 overflow-y-auto pr-1">
-                {(!taskComments[selectedTask.id] || taskComments[selectedTask.id].length === 0) ? (
-                  <p className="text-xs text-center py-4 text-[var(--text-tertiary)] border border-dashed border-[var(--border-color)] rounded-md bg-[var(--bg-secondary)]">
-                    No comments yet.
-                  </p>
-                ) : (
-                  taskComments[selectedTask.id].map(comm => {
-                    const commenter = members.find(m => m.id === comm.userId) || { name: 'Member', initials: 'M', color: '#6366f1' };
-                    return (
-                      <div key={comm.id} className="flex gap-2.5 items-start text-xs bg-[var(--bg-secondary)] p-3 rounded-lg border border-[var(--border-color)]">
-                        <Avatar name={commenter.name} initials={commenter.initials} color={commenter.color} size="xs" />
-                        <div className="flex-1 min-w-0">
-                          <div className="flex justify-between items-center mb-0.5 gap-2">
-                            <span className="font-semibold text-[var(--text-primary)] truncate">{commenter.name}</span>
-                            <span className="text-[9px] text-[var(--text-tertiary)] shrink-0 font-medium">
-                              {new Date(comm.createdAt).toLocaleDateString()}
-                            </span>
-                          </div>
-                          <p className="text-[var(--text-secondary)] whitespace-pre-wrap break-words">{comm.text}</p>
-                        </div>
-                      </div>
-                    );
-                  })
-                )}
-              </div>
-            </div>
-
-            {/* Task History Section */}
-            <div className="border-t pt-5 border-[var(--border-color)]">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-[var(--text-secondary)] mb-3 flex items-center gap-1.5">
-                <Clock size={12} /> Task History
-              </h4>
-              <div className="space-y-2.5 max-h-36 overflow-y-auto pr-1">
-                {(() => {
-                  const taskHistory = (activityFeed[workspaceId] || []).filter(act => 
-                    act.details?.toLowerCase().includes(selectedTask.title.toLowerCase())
-                  );
-                  if (taskHistory.length === 0) {
-                    return <p className="text-[10px] text-center py-2 text-[var(--text-tertiary)]">No logs recorded.</p>;
-                  }
-                  return (
-                    <div className="relative pl-3 border-l border-[var(--border-color)] ml-1.5 space-y-2.5 py-0.5">
-                      {taskHistory.map((act, idx) => {
-                        const actorName = act.user_id === user?.id ? 'You' : (members.find(m => m.id === act.user_id)?.name || 'Someone');
+                  {/* Comments list */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '180px', overflowY: 'auto', paddingRight: '4px' }}>
+                    {(!taskComments[selectedTask.id] || taskComments[selectedTask.id].length === 0) ? (
+                      <p style={{ fontSize: '12px', opacity: 0.4, margin: 0, fontStyle: 'italic', color: 'var(--text-primary)' }}>No comments yet.</p>
+                    ) : (
+                      taskComments[selectedTask.id].map(comm => {
+                        const commenter = members.find(m => m.id === comm.userId) || { name: 'Member', initials: 'M', color: '#6366f1' };
                         return (
-                          <div key={act.id || idx} className="text-[10px] relative flex items-start justify-between gap-4">
-                            <span className="absolute -left-[16.5px] top-1.5 w-1.5 h-1.5 rounded-full bg-[var(--bg-primary)] border border-[var(--accent)] shrink-0" />
-                            <span className="text-[var(--text-secondary)]">
-                              <span className="font-semibold text-[var(--text-primary)]">{actorName}</span>{' '}
-                              {act.details}
-                            </span>
-                            <span className="text-[9px] text-[var(--text-tertiary)] shrink-0 font-medium whitespace-nowrap">
-                              {new Date(act.created_at).toLocaleDateString()}
-                            </span>
+                          <div
+                            key={comm.id}
+                            style={{
+                              display: 'flex',
+                              gap: '10px',
+                              alignItems: 'start',
+                              padding: '10px',
+                              borderRadius: '8px',
+                              border: '1px solid rgba(255,255,255,0.08)',
+                              backgroundColor: 'rgba(255,255,255,0.03)'
+                            }}
+                          >
+                            <Avatar name={commenter.name} initials={commenter.initials} color={commenter.color} size="xs" />
+                            <div style={{ minWidth: 0, flex: 1 }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: '8px' }}>
+                                <span style={{ fontSize: '11px', fontWeight: 600, color: 'white' }}>{commenter.name}</span>
+                                <span style={{ fontSize: '9px', opacity: 0.4, color: 'white' }}>
+                                  {new Date(comm.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                </span>
+                              </div>
+                              <p style={{ fontSize: '11px', opacity: 0.7, margin: '4px 0 0 0', wordBreak: 'break-word', lineHeight: 1.4, color: 'white' }}>
+                                {comm.text}
+                              </p>
+                            </div>
                           </div>
                         );
-                      })}
-                    </div>
-                  );
-                })()}
+                      })
+                    )}
+                  </div>
+
+                  {/* Comment Input row */}
+                  <div style={{ display: 'flex', gap: '8px', alignItems: 'stretch' }}>
+                    <input
+                      type="text"
+                      placeholder="Add a comment…"
+                      value={commentText}
+                      onChange={(e) => setCommentText(e.target.value)}
+                      className="input-base"
+                      style={{ flex: 1, boxSizing: 'border-box', minWidth: 0, padding: '10px 14px', borderRadius: '12px' }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          if (commentText.trim()) {
+                            addTaskComment(selectedTask.id, commentText);
+                            setCommentText('');
+                          }
+                        }
+                      }}
+                    />
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      type="button"
+                      onClick={() => {
+                        if (commentText.trim()) {
+                          addTaskComment(selectedTask.id, commentText);
+                          setCommentText('');
+                        }
+                      }}
+                      disabled={!commentText.trim()}
+                      style={{ flexShrink: 0, whiteSpace: 'nowrap' }}
+                    >
+                      Comment
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Task History Section */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '12px' }}>
+                  <h4 style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', opacity: 0.5, textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0, color: 'var(--text-primary)' }}>
+                    <Clock size={10} /> Task History
+                  </h4>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '120px', overflowY: 'auto', paddingRight: '4px' }}>
+                    {(() => {
+                      const taskHistory = (activityFeed[workspaceId] || []).filter(act => 
+                        act.details?.toLowerCase().includes(selectedTask.title.toLowerCase())
+                      );
+                      if (taskHistory.length === 0) {
+                        return <p style={{ fontSize: '12px', opacity: 0.4, margin: 0, fontStyle: 'italic', color: 'var(--text-primary)' }}>No logs recorded.</p>;
+                      }
+                      return (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', paddingLeft: '8px', borderLeft: '1px solid rgba(255,255,255,0.08)' }}>
+                          {taskHistory.map((act, idx) => {
+                            const actorName = act.user_id === user?.id ? 'You' : (members.find(m => m.id === act.user_id)?.name || 'Someone');
+                            return (
+                              <div key={act.id || idx} style={{ fontSize: '11px', display: 'flex', justifyContent: 'space-between', alignItems: 'start', gap: '16px' }}>
+                                <span style={{ opacity: 0.7, color: 'white' }}>
+                                  <span style={{ fontWeight: 600 }}>{actorName}</span>{' '}
+                                  {act.details}
+                                </span>
+                                <span style={{ fontSize: '9px', opacity: 0.4, shrink: 0, fontMedium: true, whiteSpace: 'nowrap', color: 'white' }}>
+                                  {new Date(act.created_at).toLocaleDateString()}
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      );
+                    })()}
+                  </div>
+                </div>
+              </div>
+
+              {/* Right Column */}
+              <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+                <span style={{ fontSize: '11px', opacity: 0.4, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px', display: 'block', color: 'var(--text-primary)' }}>
+                  TASK PROPERTIES
+                </span>
+
+                {/* Status Field Group */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '14px' }}>
+                  <label style={{ fontSize: '11px', opacity: 0.5, textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0, color: 'var(--text-primary)' }}>
+                    Status
+                  </label>
+                  <CustomSelect
+                    value={selectedTask.status || 'todo'}
+                    onChange={(val) => isOwner && setSelectedTask({ ...selectedTask, status: val })}
+                    disabled={!isOwner && selectedTask.assignee !== user?.id}
+                    options={[
+                      { value: 'todo', label: 'To Do' },
+                      { value: 'inProgress', label: 'In Progress' },
+                      { value: 'done', label: 'Done' }
+                    ]}
+                  />
+                </div>
+
+                {/* Assignee Field Group */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '14px' }}>
+                  <label style={{ fontSize: '11px', opacity: 0.5, textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0, color: 'var(--text-primary)' }}>
+                    Assignee
+                  </label>
+                  <CustomSelect
+                    value={selectedTask.assignee || ''}
+                    onChange={(val) => isOwner && setSelectedTask({ ...selectedTask, assignee: val })}
+                    disabled={!isOwner}
+                    options={[
+                      { value: '', label: 'Unassigned' },
+                      ...members.map(m => ({ value: m.id, label: m.name }))
+                    ]}
+                    placeholder="Unassigned"
+                  />
+                </div>
+
+                {/* Priority Field Group */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '14px' }}>
+                  <label style={{ fontSize: '11px', opacity: 0.5, textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0, color: 'var(--text-primary)' }}>
+                    Priority
+                  </label>
+                  <CustomSelect
+                    value={selectedTask.priority}
+                    onChange={(val) => isOwner && setSelectedTask({ ...selectedTask, priority: val })}
+                    disabled={!isOwner}
+                    options={[
+                      { value: 'low', label: 'Low' },
+                      { value: 'medium', label: 'Medium' },
+                      { value: 'high', label: 'High' }
+                    ]}
+                  />
+                </div>
+
+                {/* Due Date Field Group */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '14px' }}>
+                  <label style={{ fontSize: '11px', opacity: 0.5, textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0, color: 'var(--text-primary)' }}>
+                    Due Date
+                  </label>
+                  <input
+                    type="date"
+                    value={selectedTask.dueDate || ''}
+                    onChange={(e) => isOwner && setSelectedTask({ ...selectedTask, dueDate: e.target.value })}
+                    disabled={!isOwner}
+                    className="input-base"
+                    style={{ width: '100%', boxSizing: 'border-box', padding: '10px 14px', borderRadius: '12px', margin: 0 }}
+                  />
+                </div>
+              </div>
+
+              {/* Bottom action row */}
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: '12px',
+                  width: '100%',
+                  marginTop: '8px',
+                  gridColumn: '1 / -1'
+                }}
+              >
+                <div>
+                  {isOwner ? (
+                    <Button
+                      variant="danger"
+                      size="sm"
+                      type="button"
+                      icon={Trash2}
+                      onClick={() => {
+                        if (window.confirm("Delete this task permanently?")) {
+                          deleteTask(workspaceId, selectedTask.id);
+                          setSelectedTask(null);
+                        }
+                      }}
+                      style={{
+                        padding: '9px 16px',
+                        boxSizing: 'border-box',
+                        whiteSpace: 'nowrap',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        flexShrink: 0,
+                        borderRadius: '10px',
+                        height: 'auto'
+                      }}
+                    >
+                      Delete Task
+                    </Button>
+                  ) : (
+                    <div />
+                  )}
+                </div>
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexShrink: 0 }}>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    type="button"
+                    onClick={() => setSelectedTask(null)}
+                    style={{
+                      padding: '10px 24px',
+                      boxSizing: 'border-box',
+                      borderRadius: '10px',
+                      fontSize: '14px',
+                      fontWeight: 500,
+                      height: 'auto'
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                  {(isOwner || selectedTask.assignee === user?.id) && (
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      type="submit"
+                      style={{
+                        padding: '10px 24px',
+                        boxSizing: 'border-box',
+                        borderRadius: '10px',
+                        fontSize: '14px',
+                        fontWeight: 500,
+                        height: 'auto'
+                      }}
+                    >
+                      Save
+                    </Button>
+                  )}
+                </div>
               </div>
             </div>
           </form>
@@ -566,72 +795,129 @@ export default function TasksPage() {
       )}
 
       {/* New Task modal */}
-      <Modal isOpen={showCreate} onClose={() => setShowCreate(false)} title="Create task">
-        <form onSubmit={createTask} className="space-y-4">
-          <Input
-            label="Task title"
-            placeholder="Title of task"
-            value={newTask.title}
-            onChange={(e) => setNewTask({ ...newTask, title: e.target.value })}
-            required
-          />
-          <div className="space-y-1.5">
-            <label className="block text-xs font-semibold uppercase tracking-wider text-[var(--text-secondary)]">
+      <Modal isOpen={showCreate} onClose={() => setShowCreate(false)} noPadding={true}>
+        <form
+          onSubmit={createTask}
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '18px',
+            padding: '24px',
+            boxSizing: 'border-box'
+          }}
+        >
+          {/* Section 1 — Header */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', margin: 0 }}>
+            <h2 style={{ fontSize: '18px', fontWeight: 600, color: 'white', margin: 0, flex: 1 }}>Create task</h2>
+            <button
+              onClick={() => setShowCreate(false)}
+              type="button"
+              style={{
+                width: '28px',
+                height: '28px',
+                borderRadius: '8px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                background: 'transparent',
+                border: 'none',
+                color: 'rgba(255,255,255,0.4)',
+                cursor: 'pointer',
+                flexShrink: 0,
+                padding: 0,
+              }}
+            >
+              <X size={16} strokeWidth={1.5} />
+            </button>
+          </div>
+
+          {/* Task title */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            <label style={{ fontSize: '11px', opacity: 0.5, textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0, color: 'var(--text-primary)' }}>
+              Task title
+            </label>
+            <input
+              type="text"
+              placeholder="Title of task"
+              value={newTask.title}
+              onChange={(e) => setNewTask({ ...newTask, title: e.target.value })}
+              required
+              className="input-base"
+              style={{ width: '100%', boxSizing: 'border-box', padding: '10px 14px', borderRadius: '12px', margin: 0 }}
+            />
+          </div>
+
+          {/* Description */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            <label style={{ fontSize: '11px', opacity: 0.5, textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0, color: 'var(--text-primary)' }}>
               Description
             </label>
             <textarea
               placeholder="Add more description details…"
               value={newTask.description}
               onChange={(e) => setNewTask({ ...newTask, description: e.target.value })}
-              className="input-base resize-none"
-              style={{ height: 80 }}
+              className="input-base resize-none h-20"
+              style={{ width: '100%', boxSizing: 'border-box', padding: '10px 14px', borderRadius: '12px', margin: 0 }}
             />
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <label className="block text-xs font-semibold uppercase tracking-wider text-[var(--text-secondary)]">
-                Assignee
-              </label>
-              <select
-                value={newTask.assignee}
-                onChange={(e) => setNewTask({ ...newTask, assignee: e.target.value })}
-                className="input-base"
-              >
-                <option value="">Unassigned</option>
-                {members.map((m) => (
-                  <option key={m.id} value={m.id}>
-                    {m.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="space-y-1.5">
-              <label className="block text-xs font-semibold uppercase tracking-wider text-[var(--text-secondary)]">
+
+          {/* Assignee */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            <label style={{ fontSize: '11px', opacity: 0.5, textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0, color: 'var(--text-primary)' }}>
+              Assignee
+            </label>
+            <CustomSelect
+              value={newTask.assignee}
+              onChange={(val) => setNewTask({ ...newTask, assignee: val })}
+              options={[
+                { value: '', label: 'Unassigned' },
+                ...members.map(m => ({ value: m.id, label: m.name }))
+              ]}
+              placeholder="Unassigned"
+            />
+          </div>
+
+          {/* Priority + Due Date row */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <label style={{ fontSize: '11px', opacity: 0.5, textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0, color: 'var(--text-primary)' }}>
                 Priority
               </label>
-              <select
+              <CustomSelect
                 value={newTask.priority}
-                onChange={(e) => setNewTask({ ...newTask, priority: e.target.value })}
+                onChange={(val) => setNewTask({ ...newTask, priority: val })}
+                options={[
+                  { value: 'low', label: 'Low' },
+                  { value: 'medium', label: 'Medium' },
+                  { value: 'high', label: 'High' }
+                ]}
+              />
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <label style={{ fontSize: '11px', opacity: 0.5, textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0, color: 'var(--text-primary)' }}>
+                Due date
+              </label>
+              <input
+                type="date"
+                value={newTask.dueDate}
+                onChange={(e) => setNewTask({ ...newTask, dueDate: e.target.value })}
                 className="input-base"
-              >
-                <option value="low">Low</option>
-                <option value="medium">Medium</option>
-                <option value="high">High</option>
-              </select>
+                style={{ width: '100%', boxSizing: 'border-box', padding: '10px 14px', borderRadius: '12px', margin: 0 }}
+              />
             </div>
           </div>
-          <Input
-            label="Due date"
-            type="date"
-            icon={Calendar}
-            value={newTask.dueDate}
-            onChange={(e) => setNewTask({ ...newTask, dueDate: e.target.value })}
-          />
-          <div className="flex gap-3 pt-3 border-t border-[var(--border-light)]">
-            <Button variant="secondary" type="button" className="flex-1" onClick={() => setShowCreate(false)}>
+
+          {/* Action buttons row */}
+          <div style={{ display: 'flex', gap: '10px', marginTop: '4px' }}>
+            <Button
+              variant="secondary"
+              type="button"
+              style={{ flex: 1 }}
+              onClick={() => setShowCreate(false)}
+            >
               Cancel
             </Button>
-            <Button type="submit" className="flex-1">
+            <Button type="submit" style={{ flex: 1 }}>
               Create task
             </Button>
           </div>

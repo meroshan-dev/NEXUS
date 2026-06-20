@@ -209,7 +209,7 @@ export default function AppLayout() {
       >
         <TopBar onMobileMenuToggle={() => setMobileOpen(true)} />
         <main
-          className="flex-1 overflow-y-auto overflow-x-hidden min-w-0"
+          className="main-content flex-1 overflow-y-auto overflow-x-hidden min-w-0"
           style={{
             padding: isKeyboardVisible
               ? 'var(--page-padding-y) var(--page-padding-x) 12px var(--page-padding-x)'
@@ -288,7 +288,7 @@ export default function AppLayout() {
         className="hidden lg:flex flex-col flex-1 min-w-0 h-screen overflow-hidden relative z-10"
       >
         <TopBar onMobileMenuToggle={() => setMobileOpen(true)} />
-        <main className="flex-1 overflow-y-auto overflow-x-hidden min-w-0">
+        <main className="main-content flex-1 overflow-y-auto overflow-x-hidden min-w-0">
           <div
             className="content-max w-full min-w-0"
             style={{

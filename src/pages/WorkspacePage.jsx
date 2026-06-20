@@ -8,7 +8,7 @@ import {
   FileText, CheckSquare, Users, MapPin, Phone, PhoneCall,
   Video, Trash2, Upload, Download, Grid, List, File,
   CloudUpload, Plus, Search, AlertCircle,
-  Calendar, Edit3, FolderKanban
+  Calendar, Edit3, FolderKanban, X
 } from 'lucide-react';
 import Avatar from '../components/ui/Avatar';
 import Card from '../components/ui/Card';
@@ -18,6 +18,7 @@ import Input from '../components/ui/Input';
 import LoadingState from '../components/ui/LoadingState';
 import EmptyState from '../components/ui/EmptyState';
 import { PriorityBadge } from '../components/ui/Badge';
+import CustomSelect from '../components/ui/CustomSelect';
 import { useWorkspace } from '../context/WorkspaceContext';
 import { useAuth } from '../context/AuthContext';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
@@ -318,6 +319,7 @@ export default function WorkspacePage() {
   }
 
   const isOwner = workspace.ownerId === user?.id;
+  const currentUserRole = (workspaceMembers[workspace.id]?.find(m => m.id === user?.id || m.userId === user?.id)?.role || 'Member').toLowerCase();
   const wsFiles = files[workspace.id] || [];
 
   const workspaceTabs = [
@@ -624,84 +626,110 @@ export default function WorkspacePage() {
   // workspaceActivities and unused metrics removed / moved to top
 
   return (
-    <div className="page-stack pb-8 min-w-0">
-      {/* Workspace Header — Glass */}
-      <header className="flex flex-col sm:flex-row sm:items-start justify-between gap-5 min-w-0">
-        <div className="flex items-start gap-3.5 min-w-0 flex-1">
-          <div
-            className="w-10 h-10 rounded-[var(--radius-md)] flex items-center justify-center text-lg shrink-0"
-            style={{ background: workspace.color + '18', color: workspace.color, border: `1px solid ${workspace.color}25` }}
-          >
-            {workspace.icon}
-          </div>
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2.5">
-              <h1 className="text-xl font-medium tracking-tight truncate" style={{ color: 'var(--text-primary)' }}>
-                {workspace.name}
-              </h1>
-              {activeCalls[workspace.id] && (
-                <span className="flex items-center gap-1 text-[9px] font-medium px-2 py-0.5 rounded-[var(--radius-pill)] uppercase animate-pulse" style={{ background: 'rgba(16,185,129,0.15)', color: '#34d399', border: '1px solid rgba(16,185,129,0.25)' }}>
-                  <Phone size={8} strokeWidth={1.5} /> Huddle Live
-                </span>
-              )}
-            </div>
-            <p className="text-xs mt-1 truncate" style={{ color: 'var(--text-secondary)' }}>
-              {workspace.description || 'Collaborative workspace hub.'}
-            </p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2 shrink-0">
-          <Button
-            variant="secondary"
-            size="sm"
-            icon={UserPlus}
-            onClick={() => {
-              setShowInvite(true);
-              setInviteError('');
-              setInviteSuccess(false);
-              setInviteEmail('');
-            }}
-          >
-            Invite Member
-          </Button>
-        </div>
-      </header>
-
-      {/* Tabs — Glass Tab Container */}
-      <div className="glass-tab-container flex gap-1 self-start mb-6 overflow-x-auto no-scrollbar max-w-full">
-        {workspaceTabs.map((t) => {
-          const active = activeTab === t.id;
-          const Icon = t.icon;
-          return (
-            <button
-              key={t.id}
-              onClick={() => handleTabChange(t.id)}
-              className={`relative flex items-center gap-2 px-3.5 py-1.5 text-xs font-medium transition-all duration-200 cursor-pointer shrink-0 ${active ? 'glass-tab-active' : 'rounded-[var(--radius-md)] hover:bg-[rgba(255,255,255,0.05)]'}`}
-              style={{
-                color: active ? 'var(--text-primary)' : 'var(--text-secondary)',
-              }}
-            >
-              <span className="relative z-10 flex items-center gap-1.5">
-                <Icon size={13} strokeWidth={1.5} style={{ color: active ? 'var(--accent)' : 'var(--text-secondary)' }} />
-                {t.label}
-              </span>
-            </button>
-          );
-        })}
-      </div>
-
+    <div
+      className="page-stack pb-8 min-w-0"
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '16px',
+        padding: '24px',
+        paddingTop: '24px',
+        boxSizing: 'border-box',
+        width: '100%',
+        minWidth: 0
+      }}
+    >
       <div className="flex flex-col xl:flex-row gap-6 items-start min-w-0 w-full">
         <div className="flex-1 min-w-0 w-full max-w-full">
           <AnimatePresence mode="wait">
             
             {/* OVERVIEW TAB */}
             {activeTab === 'overview' && (
-              <motion.div key="overview" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-6">
+              <motion.div
+                key="overview"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '16px',
+                  position: 'static',
+                  margin: 0,
+                  width: '100%'
+                }}
+              >
                 
-                {/* Active Workspace Huddle Box */}
-                {activeCalls[workspace.id] ? (
-                  <div className="glass-card p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 animate-pulse" style={{ borderColor: 'rgba(16,185,129,0.25)' }}>
-                    <div className="flex items-center gap-3">
+                {/* Workspace Quick Actions */}
+                <Card
+                  padding={false}
+                  className=""
+                  style={{
+                    position: 'static',
+                    margin: 0,
+                    height: 'auto',
+                    padding: '20px 24px',
+                    boxSizing: 'border-box'
+                  }}
+                >
+                  <h3 className="section-label" style={{ marginBottom: '12px' }}>Workspace Actions</h3>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
+                    {currentUserRole === 'owner' && (
+                      <button onClick={() => setShowCreateTask(true)} className="workspace-action-btn">
+                        <div className="workspace-action-icon-wrapper">
+                          <CheckSquare size={18} strokeWidth={1.5} className="icon-glow" style={{ color: 'var(--text-tertiary)' }} />
+                        </div>
+                        <span className="text-truncate" style={{ fontSize: '11px', fontWeight: 500, color: 'var(--text-primary)', maxWidth: '100%' }}>Create Task</span>
+                      </button>
+                    )}
+                    <label className="workspace-action-btn">
+                      <input type="file" onChange={handleFileUpload} className="hidden" />
+                      <div className="workspace-action-icon-wrapper">
+                        <Upload size={18} strokeWidth={1.5} className="icon-glow" style={{ color: 'var(--text-tertiary)' }} />
+                      </div>
+                      <span className="text-truncate" style={{ fontSize: '11px', fontWeight: 500, color: 'var(--text-primary)', maxWidth: '100%' }}>Upload File</span>
+                    </label>
+                    <button onClick={createNewNote} className="workspace-action-btn">
+                      <div className="workspace-action-icon-wrapper">
+                        <File size={18} strokeWidth={1.5} className="icon-glow" style={{ color: 'var(--text-tertiary)' }} />
+                      </div>
+                      <span className="text-truncate" style={{ fontSize: '11px', fontWeight: 500, color: 'var(--text-primary)', maxWidth: '100%' }}>Create Note</span>
+                    </button>
+                    <button onClick={() => startCall(workspace.id)} className="workspace-action-btn">
+                      <div className="workspace-action-icon-wrapper">
+                        <PhoneCall size={18} strokeWidth={1.5} className="icon-glow" style={{ color: 'var(--text-tertiary)' }} />
+                      </div>
+                      <span className="text-truncate" style={{ fontSize: '11px', fontWeight: 500, color: 'var(--text-primary)', maxWidth: '100%' }}>Start Call</span>
+                    </button>
+                    {currentUserRole === 'owner' && (
+                      <button onClick={() => { handleTabChange('meetings'); setShowScheduleMeeting(true); }} className="workspace-action-btn">
+                        <div className="workspace-action-icon-wrapper">
+                          <Calendar size={18} strokeWidth={1.5} className="icon-glow" style={{ color: 'var(--text-tertiary)' }} />
+                        </div>
+                        <span className="text-truncate" style={{ fontSize: '11px', fontWeight: 500, color: 'var(--text-primary)', maxWidth: '100%' }}>Schedule Meeting</span>
+                      </button>
+                    )}
+                    <button
+                      onClick={() => {
+                        setShowInvite(true);
+                        setInviteError('');
+                        setInviteSuccess(false);
+                        setInviteEmail('');
+                      }}
+                      className="workspace-action-btn"
+                    >
+                      <div className="workspace-action-icon-wrapper">
+                        <UserPlus size={18} strokeWidth={1.5} className="icon-glow" style={{ color: 'var(--text-tertiary)' }} />
+                      </div>
+                      <span className="text-truncate" style={{ fontSize: '11px', fontWeight: 500, color: 'var(--text-primary)', maxWidth: '100%' }}>Invite Member</span>
+                    </button>
+                  </div>
+                </Card>
+
+                {/* Active Workspace Huddle Box (only if active) */}
+                {activeCalls[workspace.id] && (
+                  <div className="glass-card p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 animate-pulse" style={{ borderColor: 'rgba(16,185,129,0.25)', position: 'static', margin: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                       <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0" style={{ background: 'rgba(16,185,129,0.15)', color: '#34d399' }}>
                         <PhoneCall size={18} strokeWidth={1.5} />
                       </div>
@@ -716,21 +744,6 @@ export default function WorkspacePage() {
                       Join Huddle
                     </Button>
                   </div>
-                ) : (
-                  <div className="glass-card p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0" style={{ background: 'rgba(255,255,255,0.06)', color: 'var(--text-secondary)' }}>
-                        <Phone size={16} strokeWidth={1.5} />
-                      </div>
-                      <div>
-                        <h3 className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Workspace Voice Huddle</h3>
-                        <p className="text-xs mt-0.5" style={{ color: 'var(--text-secondary)' }}>Start a real-time call to discuss topics with your teammates.</p>
-                      </div>
-                    </div>
-                    <Button variant="secondary" size="sm" icon={PhoneCall} className="shrink-0" onClick={() => startCall(workspace.id)}>
-                      Start Call
-                    </Button>
-                  </div>
                 )}
 
                 {/* Call error banner */}
@@ -740,6 +753,8 @@ export default function WorkspacePage() {
                     background: 'rgba(239,68,68,0.1)',
                     border: '1px solid rgba(239,68,68,0.25)',
                     display: 'flex', alignItems: 'flex-start', gap: '10px',
+                    position: 'static',
+                    margin: 0
                   }}>
                     <span style={{ fontSize: '16px', lineHeight: 1, flexShrink: 0, marginTop: '1px' }}>⚠️</span>
                     <div style={{ flex: 1, minWidth: 0 }}>
@@ -754,58 +769,39 @@ export default function WorkspacePage() {
                   </div>
                 )}
 
-                {/* Workspace Quick Actions — flex-wrap with gap:12px */}
-                <Card padding={false} className="" style={{ padding: '20px 24px', boxSizing: 'border-box' }}>
-                  <h3 className="section-label" style={{ marginBottom: '12px' }}>Workspace Actions</h3>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
+                {/* Stats & Activity — Balanced 2-column layout */}
+                <div
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: isMobile ? '1fr' : '320px 1fr',
+                    gap: '16px',
+                    alignItems: 'start',
+                    width: '100%',
+                    position: 'static',
+                    margin: 0,
+                    marginTop: 0
+                  }}
+                >
+                  {/* Glass Stats Cards Stack */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', position: 'static', margin: 0 }}>
                     {[
-                      { onClick: () => setShowCreateTask(true), icon: CheckSquare, label: 'Create Task' },
-                      { isUpload: true, icon: Upload, label: 'Upload File' },
-                      { onClick: createNewNote, icon: File, label: 'Create Note' },
-                      { onClick: () => startCall(workspace.id), icon: PhoneCall, label: 'Start Call' },
-                      { onClick: () => { handleTabChange('meetings'); setShowScheduleMeeting(true); }, icon: Calendar, label: 'Schedule Meeting' },
-                      { onClick: () => setShowInvite(true), icon: UserPlus, label: 'Invite Member' },
-                    ].map((action, i) => {
-                      const ActionIcon = action.icon;
-                      const content = (
-                        <>
-                          <div className="flex items-center justify-center" style={{ width: '36px', height: '36px', borderRadius: '12px', background: 'rgba(255,255,255,0.06)', border: '1px solid var(--glass-border-light)', flexShrink: 0 }}>
-                            <ActionIcon size={16} strokeWidth={1.5} className="icon-glow" style={{ color: 'var(--text-tertiary)' }} />
-                          </div>
-                          <span className="text-truncate" style={{ fontSize: '10px', fontWeight: 500, color: 'var(--text-primary)' }}>{action.label}</span>
-                        </>
-                      );
-                      if (action.isUpload) {
-                        return (
-                          <label key={i} style={{ flex: '1 1 120px', minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '16px 8px', borderRadius: '16px', textAlign: 'center', gap: '8px', background: 'rgba(255,255,255,0.02)', border: '1px solid var(--glass-border-light)', cursor: 'pointer', boxSizing: 'border-box', overflow: 'hidden' }}>
-                            <input type="file" onChange={handleFileUpload} className="hidden" />
-                            {content}
-                          </label>
-                        );
-                      }
-                      return (
-                        <button key={i} onClick={action.onClick} style={{ flex: '1 1 120px', minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '16px 8px', borderRadius: '16px', textAlign: 'center', gap: '8px', background: 'rgba(255,255,255,0.02)', border: '1px solid var(--glass-border-light)', cursor: 'pointer', boxSizing: 'border-box', overflow: 'hidden', transition: 'background 0.2s' }}>
-                          {content}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </Card>
-
-                {/* Stats & Activity — Glass Metric Cards */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                  {/* Glass Stats Cards */}
-                  <div className="space-y-4">
-                    {[
-                      { icon: Users, value: members.length, label: 'Total Members', iconBg: 'rgba(129,140,248,0.12)', iconColor: 'var(--accent)' },
-                      { icon: CheckSquare, value: `${completedTasksCount}/${totalTasksCount}`, label: 'Tasks Completed', iconBg: 'rgba(16,185,129,0.12)', iconColor: '#34d399' },
-                      { icon: FileText, value: wsFiles.length, label: 'Shared Files', iconBg: 'rgba(251,191,36,0.12)', iconColor: '#fbbf24' },
+                      { icon: Users, value: members.length, label: 'Total Members' },
+                      { icon: CheckSquare, value: `${completedTasksCount}/${totalTasksCount}`, label: 'Tasks Completed' },
+                      { icon: FileText, value: wsFiles.length, label: 'Shared Files' },
                     ].map((stat, i) => {
                       const StatIcon = stat.icon;
                       return (
-                        <div key={i} className="glass-stat-card flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-[var(--radius-md)] flex items-center justify-center shrink-0" style={{ background: stat.iconBg, color: stat.iconColor }}>
-                            <StatIcon size={15} strokeWidth={1.5} />
+                        <div
+                          key={i}
+                          className="glass-stat-card flex items-center gap-[10px]"
+                          style={{
+                            boxSizing: 'border-box',
+                            position: 'static',
+                            margin: 0
+                          }}
+                        >
+                          <div className="stat-icon">
+                            <StatIcon size={18} strokeWidth={1.5} />
                           </div>
                           <div>
                             <p className="text-base font-medium leading-none" style={{ color: 'var(--text-primary)' }}>{stat.value}</p>
@@ -816,28 +812,71 @@ export default function WorkspacePage() {
                     })}
                   </div>
 
-                  {/* Activity Timeline — Fix "Someone" bug */}
-                  <Card padding className="lg:col-span-2 space-y-4">
-                    <h3 className="section-label" style={{ marginBottom: '8px' }}>Workspace Activity</h3>
+                  {/* Activity Timeline */}
+                  <Card
+                    padding={false}
+                    style={{
+                      boxSizing: 'border-box',
+                      padding: '16px 20px',
+                      overflow: 'hidden',
+                      minWidth: 0,
+                      position: 'static',
+                      margin: 0
+                    }}
+                  >
+                    <span className="section-label" style={{ paddingBottom: '12px', display: 'block', margin: 0 }}>Workspace Activity</span>
                     {workspaceActivities.length === 0 ? (
-                      <div className="py-10 text-center rounded-[var(--radius-lg)]" style={{ border: '1px dashed var(--glass-border)' }}>
+                      <div className="py-10 text-center rounded-[var(--radius-lg)]" style={{ border: '1px dashed var(--glass-border)', position: 'static', margin: 0 }}>
                         <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>No recent activity.</p>
                       </div>
                     ) : (
-                      <div className="space-y-4 pt-2">
-                        {workspaceActivities.map((act) => {
-                          const actorName = act.profiles?.name ?? act.profiles?.display_name ?? act.profiles?.email ?? 'A member';
+                      <div style={{ display: 'flex', flexDirection: 'column', position: 'static', margin: 0 }}>
+                        {workspaceActivities.map((act, index) => {
+                          const localActor = members.find(m => m.id === act.user_id);
+                          const actor = act.actor || act.profiles || (localActor ? { full_name: localActor.name, email: localActor.email, avatar: localActor.avatar } : null);
+                          const actorName = actor?.full_name ?? actor?.name ?? actor?.email ?? 'A member';
+                          const isLast = index === workspaceActivities.length - 1;
                           return (
-                            <div key={act.id} style={{ display: 'flex', gap: '8px', alignItems: 'flex-start', fontSize: '12px' }}>
-                              <div style={{ flexShrink: 0, width: '24px' }}>
-                                <Avatar name={actorName} initials={actorName.slice(0, 2).toUpperCase()} size="xs" />
+                            <div
+                              key={act.id}
+                              style={{
+                                display: 'flex',
+                                alignItems: 'flex-start',
+                                gap: '10px',
+                                padding: '10px 0',
+                                borderBottom: isLast ? 'none' : '1px solid rgba(255,255,255,0.05)',
+                                overflow: 'hidden',
+                                position: 'static',
+                                margin: 0
+                              }}
+                            >
+                              <div style={{ flexShrink: 0, width: '28px', height: '28px' }}>
+                                <Avatar name={actorName} initials={actorName.slice(0, 2).toUpperCase()} src={actor?.avatar} size="xs" />
                               </div>
-                              <div style={{ minWidth: 0, flex: 1, overflow: 'hidden' }}>
-                                <p className="text-truncate" style={{ color: 'var(--text-secondary)' }}>
+                              <div style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
+                                <p
+                                  style={{
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    whiteSpace: 'nowrap',
+                                    fontSize: '13px',
+                                    color: 'var(--text-secondary)',
+                                    margin: 0
+                                  }}
+                                >
                                   <span className="font-medium" style={{ color: 'var(--text-primary)' }}>{actorName}</span>{' '}
                                   {act.details}
                                 </p>
-                                <span style={{ fontSize: '9px', fontFamily: 'monospace', display: 'block', marginTop: '2px', color: 'var(--text-tertiary)' }}>
+                                <span
+                                  style={{
+                                    fontSize: '11px',
+                                    opacity: 0.45,
+                                    whiteSpace: 'nowrap',
+                                    display: 'block',
+                                    marginTop: '2px',
+                                    color: 'var(--text-tertiary)'
+                                  }}
+                                >
                                   {formatActivityTime(act.created_at || act.createdAt)}
                                 </span>
                               </div>
@@ -853,9 +892,9 @@ export default function WorkspacePage() {
 
             {/* TASKS TAB */}
             {activeTab === 'tasks' && (
-              <motion.div key="tasks" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-5">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                  <div className="flex gap-1.5 p-1 rounded-md bg-[var(--bg-secondary)] border border-[var(--border-color)]">
+              <motion.div key="tasks" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-5" style={{ overflowX: 'hidden', width: '100%', boxSizing: 'border-box' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '20px 24px', gap: '16px', boxSizing: 'border-box', width: '100%' }}>
+                  <div style={{ display: 'flex', gap: '4px', padding: '4px', background: 'rgba(255,255,255,0.05)', backdropFilter: 'blur(16px) saturate(160%)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '10px', width: 'fit-content', flexShrink: 1, minWidth: 0 }}>
                     {[
                       { id: 'all', label: 'All Tasks' },
                       { id: 'my', label: 'My Tasks' },
@@ -865,13 +904,44 @@ export default function WorkspacePage() {
                       <button
                         key={tab.id}
                         onClick={() => setTasksFilter(tab.id)}
-                        className={`px-3 py-1 rounded text-[11px] font-semibold transition-all cursor-pointer ${tasksFilter === tab.id ? 'bg-[var(--bg-primary)] border border-[var(--border-color)] text-[var(--text-primary)] shadow-xs' : 'text-[var(--text-secondary)]'}`}
+                        style={{
+                          padding: '6px 14px',
+                          borderRadius: '8px',
+                          fontSize: '13px',
+                          whiteSpace: 'nowrap',
+                          cursor: 'pointer',
+                          opacity: tasksFilter === tab.id ? 1 : 0.6,
+                          background: tasksFilter === tab.id ? 'rgba(255,255,255,0.12)' : 'transparent',
+                          backdropFilter: tasksFilter === tab.id ? 'blur(10px)' : 'none',
+                          border: tasksFilter === tab.id ? '1px solid rgba(255,255,255,0.15)' : '1px solid transparent',
+                          fontWeight: tasksFilter === tab.id ? 500 : 400,
+                          transition: 'all 0.2s',
+                          outline: 'none',
+                          color: 'var(--text-primary)',
+                        }}
                       >
                         {tab.label}
                       </button>
                     ))}
                   </div>
-                  <Button icon={Plus} size="sm" onClick={() => setShowCreateTask(true)}>
+                  <Button
+                    icon={Plus}
+                    size="sm"
+                    onClick={() => setShowCreateTask(true)}
+                    style={{
+                      flexShrink: 0,
+                      whiteSpace: 'nowrap',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      padding: '9px 18px',
+                      borderRadius: '10px',
+                      background: 'rgba(99,102,241,0.85)',
+                      backdropFilter: 'blur(10px)',
+                      border: '1px solid rgba(255,255,255,0.15)',
+                      boxShadow: '0 4px 16px rgba(99,102,241,0.3)'
+                    }}
+                  >
                     Create Task
                   </Button>
                 </div>
@@ -883,21 +953,61 @@ export default function WorkspacePage() {
                     description="Create a task to map your product roadmap."
                     actionLabel="Create Task"
                     onAction={() => setShowCreateTask(true)}
+                    style={{
+                      padding: '48px 24px',
+                      boxSizing: 'border-box',
+                      textAlign: 'center',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      gap: '8px',
+                      overflow: 'hidden'
+                    }}
+                    iconStyle={{
+                      width: '48px',
+                      height: '48px',
+                      borderRadius: '12px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      marginBottom: '4px'
+                    }}
+                    titleStyle={{
+                      fontSize: '16px',
+                      fontWeight: 600,
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      maxWidth: '100%',
+                      margin: 0
+                    }}
+                    descStyle={{
+                      fontSize: '13px',
+                      opacity: 0.55,
+                      maxWidth: '320px',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'normal',
+                      padding: 0,
+                      margin: 0
+                    }}
+                    buttonStyle={{
+                      marginTop: '8px',
+                      whiteSpace: 'nowrap',
+                      padding: '9px 20px'
+                    }}
                   />
                 ) : (
                   <DragDropContext onDragEnd={onDragEnd}>
-                    <div className="flex gap-5 overflow-x-auto pb-4 no-scrollbar snap-x snap-mandatory">
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', padding: '0 24px 24px', boxSizing: 'border-box' }}>
                       {Object.entries(KANBAN_COLS).map(([colId, cfg]) => {
                         const columnTasks = colId === 'todo' ? todoList : colId === 'inProgress' ? inProgressList : doneList;
                         return (
-                          <div key={colId} className="flex flex-col snap-start" style={{ width: '280px', flexShrink: 0, overflow: 'hidden' }}>
-                            <div className="flex items-center justify-between mb-3 px-1">
-                              <div className="flex items-center gap-2">
-                                <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: cfg.dotColor }} />
-                                <span className="text-xs font-semibold uppercase tracking-wider text-[var(--text-secondary)]">
-                                  {cfg.title}
-                                </span>
-                                <span className="px-1.5 py-0.5 rounded-full text-[9px] font-bold border border-[var(--border-color)] bg-[var(--bg-secondary)] text-[var(--text-secondary)]">
+                          <div key={colId} style={{ width: '100%', boxSizing: 'border-box', display: 'flex', flexDirection: 'column' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 4px 12px' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: 600, letterSpacing: '0.03em', color: 'var(--text-primary)' }}>
+                                <span style={{ width: '8px', height: '8px', borderRadius: '50%', flexShrink: 0, background: cfg.dotColor }} />
+                                <span style={{ textTransform: 'uppercase' }}>{cfg.title}</span>
+                                <span style={{ fontSize: '11px', opacity: 0.5, fontWeight: 400, marginLeft: '4px' }}>
                                   {columnTasks.length}
                                 </span>
                               </div>
@@ -908,11 +1018,21 @@ export default function WorkspacePage() {
                                 <div
                                   ref={provided.innerRef}
                                   {...provided.droppableProps}
-                                  className="flex-1 rounded-[var(--radius-lg)] space-y-3 p-3 transition-all duration-200"
                                   style={{
-                                    background: snapshot.isDraggingOver ? cfg.accent : 'var(--bg-secondary)',
-                                    border: snapshot.isDraggingOver ? `1px dashed ${cfg.dotColor}55` : '1px solid var(--border-color)',
-                                    minHeight: 300,
+                                    width: '100%',
+                                    boxSizing: 'border-box',
+                                    minHeight: '320px',
+                                    borderRadius: '16px',
+                                    padding: '12px',
+                                    background: snapshot.isDraggingOver ? cfg.accent : 'rgba(255,255,255,0.04)',
+                                    backdropFilter: 'blur(20px) saturate(160%)',
+                                    WebkitBackdropFilter: 'blur(20px) saturate(160%)',
+                                    border: snapshot.isDraggingOver ? `1px dashed ${cfg.dotColor}55` : '1px solid rgba(255,255,255,0.08)',
+                                    boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.06)',
+                                    overflow: 'hidden',
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    gap: '10px'
                                   }}
                                 >
                                   {columnTasks.map((task, i) => {
@@ -924,18 +1044,32 @@ export default function WorkspacePage() {
                                           <div ref={prov.innerRef} {...prov.draggableProps} {...prov.dragHandleProps} style={{ ...prov.draggableProps.style }}>
                                             <div
                                               onClick={() => setSelectedTask({ ...task, status: colId })}
-                                              className="glass-card cursor-pointer transition-all hover:shadow-xs"
-                                              style={{ boxShadow: snap.isDragging ? 'var(--shadow-md)' : 'none', padding: '12px 14px', boxSizing: 'border-box', width: '100%' }}
+                                              className="glass-kanban-card"
+                                              style={{
+                                                boxShadow: snap.isDragging ? 'var(--shadow-md)' : undefined,
+                                              }}
                                             >
-                                              <h3 style={{ fontSize: '12px', fontWeight: 600, lineHeight: 1.4, marginBottom: '4px', color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '100%' }}>
+                                              <h3 style={{ fontSize: '14px', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: '4px', color: 'var(--text-primary)' }}>
                                                 {task.title}
                                               </h3>
                                               {task.description && (
-                                                <p className="text-clamp-2" style={{ fontSize: '10px', lineHeight: 1.5, color: 'var(--text-tertiary)', marginBottom: '10px' }}>
+                                                <p
+                                                  style={{
+                                                    fontSize: '12px',
+                                                    opacity: 0.5,
+                                                    display: '-webkit-box',
+                                                    WebkitLineClamp: 2,
+                                                    WebkitBoxOrient: 'vertical',
+                                                    overflow: 'hidden',
+                                                    marginBottom: '10px',
+                                                    color: 'var(--text-primary)',
+                                                    lineHeight: '1.5'
+                                                  }}
+                                                >
                                                   {task.description}
                                                 </p>
                                               )}
-                                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', paddingTop: '8px', borderTop: '1px solid var(--border-light)' }}>
+                                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', paddingTop: '8px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
                                                 <div className="flex items-center gap-2">
                                                   {assignee && (
                                                     <Avatar name={assignee.name} initials={assignee.initials} color={assignee.color} size="xs" />
@@ -956,7 +1090,9 @@ export default function WorkspacePage() {
                                   })}
                                   {provided.placeholder}
                                   {columnTasks.length === 0 && (
-                                    <p className="text-[10px] text-center text-[var(--text-tertiary)] py-10">No tasks</p>
+                                    <div style={{ textAlign: 'center', padding: '40px 16px', opacity: 0.4, fontSize: '13px', color: 'var(--text-primary)' }}>
+                                      No tasks
+                                    </div>
                                   )}
                                 </div>
                               )}
@@ -1646,52 +1782,119 @@ export default function WorkspacePage() {
       {/* Global MODALS */}
 
       {/* Invite member modal */}
-      <Modal isOpen={showInvite} onClose={() => setShowInvite(false)} title="Invite member">
-        <form onSubmit={handleInviteSubmit} className="space-y-4">
-          <p className="text-xs text-[var(--text-secondary)] leading-relaxed">
+      <Modal isOpen={showInvite} onClose={() => setShowInvite(false)} noPadding={true}>
+        <form
+          onSubmit={handleInviteSubmit}
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '18px',
+            padding: '24px',
+            boxSizing: 'border-box'
+          }}
+        >
+          {/* Section 1 — Header */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', margin: 0 }}>
+            <h2 style={{ fontSize: '18px', fontWeight: 600, color: 'white', margin: 0, flex: 1 }}>Invite member</h2>
+            <button
+              onClick={() => setShowInvite(false)}
+              type="button"
+              style={{
+                width: '28px',
+                height: '28px',
+                borderRadius: '8px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                background: 'transparent',
+                border: 'none',
+                color: 'rgba(255,255,255,0.4)',
+                cursor: 'pointer',
+                flexShrink: 0,
+                padding: 0,
+              }}
+            >
+              <X size={16} strokeWidth={1.5} />
+            </button>
+          </div>
+
+          {/* Section 2 — Description text */}
+          <p style={{ fontSize: '13px', opacity: 0.55, lineHeight: 1.5, margin: 0, color: 'var(--text-primary)' }}>
             Enter the email address of the team member to add them directly to this workspace.
           </p>
-          <Input
-            label="Email address"
-            type="email"
-            placeholder="colleague@domain.com"
-            value={inviteEmail}
-            onChange={(e) => setInviteEmail(e.target.value)}
-            required
-          />
+
+          {/* Section 3 — Email field group */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            <label style={{ fontSize: '11px', opacity: 0.5, textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0, color: 'var(--text-primary)' }}>
+              Email address
+            </label>
+            <input
+              type="email"
+              placeholder="colleague@domain.com"
+              value={inviteEmail}
+              onChange={(e) => setInviteEmail(e.target.value)}
+              required
+              className="input-base"
+              style={{ width: '100%', boxSizing: 'border-box', padding: '10px 14px', borderRadius: '12px' }}
+            />
+          </div>
+
           {inviteError && (
-            <p className="text-xs font-semibold text-[var(--color-danger)]">
+            <p className="text-xs font-semibold text-[var(--color-danger)]" style={{ margin: 0 }}>
               {inviteError}
             </p>
           )}
+
           {inviteSuccess && (
             <div
               className="p-2.5 rounded-md flex items-center gap-2 text-xs font-medium bg-emerald-500/5 text-emerald-500 border border-emerald-500/15"
+              style={{ margin: 0 }}
             >
               <Check size={13} />
               <span>Added successfully</span>
             </div>
           )}
-          <div className="pt-3 border-t border-[var(--border-light)]">
-            <label className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-secondary)] block mb-2">Or share invite code</label>
-            <div className="flex gap-2">
+
+          {/* Section 4 — Invite code group */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '4px' }}>
+            <label style={{ fontSize: '11px', opacity: 0.5, textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0, color: 'var(--text-primary)' }}>
+              OR SHARE INVITE CODE
+            </label>
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'stretch' }}>
               <input
                 type="text"
                 readOnly
                 value={workspace?.inviteCode || 'N/A'}
-                className="input-base font-mono text-center tracking-wider text-xs select-all flex-1"
-                style={{ background: 'var(--bg-secondary)' }}
+                className="input-base font-mono text-center tracking-wider text-xs select-all"
+                style={{ flex: 1, boxSizing: 'border-box', background: 'var(--bg-secondary)', padding: '10px 14px', borderRadius: '12px' }}
               />
-              <Button variant="secondary" type="button" size="sm" onClick={handleCopyCode} icon={copiedCode ? Check : Copy}>
+              <Button
+                variant="secondary"
+                type="button"
+                onClick={handleCopyCode}
+                icon={copiedCode ? Check : Copy}
+                style={{ flexShrink: 0, whiteSpace: 'nowrap' }}
+              >
                 {copiedCode ? 'Copied' : 'Copy'}
               </Button>
             </div>
           </div>
-          <div className="flex gap-3 pt-3 border-t border-[var(--border-light)]">
-            <Button variant="secondary" type="button" className="flex-1" onClick={() => setShowInvite(false)}>
+
+          {/* Section 5 — Action buttons */}
+          <div style={{ display: 'flex', gap: '10px', marginTop: '4px' }}>
+            <Button
+              variant="secondary"
+              type="button"
+              style={{ flex: 1 }}
+              onClick={() => setShowInvite(false)}
+            >
               Cancel
             </Button>
-            <Button type="submit" className="flex-1" disabled={inviteSuccess}>
+            <Button
+              type="submit"
+              style={{ flex: 1 }}
+              disabled={inviteSuccess}
+            >
               Add directly
             </Button>
           </div>
@@ -1750,68 +1953,129 @@ export default function WorkspacePage() {
       </Modal>
 
       {/* Create Task Modal */}
-      <Modal isOpen={showCreateTask} onClose={() => setShowCreateTask(false)} title="Create task">
-        <form onSubmit={handleCreateTaskSubmit} className="space-y-4">
-          <Input
-            label="Task title"
-            placeholder="e.g. Implement Oauth authentication"
-            value={newTaskData.title}
-            onChange={(e) => setNewTaskData({ ...newTaskData, title: e.target.value })}
-            required
-          />
-          <div className="space-y-1.5">
-            <label className="block text-xs font-semibold uppercase tracking-wider text-[var(--text-secondary)]">
+      <Modal isOpen={showCreateTask} onClose={() => setShowCreateTask(false)} noPadding={true}>
+        <form
+          onSubmit={handleCreateTaskSubmit}
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '18px',
+            padding: '24px',
+            boxSizing: 'border-box'
+          }}
+        >
+          {/* Section 1 — Header */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', margin: 0 }}>
+            <h2 style={{ fontSize: '18px', fontWeight: 600, color: 'white', margin: 0, flex: 1 }}>Create task</h2>
+            <button
+              onClick={() => setShowCreateTask(false)}
+              type="button"
+              style={{
+                width: '28px',
+                height: '28px',
+                borderRadius: '8px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                background: 'transparent',
+                border: 'none',
+                color: 'rgba(255,255,255,0.4)',
+                cursor: 'pointer',
+                flexShrink: 0,
+                padding: 0,
+              }}
+            >
+              <X size={16} strokeWidth={1.5} />
+            </button>
+          </div>
+
+          {/* Task title */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            <label style={{ fontSize: '11px', opacity: 0.5, textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0, color: 'var(--text-primary)' }}>
+              Task title
+            </label>
+            <input
+              type="text"
+              placeholder="e.g. Implement Oauth authentication"
+              value={newTaskData.title}
+              onChange={(e) => setNewTaskData({ ...newTaskData, title: e.target.value })}
+              required
+              className="input-base"
+              style={{ width: '100%', boxSizing: 'border-box', padding: '10px 14px', borderRadius: '12px', margin: 0 }}
+            />
+          </div>
+
+          {/* Description */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            <label style={{ fontSize: '11px', opacity: 0.5, textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0, color: 'var(--text-primary)' }}>
               Description
             </label>
             <textarea
               placeholder="What needs to be done?"
               value={newTaskData.description}
               onChange={(e) => setNewTaskData({ ...newTaskData, description: e.target.value })}
-              className="input-base text-xs rounded-lg p-3 w-full bg-[var(--bg-primary)] border-[var(--border-color)] text-[var(--text-primary)] focus:border-[var(--accent)] resize-none h-20"
+              className="input-base resize-none h-20"
+              style={{ width: '100%', boxSizing: 'border-box', padding: '10px 14px', borderRadius: '12px', margin: 0 }}
             />
           </div>
-          <div className="space-y-1.5">
-            <label className="block text-xs font-semibold uppercase tracking-wider text-[var(--text-secondary)]">
+
+          {/* Assignee */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            <label style={{ fontSize: '11px', opacity: 0.5, textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0, color: 'var(--text-primary)' }}>
               Assignee
             </label>
-            <select
+            <CustomSelect
               value={newTaskData.assignee}
-              onChange={(e) => setNewTaskData({ ...newTaskData, assignee: e.target.value })}
-              className="input-base text-xs rounded-lg p-2.5 w-full bg-[var(--bg-primary)] border-[var(--border-color)] text-[var(--text-primary)] focus:border-[var(--accent)]"
-            >
-              <option value="">Unassigned</option>
-              {members.map(m => (
-                <option key={m.id} value={m.id}>{m.name}</option>
-              ))}
-            </select>
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <label className="block text-xs font-semibold uppercase tracking-wider text-[var(--text-secondary)]">
-                Priority
-              </label>
-              <select
-                value={newTaskData.priority}
-                onChange={(e) => setNewTaskData({ ...newTaskData, priority: e.target.value })}
-                className="input-base text-xs rounded-lg p-2.5 w-full bg-[var(--bg-primary)] border-[var(--border-color)] text-[var(--text-primary)] focus:border-[var(--accent)]"
-              >
-                <option value="low">Low</option>
-                <option value="medium">Medium</option>
-                <option value="high">High</option>
-              </select>
-            </div>
-            <Input
-              label="Due Date"
-              type="date"
-              value={newTaskData.dueDate}
-              onChange={(e) => setNewTaskData({ ...newTaskData, dueDate: e.target.value })}
+              onChange={(val) => setNewTaskData({ ...newTaskData, assignee: val })}
+              options={[
+                { value: '', label: 'Unassigned' },
+                ...members.map(m => ({ value: m.id, label: m.name }))
+              ]}
+              placeholder="Unassigned"
             />
           </div>
-          <div className="flex gap-3 pt-3 border-t border-[var(--border-light)]">
-            <Button variant="secondary" type="button" className="flex-1" onClick={() => setShowCreateTask(false)}>
+
+          {/* Priority + Due Date row */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <label style={{ fontSize: '11px', opacity: 0.5, textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0, color: 'var(--text-primary)' }}>
+                Priority
+              </label>
+              <CustomSelect
+                value={newTaskData.priority}
+                onChange={(val) => setNewTaskData({ ...newTaskData, priority: val })}
+                options={[
+                  { value: 'low', label: 'Low' },
+                  { value: 'medium', label: 'Medium' },
+                  { value: 'high', label: 'High' }
+                ]}
+              />
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <label style={{ fontSize: '11px', opacity: 0.5, textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0, color: 'var(--text-primary)' }}>
+                Due Date
+              </label>
+              <input
+                type="date"
+                value={newTaskData.dueDate}
+                onChange={(e) => setNewTaskData({ ...newTaskData, dueDate: e.target.value })}
+                className="input-base"
+                style={{ width: '100%', boxSizing: 'border-box', padding: '10px 14px', borderRadius: '12px', margin: 0 }}
+              />
+            </div>
+          </div>
+
+          {/* Action buttons row */}
+          <div style={{ display: 'flex', gap: '10px', marginTop: '4px' }}>
+            <Button
+              variant="secondary"
+              type="button"
+              style={{ flex: 1 }}
+              onClick={() => setShowCreateTask(false)}
+            >
               Cancel
             </Button>
-            <Button type="submit" className="flex-1">
+            <Button type="submit" style={{ flex: 1 }}>
               Create task
             </Button>
           </div>
@@ -1823,157 +2087,312 @@ export default function WorkspacePage() {
         <Modal
           isOpen={!!selectedTask}
           onClose={() => setSelectedTask(null)}
-          title={isOwner ? "Edit Task" : "Task Details"}
+          noPadding={true}
           size="lg"
         >
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Form details (2/3 width) */}
-            <form onSubmit={handleEditTaskSubmit} className="lg:col-span-2 space-y-4 text-left">
-              <Input
-                label="Title"
-                value={selectedTask.title}
-                onChange={(e) => setSelectedTask({ ...selectedTask, title: e.target.value })}
-                disabled={!isOwner}
-                required
-              />
-              <div className="space-y-1.5">
-                <label className="block text-xs font-semibold uppercase tracking-wider text-[var(--text-secondary)]">
-                  Description
-                </label>
-                <textarea
-                  value={selectedTask.description || ''}
-                  onChange={(e) => setSelectedTask({ ...selectedTask, description: e.target.value })}
-                  disabled={!isOwner}
-                  className="input-base text-xs rounded-lg p-3 w-full bg-[var(--bg-primary)] border-[var(--border-color)] text-[var(--text-primary)] resize-none h-20"
-                />
-              </div>
+          <form
+            onSubmit={handleEditTaskSubmit}
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '18px',
+              padding: '24px',
+              boxSizing: 'border-box'
+            }}
+          >
+            {/* Header */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', margin: 0 }}>
+              <h2 style={{ fontSize: '18px', fontWeight: 600, color: 'white', margin: 0, flex: 1 }}>
+                {isOwner ? "Edit Task" : "Task Details"}
+              </h2>
+              <button
+                onClick={() => setSelectedTask(null)}
+                type="button"
+                style={{
+                  width: '28px',
+                  height: '28px',
+                  borderRadius: '8px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  background: 'transparent',
+                  border: 'none',
+                  color: 'rgba(255,255,255,0.4)',
+                  cursor: 'pointer',
+                  flexShrink: 0,
+                  padding: 0,
+                }}
+              >
+                <X size={16} strokeWidth={1.5} />
+              </button>
+            </div>
 
-              {/* Task Comments Stream */}
-              <div className="space-y-3 pt-4 border-t border-[var(--border-light)]">
-                <h4 className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-secondary)] flex items-center gap-1.5">
-                  <MessageSquare size={10} /> Discussion Stream
-                </h4>
-                
-                <div className="space-y-3 max-h-48 overflow-y-auto pr-1">
-                  {(taskComments[selectedTask.id] || []).length === 0 ? (
-                    <p className="text-[10px] text-[var(--text-tertiary)] italic">No comments yet. Start a discussion below.</p>
-                  ) : (
-                    (taskComments[selectedTask.id] || []).map(comment => {
-                      const commSender = members.find(m => m.id === comment.userId) || { name: 'Member', initials: 'M' };
-                      return (
-                        <div key={comment.id} className="flex gap-2.5 items-start p-2.5 rounded-lg border border-[var(--border-color)] bg-[var(--bg-secondary)]">
-                          <Avatar name={commSender.name} initials={commSender.initials} size="xs" />
-                          <div className="min-w-0 flex-1">
-                            <div className="flex justify-between items-baseline gap-2">
-                              <span className="text-[10px] font-bold text-[var(--text-primary)]">{commSender.name}</span>
-                              <span className="text-[8px] text-[var(--text-tertiary)]">{new Date(comment.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
-                            </div>
-                            <p className="text-[10px] text-[var(--text-secondary)] mt-1 break-words leading-relaxed">{comment.text}</p>
-                          </div>
-                        </div>
-                      );
-                    })
-                  )}
-                </div>
-
-                <div className="flex gap-2 mt-2">
+            {/* Two-column layout grid */}
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: '1fr 280px',
+                gap: '24px',
+                alignItems: 'start'
+              }}
+            >
+              {/* Left Column */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '18px', minWidth: 0 }}>
+                {/* Title */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <label style={{ fontSize: '11px', opacity: 0.5, textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0, color: 'var(--text-primary)' }}>
+                    Title
+                  </label>
                   <input
                     type="text"
-                    placeholder="Add a comment…"
-                    value={commentText}
-                    onChange={(e) => setCommentText(e.target.value)}
-                    className="input-base text-xs px-3 py-1.5 flex-1 rounded-lg"
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        handleAddTaskCommentSubmit(e);
-                      }
-                    }}
+                    value={selectedTask.title}
+                    onChange={(e) => setSelectedTask({ ...selectedTask, title: e.target.value })}
+                    disabled={!isOwner}
+                    required
+                    className="input-base"
+                    style={{ width: '100%', boxSizing: 'border-box', padding: '10px 14px', borderRadius: '12px', margin: 0 }}
                   />
-                  <Button variant="secondary" size="sm" type="button" onClick={handleAddTaskCommentSubmit} disabled={!commentText.trim()}>
-                    Comment
-                  </Button>
                 </div>
-              </div>
 
-              {isOwner && (
-                <div className="flex justify-between items-center pt-3 border-t border-[var(--border-light)] gap-3">
-                  <Button variant="danger" size="sm" type="button" icon={Trash2} onClick={() => handleTaskDelete(selectedTask.id)}>
-                    Delete Task
-                  </Button>
-                  <div className="flex gap-2">
-                    <Button variant="secondary" size="sm" type="button" onClick={() => setSelectedTask(null)}>
-                      Cancel
-                    </Button>
-                    <Button variant="primary" size="sm" type="submit">
-                      Save
+                {/* Description */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <label style={{ fontSize: '11px', opacity: 0.5, textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0, color: 'var(--text-primary)' }}>
+                    Description
+                  </label>
+                  <textarea
+                    value={selectedTask.description || ''}
+                    onChange={(e) => setSelectedTask({ ...selectedTask, description: e.target.value })}
+                    disabled={!isOwner}
+                    placeholder="Add task description..."
+                    className="input-base resize-none h-20"
+                    style={{ width: '100%', boxSizing: 'border-box', padding: '10px 14px', borderRadius: '12px', margin: 0 }}
+                  />
+                </div>
+
+                {/* Discussion Stream */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '4px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', opacity: 0.5, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-primary)' }}>
+                    <MessageSquare size={10} />
+                    <span>Discussion Stream</span>
+                  </div>
+
+                  {/* Comments list */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '180px', overflowY: 'auto', paddingRight: '4px' }}>
+                    {(taskComments[selectedTask.id] || []).length === 0 ? (
+                      <p style={{ fontSize: '12px', opacity: 0.4, margin: 0, fontStyle: 'italic', color: 'var(--text-primary)' }}>No comments yet.</p>
+                    ) : (
+                      (taskComments[selectedTask.id] || []).map(comment => {
+                        const commSender = members.find(m => m.id === comment.userId) || { name: 'Member', initials: 'M' };
+                        return (
+                          <div
+                            key={comment.id}
+                            style={{
+                              display: 'flex',
+                              gap: '10px',
+                              alignItems: 'start',
+                              padding: '10px',
+                              borderRadius: '8px',
+                              border: '1px solid rgba(255,255,255,0.08)',
+                              backgroundColor: 'rgba(255,255,255,0.03)'
+                            }}
+                          >
+                            <Avatar name={commSender.name} initials={commSender.initials} size="xs" />
+                            <div style={{ minWidth: 0, flex: 1 }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: '8px' }}>
+                                <span style={{ fontSize: '11px', fontWeight: 600, color: 'white' }}>{commSender.name}</span>
+                                <span style={{ fontSize: '9px', opacity: 0.4, color: 'white' }}>
+                                  {new Date(comment.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                </span>
+                              </div>
+                              <p style={{ fontSize: '11px', opacity: 0.7, margin: '4px 0 0 0', wordBreak: 'break-word', lineHeight: 1.4, color: 'white' }}>
+                                {comment.text}
+                              </p>
+                            </div>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+
+                  {/* Comment Input row */}
+                  <div style={{ display: 'flex', gap: '8px', alignItems: 'stretch' }}>
+                    <input
+                      type="text"
+                      placeholder="Add a comment…"
+                      value={commentText}
+                      onChange={(e) => setCommentText(e.target.value)}
+                      className="input-base"
+                      style={{ flex: 1, boxSizing: 'border-box', minWidth: 0, padding: '10px 14px', borderRadius: '12px' }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleAddTaskCommentSubmit(e);
+                        }
+                      }}
+                    />
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      type="button"
+                      onClick={handleAddTaskCommentSubmit}
+                      disabled={!commentText.trim()}
+                      style={{ flexShrink: 0, whiteSpace: 'nowrap' }}
+                    >
+                      Comment
                     </Button>
                   </div>
                 </div>
-              )}
-            </form>
+              </div>
 
-            {/* Sidebar properties (1/3 width) */}
-            <div className="space-y-4 border-l border-[var(--border-light)] pl-6 text-left text-xs">
-              <h4 className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-tertiary)]">Task Properties</h4>
-              
-              <div className="space-y-3 pt-2">
-                <div>
-                  <span className="block text-[10px] uppercase font-semibold text-[var(--text-tertiary)] mb-1">Status</span>
-                  <select
+              {/* Right Column */}
+              <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+                <span style={{ fontSize: '11px', opacity: 0.4, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px', display: 'block', color: 'var(--text-primary)' }}>
+                  TASK PROPERTIES
+                </span>
+
+                {/* Status Field Group */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '14px' }}>
+                  <label style={{ fontSize: '11px', opacity: 0.5, textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0, color: 'var(--text-primary)' }}>
+                    Status
+                  </label>
+                  <CustomSelect
                     value={selectedTask.status}
-                    onChange={(e) => setSelectedTask({ ...selectedTask, status: e.target.value })}
+                    onChange={(val) => setSelectedTask({ ...selectedTask, status: val })}
                     disabled={!isOwner && selectedTask.assignee !== user?.id}
-                    className="input-base text-xs rounded p-1.5 w-full bg-[var(--bg-secondary)] border-[var(--border-color)] text-[var(--text-primary)]"
-                  >
-                    <option value="todo">To do</option>
-                    <option value="inProgress">In progress</option>
-                    <option value="done">Done</option>
-                  </select>
+                    options={[
+                      { value: 'todo', label: 'To do' },
+                      { value: 'inProgress', label: 'In progress' },
+                      { value: 'done', label: 'Done' }
+                    ]}
+                  />
                 </div>
 
-                <div>
-                  <span className="block text-[10px] uppercase font-semibold text-[var(--text-tertiary)] mb-1">Assignee</span>
-                  <select
+                {/* Assignee Field Group */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '14px' }}>
+                  <label style={{ fontSize: '11px', opacity: 0.5, textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0, color: 'var(--text-primary)' }}>
+                    Assignee
+                  </label>
+                  <CustomSelect
                     value={selectedTask.assignee || ''}
-                    onChange={(e) => setSelectedTask({ ...selectedTask, assignee: e.target.value || null })}
+                    onChange={(val) => setSelectedTask({ ...selectedTask, assignee: val || null })}
                     disabled={!isOwner}
-                    className="input-base text-xs rounded p-1.5 w-full bg-[var(--bg-secondary)] border-[var(--border-color)] text-[var(--text-primary)]"
-                  >
-                    <option value="">Unassigned</option>
-                    {members.map(m => (
-                      <option key={m.id} value={m.id}>{m.name}</option>
-                    ))}
-                  </select>
+                    options={[
+                      { value: '', label: 'Unassigned' },
+                      ...members.map(m => ({ value: m.id, label: m.name }))
+                    ]}
+                    placeholder="Unassigned"
+                  />
                 </div>
 
-                <div>
-                  <span className="block text-[10px] uppercase font-semibold text-[var(--text-tertiary)] mb-1">Priority</span>
-                  <select
+                {/* Priority Field Group */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '14px' }}>
+                  <label style={{ fontSize: '11px', opacity: 0.5, textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0, color: 'var(--text-primary)' }}>
+                    Priority
+                  </label>
+                  <CustomSelect
                     value={selectedTask.priority}
-                    onChange={(e) => setSelectedTask({ ...selectedTask, priority: e.target.value })}
+                    onChange={(val) => setSelectedTask({ ...selectedTask, priority: val })}
                     disabled={!isOwner}
-                    className="input-base text-xs rounded p-1.5 w-full bg-[var(--bg-secondary)] border-[var(--border-color)] text-[var(--text-primary)]"
-                  >
-                    <option value="low">Low</option>
-                    <option value="medium">Medium</option>
-                    <option value="high">High</option>
-                  </select>
+                    options={[
+                      { value: 'low', label: 'Low' },
+                      { value: 'medium', label: 'Medium' },
+                      { value: 'high', label: 'High' }
+                    ]}
+                  />
                 </div>
 
-                <div>
-                  <span className="block text-[10px] uppercase font-semibold text-[var(--text-tertiary)] mb-1">Due Date</span>
+                {/* Due Date Field Group */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '14px' }}>
+                  <label style={{ fontSize: '11px', opacity: 0.5, textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0, color: 'var(--text-primary)' }}>
+                    Due Date
+                  </label>
                   <input
                     type="date"
                     value={selectedTask.dueDate || ''}
                     onChange={(e) => setSelectedTask({ ...selectedTask, dueDate: e.target.value })}
                     disabled={!isOwner}
-                    className="input-base text-xs rounded p-1.5 w-full bg-[var(--bg-secondary)] border-[var(--border-color)] text-[var(--text-primary)]"
+                    className="input-base"
+                    style={{ width: '100%', boxSizing: 'border-box', padding: '10px 14px', borderRadius: '12px', margin: 0 }}
                   />
                 </div>
               </div>
+
+              {/* Bottom action row */}
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: '12px',
+                  width: '100%',
+                  marginTop: '8px',
+                  gridColumn: '1 / -1'
+                }}
+              >
+                <div>
+                  {isOwner ? (
+                    <Button
+                      variant="danger"
+                      size="sm"
+                      type="button"
+                      icon={Trash2}
+                      onClick={() => handleTaskDelete(selectedTask.id)}
+                      style={{
+                        padding: '9px 16px',
+                        boxSizing: 'border-box',
+                        whiteSpace: 'nowrap',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        flexShrink: 0,
+                        borderRadius: '10px',
+                        height: 'auto'
+                      }}
+                    >
+                      Delete Task
+                    </Button>
+                  ) : (
+                    <div />
+                  )}
+                </div>
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexShrink: 0 }}>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    type="button"
+                    onClick={() => setSelectedTask(null)}
+                    style={{
+                      padding: '10px 24px',
+                      boxSizing: 'border-box',
+                      borderRadius: '10px',
+                      fontSize: '14px',
+                      fontWeight: 500,
+                      height: 'auto'
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                  {(isOwner || selectedTask.assignee === user?.id) && (
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      type="submit"
+                      style={{
+                        padding: '10px 24px',
+                        boxSizing: 'border-box',
+                        borderRadius: '10px',
+                        fontSize: '14px',
+                        fontWeight: 500,
+                        height: 'auto'
+                      }}
+                    >
+                      Save
+                    </Button>
+                  )}
+                </div>
+              </div>
             </div>
-          </div>
+          </form>
         </Modal>
       )}
 

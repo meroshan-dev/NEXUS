@@ -1,7 +1,7 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { X } from 'lucide-react';
 
-export default function Modal({ isOpen, onClose, title, children, size = 'md' }) {
+export default function Modal({ isOpen, onClose, title, children, size = 'md', noPadding = false }) {
   const maxWidths = { sm: '400px', md: '480px', lg: '640px', xl: '900px' };
 
   return (
@@ -64,7 +64,7 @@ export default function Modal({ isOpen, onClose, title, children, size = 'md' })
               {/* Inner content wrapper — handles ALL padding */}
               <div
                 style={{
-                  padding: '24px',
+                  padding: noPadding ? '0' : '24px',
                   width: '100%',
                   boxSizing: 'border-box',
                 }}

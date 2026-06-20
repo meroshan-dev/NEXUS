@@ -657,24 +657,76 @@ export function WorkspaceProvider({ children }) {
 
   const loadActivitiesForAllWorkspaces = async (wsIds) => {
     if (!wsIds || wsIds.length === 0) return;
+
+    // First, load localStorage data as immediate fallback
+    const localGrouped = {};
+    wsIds.forEach(id => {
+      try {
+        const stored = localStorage.getItem(`nexus_activity_${id}`);
+        localGrouped[id] = stored ? JSON.parse(stored) : [];
+      } catch (e) {
+        localGrouped[id] = [];
+      }
+    });
+    setActivityFeed(prev => ({ ...prev, ...localGrouped }));
+
+    // Then try Supabase fetch
     try {
-      const { data, error } = await supabase
+      let data = null;
+      let error = null;
+
+      // Try with actor join first
+      const res1 = await supabase
         .from('activity_feed')
-        .select('*, profiles(name, avatar)')
+        .select('*, actor:profiles(name, email, avatar)')
         .in('workspace_id', wsIds)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .limit(100);
       
-      if (!error && data) {
+      data = res1.data;
+      error = res1.error;
+
+      // If join failed, retry without the join
+      if (error) {
+        console.warn('[Activity] Bulk fetch with actor join failed, retrying without join:', error.message);
+        const res2 = await supabase
+          .from('activity_feed')
+          .select('*')
+          .in('workspace_id', wsIds)
+          .order('created_at', { ascending: false })
+          .limit(100);
+        data = res2.data;
+        error = res2.error;
+      }
+
+      if (error) {
+        console.error('[Activity] Bulk fetch failed entirely:', error.message, error.code);
+        return; // keep localStorage data
+      }
+
+      if (data && data.length > 0) {
         const grouped = {};
         wsIds.forEach(id => { grouped[id] = []; });
         data.forEach(act => {
           if (!grouped[act.workspace_id]) grouped[act.workspace_id] = [];
-          grouped[act.workspace_id].push(act);
+          const withFullName = act.actor ? {
+            ...act,
+            actor: { ...act.actor, full_name: act.actor.name }
+          } : act;
+          grouped[act.workspace_id].push(withFullName);
         });
-        setActivityFeed(grouped);
+        // Persist DB data to localStorage
+        wsIds.forEach(id => {
+          try {
+            localStorage.setItem(`nexus_activity_${id}`, JSON.stringify(grouped[id] || []));
+          } catch (e) { /* storage full */ }
+        });
+        setActivityFeed(prev => ({ ...prev, ...grouped }));
       }
+      // If data is empty (0 rows), keep the localStorage data that's already set
     } catch (err) {
-      console.error('Error loading activities:', err);
+      console.error('[Activity] Bulk fetch exception:', err);
+      // localStorage data already set above
     }
   };
 
@@ -917,35 +969,65 @@ export function WorkspaceProvider({ children }) {
   // Helper to log activities
   const logActivity = async (workspaceId, action, details) => {
     if (!workspaceId || !user?.id) return;
+
+    // Always create a local activity object for optimistic UI + localStorage backup
+    const newAct = {
+      id: `act_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+      workspace_id: workspaceId,
+      user_id: user.id,
+      action,
+      details,
+      created_at: new Date().toISOString(),
+      actor: {
+        name: user.name || user.email || 'You',
+        full_name: user.name || user.email || 'You',
+        email: user.email || '',
+        avatar: user.avatar || null
+      }
+    };
+
+    // Update React state immediately (optimistic)
+    setActivityFeed(prev => {
+      const current = prev[workspaceId] || [];
+      const updated = [newAct, ...current].slice(0, 50);
+      // Always persist to localStorage as a fallback
+      try {
+        localStorage.setItem(`nexus_activity_${workspaceId}`, JSON.stringify(updated));
+      } catch (e) { /* storage full */ }
+      return { ...prev, [workspaceId]: updated };
+    });
+
+    // If Supabase is configured, also persist to DB (fire-and-forget with logging)
     if (isSupabaseConfigured) {
       try {
-        const { error } = await supabase
+        const { data, error } = await supabase
           .from('activity_feed')
           .insert({
             workspace_id: workspaceId,
             user_id: user.id,
             action,
             details
-          });
-        if (error) throw error;
+          })
+          .select();
+        if (error) {
+          console.error('[Activity] DB insert failed:', error.message, error.code, error.details);
+        } else {
+          console.log('[Activity] DB insert success:', data?.[0]?.id);
+          // Update the local entry with the real DB id if available
+          if (data?.[0]) {
+            setActivityFeed(prev => {
+              const current = prev[workspaceId] || [];
+              const updated = current.map(a => a.id === newAct.id ? { ...a, id: data[0].id } : a);
+              try {
+                localStorage.setItem(`nexus_activity_${workspaceId}`, JSON.stringify(updated));
+              } catch (e) { /* storage full */ }
+              return { ...prev, [workspaceId]: updated };
+            });
+          }
+        }
       } catch (err) {
-        console.error('Error logging activity:', err);
+        console.error('[Activity] DB insert exception:', err);
       }
-    } else {
-      const newAct = {
-        id: `act_${Date.now()}`,
-        workspace_id: workspaceId,
-        user_id: user.id,
-        action,
-        details,
-        created_at: new Date().toISOString()
-      };
-      setActivityFeed(prev => {
-        const current = prev[workspaceId] || [];
-        const updated = [newAct, ...current];
-        localStorage.setItem(`nexus_activity_${workspaceId}`, JSON.stringify(updated));
-        return { ...prev, [workspaceId]: updated };
-      });
     }
   };
 
@@ -1120,15 +1202,64 @@ export function WorkspaceProvider({ children }) {
         await refetchComments(workspaceId);
 
         // 5. Fetch Activity Feed
-        const { data: activityData, error: actErr } = await supabase
-          .from('activity_feed')
-          .select('*')
-          .eq('workspace_id', workspaceId)
-          .order('created_at', { ascending: false });
+        // Load localStorage fallback first for instant display
+        try {
+          const storedActivity = localStorage.getItem(`nexus_activity_${workspaceId}`);
+          if (storedActivity) {
+            const parsed = JSON.parse(storedActivity);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              setActivityFeed(prev => ({ ...prev, [workspaceId]: parsed }));
+            }
+          }
+        } catch (e) { /* ignore parse errors */ }
 
-        if (!actErr && activityData) {
-          setActivityFeed(prev => ({ ...prev, [workspaceId]: activityData }));
+        // Then fetch from DB
+        let activityData = null;
+        let actErr = null;
+
+        const res1 = await supabase
+          .from('activity_feed')
+          .select('*, actor:profiles(name, email, avatar)')
+          .eq('workspace_id', workspaceId)
+          .order('created_at', { ascending: false })
+          .limit(30);
+        
+        activityData = res1.data;
+        actErr = res1.error;
+
+        // If join failed, retry without actor join
+        if (actErr) {
+          console.warn('[Activity] Fetch with actor join failed, retrying without:', actErr.message);
+          const res2 = await supabase
+            .from('activity_feed')
+            .select('*')
+            .eq('workspace_id', workspaceId)
+            .order('created_at', { ascending: false })
+            .limit(30);
+          activityData = res2.data;
+          actErr = res2.error;
         }
+
+        if (actErr) {
+          console.error('[Activity] Fetch failed entirely:', actErr.message, actErr.code);
+          // Keep localStorage data that was set above
+        } else if (activityData && activityData.length > 0) {
+          const mapped = activityData.map(act => {
+            if (act.actor) {
+              return {
+                ...act,
+                actor: { ...act.actor, full_name: act.actor.name }
+              };
+            }
+            return act;
+          });
+          setActivityFeed(prev => ({ ...prev, [workspaceId]: mapped }));
+          // Persist DB data to localStorage
+          try {
+            localStorage.setItem(`nexus_activity_${workspaceId}`, JSON.stringify(mapped));
+          } catch (e) { /* storage full */ }
+        }
+        // If DB returns 0 rows, keep localStorage data
 
         // 6. Fetch User Presence baseline
         const { data: presenceData, error: presErr } = await supabase

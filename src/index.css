@@ -182,7 +182,9 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   line-height: 1.5;
-  background: var(--bg-app);
+  background: radial-gradient(circle at 20% 20%, rgba(99,102,241,0.15), transparent 50%),
+              radial-gradient(circle at 80% 80%, rgba(168,85,247,0.12), transparent 50%),
+              #0a0a14;
   color: var(--text-primary);
   overflow-x: hidden;
 }
@@ -553,6 +555,29 @@ body {
   border-bottom: 1px solid var(--glass-border-light);
 }
 
+/* ===== Glass Kanban Card ===== */
+.glass-kanban-card {
+  cursor: pointer;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.07);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  margin-bottom: 10px;
+  overflow: hidden;
+  transition: all 0.2s ease-in-out;
+}
+
+.glass-kanban-card:hover {
+  background: rgba(255, 255, 255, 0.1);
+  transform: translateY(-2px);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+}
+
 /* ===== Pill Active States ===== */
 .glass-pill-active {
   background: rgba(129, 140, 248, 0.15);
@@ -625,7 +650,10 @@ body {
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-xl);
   box-shadow: var(--glass-shadow);
-  padding: 20px;
+  padding: 16px 20px;
+  min-height: 72px;
+  box-sizing: border-box;
+  overflow: hidden;
   transition: all 0.25s ease;
 }
 
@@ -1061,4 +1089,63 @@ body {
 .profile-camera-btn:hover {
   background: rgba(99,102,241,1) !important;
   transform: scale(1.05);
+}
+
+/* ===== Workspace Page Overrides ===== */
+
+.workspace-action-btn {
+  flex: 1 1 120px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 16px 12px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  cursor: pointer;
+  box-sizing: border-box;
+  overflow: hidden;
+  gap: 8px;
+  transition: all 0.2s;
+  color: inherit;
+  text-decoration: none;
+  font-family: inherit;
+}
+
+.workspace-action-btn:hover {
+  background: rgba(255, 255, 255, 0.09);
+  border-color: rgba(255, 255, 255, 0.15);
+  transform: translateY(-2px);
+}
+
+.workspace-action-icon-wrapper {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.07);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.2s;
+}
+
+.stat-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: rgba(99, 102, 241, 0.12) !important;
+  color: #818cf8 !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.main-content {
+  max-width: 100%;
+  overflow-x: hidden;
+  box-sizing: border-box;
 }

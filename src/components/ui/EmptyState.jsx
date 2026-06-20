@@ -9,6 +9,11 @@ export default function EmptyState({
   onAction,
   actionIcon,
   compact = false,
+  style,
+  iconStyle,
+  titleStyle,
+  descStyle,
+  buttonStyle
 }) {
   return (
     <motion.div
@@ -20,6 +25,7 @@ export default function EmptyState({
       }`}
       style={{
         border: '1px dashed var(--glass-border)',
+        ...style
       }}
     >
       {Icon && (
@@ -29,6 +35,7 @@ export default function EmptyState({
             background: 'rgba(255, 255, 255, 0.06)',
             border: '1px solid var(--glass-border-light)',
             boxShadow: 'var(--shadow-sm)',
+            ...iconStyle
           }}
         >
           <Icon size={compact ? 18 : 22} strokeWidth={1.5} style={{ color: 'var(--accent)' }} />
@@ -36,21 +43,21 @@ export default function EmptyState({
       )}
       <h3
         className={`font-medium tracking-tight max-w-md px-2 ${compact ? 'text-sm mb-1.5' : 'text-base mb-2'}`}
-        style={{ color: 'var(--text-primary)' }}
+        style={{ color: 'var(--text-primary)', ...titleStyle }}
       >
         {title}
       </h3>
       {description && (
         <p
           className={`max-w-md leading-relaxed px-4 ${compact ? 'text-[11px]' : 'text-xs'}`}
-          style={{ color: 'var(--text-secondary)' }}
+          style={{ color: 'var(--text-secondary)', ...descStyle }}
         >
           {description}
         </p>
       )}
       {actionLabel && onAction && (
-        <div className={compact ? 'mt-4' : 'mt-6'}>
-          <Button icon={actionIcon} onClick={onAction} size={compact ? 'sm' : 'md'}>
+        <div className={compact ? 'mt-4' : 'mt-6'} style={buttonStyle ? { marginTop: buttonStyle.marginTop || buttonStyle.margin } : undefined}>
+          <Button icon={actionIcon} onClick={onAction} size={compact ? 'sm' : 'md'} style={buttonStyle}>
             {actionLabel}
           </Button>
         </div>
@@ -58,3 +65,4 @@ export default function EmptyState({
     </motion.div>
   );
 }
+

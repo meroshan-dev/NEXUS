@@ -242,7 +242,19 @@ export default function FilesPage() {
     setSelected((p) => (p.includes(fileId) ? p.filter((x) => x !== fileId) : [...p, fileId]));
 
   return (
-    <div className="page-stack pb-8 min-w-0">
+    <div
+      className="page-content"
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '16px',
+        width: '100%',
+        maxWidth: '100%',
+        overflowX: 'hidden',
+        boxSizing: 'border-box',
+        paddingRight: '24px'
+      }}
+    >
       <header className="page-header flex flex-col sm:flex-row sm:items-end justify-between gap-5">
         <div className="min-w-0">
           <p className="page-eyebrow">Files</p>
@@ -253,9 +265,6 @@ export default function FilesPage() {
             {files.length} file{files.length !== 1 ? 's' : ''} in workspace · drag to upload
           </p>
         </div>
-        <Button icon={Upload} size="sm" onClick={() => inputRef.current?.click()}>
-          Upload File
-        </Button>
         <input ref={inputRef} type="file" multiple className="hidden" onChange={handleFileChange} />
       </header>
 
@@ -282,9 +291,29 @@ export default function FilesPage() {
         </p>
       </motion.div>
 
-      {/* Filters row */}
-      <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-        <div className="relative flex-1 min-w-0 max-w-sm">
+      {/* Top bar container */}
+      <div
+        className="files-top-bar"
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '12px',
+          width: '100%',
+          maxWidth: '100%',
+          padding: '20px 24px',
+          boxSizing: 'border-box'
+        }}
+      >
+        {/* Search input */}
+        <div
+          className="relative"
+          style={{
+            flex: 1,
+            maxWidth: '400px',
+            minWidth: 0
+          }}
+        >
           <Search
             size={14}
             className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
@@ -296,6 +325,10 @@ export default function FilesPage() {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             className="input-base pl-9 pr-8"
+            style={{
+              width: '100%',
+              boxSizing: 'border-box'
+            }}
           />
           {query && (
             <button
@@ -307,40 +340,90 @@ export default function FilesPage() {
           )}
         </div>
 
+        {/* Right side group (view toggle + Upload button) */}
         <div
-          className="flex items-center rounded-md p-0.5 gap-0.5 shrink-0 bg-[var(--bg-secondary)] border border-[var(--border-color)]"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            flexShrink: 0
+          }}
         >
-          {[['list', List], ['grid', Grid]].map(([v, Icon]) => (
-            <button
-              key={v}
-              onClick={() => setView(v)}
-              className="w-7.5 h-7.5 rounded-md flex items-center justify-center transition-all cursor-pointer"
-              style={{
-                background: view === v ? 'var(--bg-primary)' : 'transparent',
-                color: view === v ? 'var(--text-primary)' : 'var(--text-tertiary)',
-                boxShadow: view === v ? 'var(--shadow-xs)' : 'none',
-              }}
+          {selected.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              style={{ display: 'flex', alignItems: 'center', gap: '10px', marginRight: '4px' }}
             >
-              <Icon size={13} />
-            </button>
-          ))}
-        </div>
+              <Badge variant="brand">{selected.length} selected</Badge>
+              <Button variant="secondary" size="xs" icon={Download} onClick={() => selected.forEach(id => downloadFile(files.find(f => f.id === id)))}>
+                Download
+              </Button>
+              <Button variant="ghost" size="xs" icon={Trash2} className="!text-[var(--color-danger)] font-semibold" onClick={handleBulkDelete}>
+                Delete
+              </Button>
+            </motion.div>
+          )}
 
-        {selected.length > 0 && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="flex items-center gap-2.5"
+          {/* View toggle (list/grid icons) */}
+          <div
+            style={{
+              display: 'flex',
+              gap: '2px',
+              padding: '3px',
+              borderRadius: '10px',
+              background: 'rgba(255,255,255,0.06)',
+              border: '1px solid rgba(255,255,255,0.1)',
+              flexShrink: 0
+            }}
           >
-            <Badge variant="brand">{selected.length} selected</Badge>
-            <Button variant="secondary" size="xs" icon={Download} onClick={() => selected.forEach(id => downloadFile(files.find(f => f.id === id)))}>
-              Download
-            </Button>
-            <Button variant="ghost" size="xs" icon={Trash2} className="!text-[var(--color-danger)] font-semibold" onClick={handleBulkDelete}>
-              Delete
-            </Button>
-          </motion.div>
-        )}
+            {[['list', List], ['grid', Grid]].map(([v, Icon]) => {
+              const isActive = view === v;
+              return (
+                <button
+                  key={v}
+                  onClick={() => setView(v)}
+                  style={{
+                    width: '32px',
+                    height: '32px',
+                    borderRadius: '8px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    opacity: isActive ? 1 : 0.6,
+                    background: isActive ? 'rgba(255,255,255,0.12)' : 'transparent',
+                    transition: 'all 0.2s',
+                    border: 'none',
+                    cursor: 'pointer',
+                    color: 'white',
+                    outline: 'none'
+                  }}
+                >
+                  <Icon size={16} />
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Upload button */}
+          <Button
+            className="upload-file-btn"
+            icon={Upload}
+            onClick={() => inputRef.current?.click()}
+            style={{
+              whiteSpace: 'nowrap',
+              flexShrink: 0,
+              marginRight: 0,
+              padding: '10px 20px',
+              boxSizing: 'border-box',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px'
+            }}
+          >
+            Upload File
+          </Button>
+        </div>
       </div>
 
       {files.length === 0 && !query ? (
@@ -381,10 +464,16 @@ export default function FilesPage() {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         transition={{ delay: i * 0.02 }}
-                        className="flex flex-col sm:flex-row sm:items-center gap-4 p-4 transition-colors group min-w-0"
                         style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '12px',
+                          padding: '14px 16px',
+                          overflow: 'hidden',
+                          boxSizing: 'border-box',
                           borderBottom: i < filtered.length - 1 ? '1px solid var(--border-light)' : 'none',
                           background: isSelected ? 'var(--bg-active)' : 'transparent',
+                          transition: 'background 0.2s'
                         }}
                         onMouseEnter={(e) => {
                           if (!isSelected) e.currentTarget.style.background = 'var(--bg-hover)';
@@ -393,87 +482,87 @@ export default function FilesPage() {
                           if (!isSelected) e.currentTarget.style.background = 'transparent';
                         }}
                       >
-                        <div className="flex items-center gap-3 min-w-0 flex-1">
-                          <input
-                            type="checkbox"
-                            checked={isSelected}
-                            onChange={() => toggle(file.id)}
-                            className="w-3.5 h-3.5 rounded border-[var(--border-color)] shrink-0 cursor-pointer"
-                          />
-                          <div
-                            className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 border"
-                            style={{ background: cfg.bg, borderColor: cfg.color + '18' }}
-                          >
-                            <Icon size={14} style={{ color: cfg.color }} />
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <p className="text-xs font-semibold text-[var(--text-primary)] truncate">
-                              {file.name}
-                            </p>
-                            <div className="flex flex-wrap items-center gap-2 mt-1 sm:hidden">
-                              <Badge>{cfg.label}</Badge>
-                              <span className="text-[10px] text-[var(--text-tertiary)]">{file.size}</span>
-                            </div>
-                          </div>
+                        {/* Checkbox */}
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => toggle(file.id)}
+                          className="w-3.5 h-3.5 rounded border-[var(--border-color)] shrink-0 cursor-pointer"
+                        />
+
+                        {/* File Icon wrapper */}
+                        <div
+                          className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 border"
+                          style={{ background: cfg.bg, borderColor: cfg.color + '18' }}
+                        >
+                          <Icon size={14} style={{ color: cfg.color }} />
                         </div>
 
-                        <div className="hidden sm:flex items-center gap-5 shrink-0">
-                          <Badge>{cfg.label}</Badge>
-                          <span className="text-xs w-16 text-right text-[var(--text-tertiary)]">
-                            {file.size}
+                        {/* Filename column */}
+                        <div
+                          style={{
+                            flex: 1,
+                            minWidth: 0,
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap'
+                          }}
+                        >
+                          <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>
+                            {file.name}
                           </span>
-                          <div className="hidden md:flex items-center gap-2 w-28 min-w-0">
-                            <Avatar name={uploader?.name} initials={uploader?.initials} color={uploader?.color} size="xs" />
-                            <span className="text-xs text-[var(--text-secondary)] font-medium truncate">
-                              {uploader?.name?.split(' ')[0]}
-                            </span>
-                          </div>
-                          <span className="hidden lg:block text-[10px] w-20 text-right text-[var(--text-tertiary)]">
-                            {file.uploadedAt}
-                          </span>
-                          <div className="flex items-center gap-1.5 pl-3 border-l border-[var(--border-light)]">
-                            <button
-                              onClick={() => handleOpenPreview(file)}
-                              className="w-7 h-7 rounded-md flex items-center justify-center border border-[var(--border-color)] hover:bg-[var(--bg-hover)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-all cursor-pointer"
-                              title="Preview"
-                            >
-                              <Eye size={12} />
-                            </button>
-                            <button
-                              onClick={() => downloadFile(file)}
-                              className="w-7 h-7 rounded-md flex items-center justify-center border border-[var(--border-color)] hover:bg-[var(--bg-hover)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-all cursor-pointer"
-                              title="Download"
-                            >
-                              <Download size={12} />
-                            </button>
-                            <button
-                              onClick={() => deleteFile(workspaceId, file.id)}
-                              className="w-7 h-7 rounded-md flex items-center justify-center border border-red-500/15 bg-red-500/5 hover:bg-red-500/10 text-red-500 transition-all cursor-pointer"
-                              title="Delete"
-                            >
-                              <Trash2 size={12} />
-                            </button>
-                          </div>
                         </div>
 
-                        <div className="flex gap-2 sm:hidden self-end mt-1">
+                        {/* File size + uploader text */}
+                        <div
+                          style={{
+                            fontSize: '12px',
+                            opacity: 0.5,
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            color: 'var(--text-secondary)'
+                          }}
+                          className="hidden sm:flex"
+                        >
+                          <span>{file.size}</span>
+                          <span>·</span>
+                          <span>{cfg.label}</span>
+                          <span>·</span>
+                          <span>by {uploader?.name?.split(' ')[0]}</span>
+                        </div>
+
+                        {/* Action icons */}
+                        <div
+                          style={{
+                            flexShrink: 0,
+                            display: 'flex',
+                            gap: '12px'
+                          }}
+                        >
                           <button
                             onClick={() => handleOpenPreview(file)}
-                            className="w-7.5 h-7.5 rounded-md flex items-center justify-center border border-[var(--border-color)] bg-[var(--bg-secondary)] text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] cursor-pointer"
+                            style={{ background: 'transparent', border: 'none', padding: 0, cursor: 'pointer', color: 'var(--text-secondary)', outline: 'none' }}
+                            title="Preview"
                           >
-                            <Eye size={12} />
+                            <Eye size={14} />
                           </button>
                           <button
                             onClick={() => downloadFile(file)}
-                            className="w-7.5 h-7.5 rounded-md flex items-center justify-center border border-[var(--border-color)] bg-[var(--bg-secondary)] text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] cursor-pointer"
+                            style={{ background: 'transparent', border: 'none', padding: 0, cursor: 'pointer', color: 'var(--text-secondary)', outline: 'none' }}
+                            title="Download"
                           >
-                            <Download size={12} />
+                            <Download size={14} />
                           </button>
                           <button
                             onClick={() => deleteFile(workspaceId, file.id)}
-                            className="w-7.5 h-7.5 rounded-md flex items-center justify-center border border-red-500/15 bg-red-500/5 text-red-500 cursor-pointer"
+                            style={{ background: 'transparent', border: 'none', padding: 0, cursor: 'pointer', color: 'var(--color-danger, #ef4444)', outline: 'none' }}
+                            title="Delete"
                           >
-                            <Trash2 size={12} />
+                            <Trash2 size={14} />
                           </button>
                         </div>
                       </motion.div>
@@ -488,11 +577,22 @@ export default function FilesPage() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
+                gap: '16px',
+                width: '100%',
+                boxSizing: 'border-box'
+              }}
             >
               {filtered.map((file, i) => {
                 const cfg = typeConfig[file.type] || typeConfig.document;
                 const Icon = cfg.icon;
+                const uploader = members.find((m) => m.id === file.uploadedBy) || {
+                  name: 'Member',
+                  initials: 'M',
+                  color: '#71717a',
+                };
                 return (
                   <motion.div
                     key={file.id}
@@ -500,45 +600,115 @@ export default function FilesPage() {
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ delay: i * 0.03 }}
                   >
-                    <Card hover className="group relative flex flex-col justify-between text-center !p-5 border border-[var(--border-color)] hover:border-[var(--accent)] bg-[var(--bg-primary)] shadow-sm">
-                      <div>
-                        <div
-                          className="w-12 h-12 rounded-xl flex items-center justify-center mx-auto mb-3 border"
-                          style={{ background: cfg.bg, borderColor: cfg.color + '15' }}
+                    <Card
+                      hover
+                      padding={false}
+                      style={{
+                        width: '100%',
+                        boxSizing: 'border-box',
+                        padding: '16px',
+                        borderRadius: '14px',
+                        overflow: 'hidden',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        gap: '10px',
+                        textAlign: 'center'
+                      }}
+                      className="group relative border border-[var(--border-color)] hover:border-[var(--accent)] bg-[var(--bg-primary)] shadow-sm"
+                    >
+                      {/* File icon wrapper */}
+                      <div
+                        style={{
+                          width: '40px',
+                          height: '40px',
+                          borderRadius: '10px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          flexShrink: 0,
+                          background: cfg.bg,
+                          borderColor: cfg.color + '15'
+                        }}
+                        className="border"
+                      >
+                        <Icon size={20} style={{ color: cfg.color }} />
+                      </div>
+
+                      {/* Filename and size info */}
+                      <div style={{ width: '100%', minWidth: 0 }}>
+                        <p
+                          style={{
+                            fontSize: '13px',
+                            fontWeight: 500,
+                            width: '100%',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            display: '-webkit-box',
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: 'vertical',
+                            whiteSpace: 'normal',
+                            margin: 0,
+                            color: 'var(--text-primary)'
+                          }}
                         >
-                          <Icon size={20} style={{ color: cfg.color }} />
-                        </div>
-                        <p className="text-xs font-semibold text-[var(--text-primary)] truncate px-1 group-hover:text-[var(--accent)] transition-colors">
                           {file.name}
                         </p>
-                        <p className="text-[10px] text-[var(--text-tertiary)] mt-0.5">{file.size}</p>
+                        <p
+                          style={{
+                            fontSize: '11px',
+                            opacity: 0.5,
+                            whiteSpace: 'nowrap',
+                            margin: '4px 0 0 0',
+                            color: 'var(--text-tertiary)'
+                          }}
+                        >
+                          {file.size}
+                        </p>
                       </div>
+
+                      {/* Download/delete icons */}
                       <div
-                        className="mt-4 pt-3 flex items-center justify-center gap-1.5 border-t border-[var(--border-light)]"
+                        style={{
+                          display: 'flex',
+                          gap: '12px',
+                          justifyContent: 'center',
+                          marginTop: '4px',
+                          opacity: 0.6,
+                          width: '100%'
+                        }}
                       >
                         {[
-                          { icon: Eye, title: 'Preview' },
-                          { icon: Download, title: 'Download' },
-                          { icon: Trash2, title: 'Delete', danger: true }
+                          { icon: Eye, title: 'Preview', action: () => handleOpenPreview(file), danger: false },
+                          { icon: Download, title: 'Download', action: () => downloadFile(file), danger: false },
+                          { icon: Trash2, title: 'Delete', action: () => deleteFile(workspaceId, file.id), danger: true }
                         ].map((btn, j) => {
                           const Ico = btn.icon;
                           return (
                             <button
                               key={j}
+                              type="button"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                if (Ico === Eye) handleOpenPreview(file);
-                                else if (Ico === Download) downloadFile(file);
-                                else if (Ico === Trash2) deleteFile(workspaceId, file.id);
+                                btn.action();
                               }}
-                              className={`w-7 h-7 rounded-md flex items-center justify-center transition-all cursor-pointer border ${
-                                btn.danger
-                                  ? 'border-red-500/15 bg-red-500/5 text-red-500 hover:bg-red-500/10'
-                                  : 'border-[var(--border-color)] bg-[var(--bg-secondary)] text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)]'
-                              }`}
+                              style={{
+                                width: '16px',
+                                height: '16px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                flexShrink: 0,
+                                cursor: 'pointer',
+                                background: 'transparent',
+                                border: 'none',
+                                padding: 0,
+                                color: btn.danger ? 'var(--color-danger, #ef4444)' : 'var(--text-secondary)',
+                                outline: 'none'
+                              }}
                               title={btn.title}
                             >
-                              <Ico size={11} />
+                              <Ico size={16} />
                             </button>
                           );
                         })}

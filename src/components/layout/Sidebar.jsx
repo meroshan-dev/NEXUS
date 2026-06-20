@@ -29,9 +29,10 @@ const navItemStyle = (collapsed, isActive) => ({
   background: isActive ? 'rgba(255,255,255,0.1)' : 'transparent',
   backdropFilter: isActive ? 'blur(12px)' : 'none',
   WebkitBackdropFilter: isActive ? 'blur(12px)' : 'none',
-  border: isActive ? '1px solid rgba(255,255,255,0.15)' : '1px solid transparent',
+  border: isActive ? '1px solid rgba(255,255,255,0.12)' : '1px solid transparent',
   color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
-  fontWeight: isActive ? 500 : 400,
+  fontWeight: isActive ? 600 : 400,
+  opacity: isActive ? 1 : 0.65,
 });
 
 const navIconStyle = (isActive) => ({
@@ -208,7 +209,7 @@ export default function Sidebar({ collapsed, onToggle }) {
         </button>
       </div>
 
-      <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', padding: collapsed ? '12px 6px' : '12px 10px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+      <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', padding: collapsed ? '12px 6px 16px 6px' : '12px 10px 16px 10px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
         <nav style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
           {!collapsed && (
             <p style={{ fontSize: '10px', fontWeight: 500, letterSpacing: '0.1em', textTransform: 'uppercase', opacity: 0.4, color: 'var(--text-tertiary)', padding: '8px 4px 4px', margin: 0 }}>
@@ -235,10 +236,20 @@ export default function Sidebar({ collapsed, onToggle }) {
                     key={item.tab}
                     to={`/workspace/${activeWorkspaceId}?tab=${item.tab}`}
                     style={navItemStyle(collapsed, isActive)}
-                    onMouseEnter={(e) => { if (!isActive) e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; }}
-                    onMouseLeave={(e) => { if (!isActive) e.currentTarget.style.background = 'transparent'; }}
+                    onMouseEnter={(e) => {
+                      if (!isActive) {
+                        e.currentTarget.style.background = 'rgba(255,255,255,0.04)';
+                        e.currentTarget.style.opacity = '0.9';
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!isActive) {
+                        e.currentTarget.style.background = 'transparent';
+                        e.currentTarget.style.opacity = '0.65';
+                      }
+                    }}
                   >
-                    <Icon size={18} strokeWidth={1.5} style={navIconStyle(isActive)} />
+                    <Icon size={16} strokeWidth={1.5} style={navIconStyle(isActive)} />
                     {!collapsed && <span style={navLabelStyle}>{item.label}</span>}
                   </NavLink>
                 );
@@ -247,10 +258,22 @@ export default function Sidebar({ collapsed, onToggle }) {
                 <NavLink
                   to="/dashboard"
                   style={({ isActive }) => navItemStyle(collapsed, isActive)}
-                  onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+                  onMouseEnter={(e) => {
+                    const isNowActive = false;
+                    if (!isNowActive) {
+                      e.currentTarget.style.background = 'rgba(255,255,255,0.04)';
+                      e.currentTarget.style.opacity = '0.9';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    const isNowActive = false;
+                    if (!isNowActive) {
+                      e.currentTarget.style.background = 'transparent';
+                      e.currentTarget.style.opacity = '0.65';
+                    }
+                  }}
                 >
-                  <Home size={18} strokeWidth={1.5} style={navIconStyle(false)} />
+                  <Home size={16} strokeWidth={1.5} style={navIconStyle(false)} />
                   {!collapsed && <span style={navLabelStyle}>All workspaces</span>}
                 </NavLink>
               </div>
@@ -260,19 +283,43 @@ export default function Sidebar({ collapsed, onToggle }) {
               <NavLink
                 to="/dashboard"
                 style={({ isActive }) => navItemStyle(collapsed, isActive)}
-                onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; }}
-                onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+                onMouseEnter={(e) => {
+                  const isNowActive = location.pathname === '/dashboard';
+                  if (!isNowActive) {
+                    e.currentTarget.style.background = 'rgba(255,255,255,0.04)';
+                    e.currentTarget.style.opacity = '0.9';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  const isNowActive = location.pathname === '/dashboard';
+                  if (!isNowActive) {
+                    e.currentTarget.style.background = 'transparent';
+                    e.currentTarget.style.opacity = '0.65';
+                  }
+                }}
               >
-                <LayoutDashboard size={18} strokeWidth={1.5} style={navIconStyle(false)} />
+                <LayoutDashboard size={16} strokeWidth={1.5} style={navIconStyle(false)} />
                 {!collapsed && <span style={navLabelStyle}>Dashboard</span>}
               </NavLink>
               <NavLink
                 to="/profile"
                 style={({ isActive }) => navItemStyle(collapsed, isActive)}
-                onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; }}
-                onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+                onMouseEnter={(e) => {
+                  const isNowActive = location.pathname === '/profile';
+                  if (!isNowActive) {
+                    e.currentTarget.style.background = 'rgba(255,255,255,0.04)';
+                    e.currentTarget.style.opacity = '0.9';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  const isNowActive = location.pathname === '/profile';
+                  if (!isNowActive) {
+                    e.currentTarget.style.background = 'transparent';
+                    e.currentTarget.style.opacity = '0.65';
+                  }
+                }}
               >
-                <User size={18} strokeWidth={1.5} style={navIconStyle(false)} />
+                <User size={16} strokeWidth={1.5} style={navIconStyle(false)} />
                 {!collapsed && <span style={navLabelStyle}>Profile</span>}
               </NavLink>
             </>
@@ -315,10 +362,21 @@ export default function Sidebar({ collapsed, onToggle }) {
                       background: active ? 'rgba(255,255,255,0.1)' : 'transparent',
                       border: active ? '1px solid rgba(255,255,255,0.12)' : '1px solid transparent',
                       color: active ? 'var(--text-primary)' : 'var(--text-secondary)',
-                      fontWeight: active ? 500 : 400,
+                      fontWeight: active ? 600 : 400,
+                      opacity: active ? 1 : 0.65,
                     }}
-                    onMouseEnter={(e) => { if (!active) e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; }}
-                    onMouseLeave={(e) => { if (!active) e.currentTarget.style.background = 'transparent'; }}
+                    onMouseEnter={(e) => {
+                      if (!active) {
+                        e.currentTarget.style.background = 'rgba(255,255,255,0.04)';
+                        e.currentTarget.style.opacity = '0.9';
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!active) {
+                        e.currentTarget.style.background = 'transparent';
+                        e.currentTarget.style.opacity = '0.65';
+                      }
+                    }}
                   >
                     <span style={{ flexShrink: 0, width: '20px', textAlign: 'center', fontSize: '14px' }}>{ws.icon}</span>
                     <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0, flex: 1 }}>{ws.name}</span>
@@ -332,51 +390,6 @@ export default function Sidebar({ collapsed, onToggle }) {
                 );
               })}
             </div>
-          </div>
-        )}
-      </div>
-
-      <div style={{ flexShrink: 0, marginTop: 'auto', padding: '12px 16px', borderTop: '1px solid rgba(255,255,255,0.06)', overflow: 'hidden' }}>
-        {collapsed ? (
-          <div style={{ display: 'flex', justifyContent: 'center', padding: '4px 0' }}>
-            <button onClick={() => navigate('/profile')} style={{ cursor: 'pointer', background: 'none', border: 'none', padding: 0 }}>
-              <Avatar name={user?.name} size="sm" status="online" />
-            </button>
-          </div>
-        ) : (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', overflow: 'hidden' }}>
-            <button onClick={() => navigate('/profile')} style={{ cursor: 'pointer', flexShrink: 0, background: 'none', border: 'none', padding: 0 }}>
-              <Avatar name={user?.name} size="sm" status="online" />
-            </button>
-            <button
-              onClick={() => navigate('/profile')}
-              style={{ flex: 1, minWidth: 0, overflow: 'hidden', textAlign: 'left', cursor: 'pointer', background: 'none', border: 'none', padding: 0 }}
-            >
-              <p style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', margin: 0 }}>
-                {user?.name}
-              </p>
-              <p style={{ fontSize: '11px', opacity: 0.4, color: 'var(--text-tertiary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: '2px' }}>
-                {user?.email}
-              </p>
-            </button>
-            <button
-              onClick={async () => {
-                await signOut();
-                navigate('/login');
-              }}
-              style={{ width: '32px', height: '32px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, cursor: 'pointer', transition: 'all 0.2s', color: 'var(--text-tertiary)', background: 'transparent', border: 'none' }}
-              title="Sign out"
-              onMouseEnter={(e) => {
-                e.currentTarget.style.color = '#f87171';
-                e.currentTarget.style.background = 'rgba(239,68,68,0.1)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.color = 'var(--text-tertiary)';
-                e.currentTarget.style.background = 'transparent';
-              }}
-            >
-              <LogOut size={14} strokeWidth={1.5} />
-            </button>
           </div>
         )}
       </div>

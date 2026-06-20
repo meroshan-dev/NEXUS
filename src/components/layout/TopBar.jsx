@@ -1,15 +1,16 @@
 import { useState } from 'react';
-import { Bell, Search, Menu, Check, BellOff } from 'lucide-react';
+import { Bell, Search, Menu, Check, BellOff, User, LogOut } from 'lucide-react';
 import Avatar from '../ui/Avatar';
 import { useAuth } from '../../context/AuthContext';
 import { useWorkspace } from '../../context/WorkspaceContext';
 import { useNavigate } from 'react-router-dom';
 
 export default function TopBar({ onMobileMenuToggle }) {
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const { notifications, markNotificationAsRead, markAllNotificationsAsRead } = useWorkspace();
   const [showNotifications, setShowNotifications] = useState(false);
+  const [showProfileDropdown, setShowProfileDropdown] = useState(false);
 
   const unreadCount = notifications.filter((n) => !n.read).length;
 
@@ -216,25 +217,122 @@ export default function TopBar({ onMobileMenuToggle }) {
           )}
         </div>
 
-        <button
-          onClick={() => navigate('/profile')}
-          className="cursor-pointer"
-          style={{
-            width: '36px',
-            height: '36px',
-            borderRadius: '50%',
-            flexShrink: 0,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: 0,
-            border: 'none',
-            background: 'transparent',
-            overflow: 'visible',
-          }}
-        >
-          <Avatar name={user?.name} size="md" status="online" />
-        </button>
+        <div className="relative">
+          <button
+            onClick={() => setShowProfileDropdown(!showProfileDropdown)}
+            className="cursor-pointer"
+            style={{
+              width: '36px',
+              height: '36px',
+              borderRadius: '50%',
+              flexShrink: 0,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: 0,
+              border: 'none',
+              background: 'transparent',
+              overflow: 'visible',
+            }}
+          >
+            <Avatar name={user?.name} size="md" status="online" />
+          </button>
+
+          {showProfileDropdown && (
+            <>
+              <div
+                style={{ position: 'fixed', inset: 0, zIndex: 9998 }}
+                onClick={() => setShowProfileDropdown(false)}
+              />
+              <div
+                style={{
+                  position: 'absolute',
+                  top: '100%',
+                  right: 0,
+                  marginTop: '8px',
+                  background: 'rgba(15,15,35,0.92)',
+                  backdropFilter: 'blur(30px)',
+                  WebkitBackdropFilter: 'blur(30px)',
+                  border: '1px solid rgba(255,255,255,0.12)',
+                  borderRadius: '14px',
+                  padding: '12px',
+                  minWidth: '200px',
+                  boxSizing: 'border-box',
+                  zIndex: 9999,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '8px'
+                }}
+              >
+                <div style={{ padding: '4px 8px', borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '8px', marginBottom: '4px' }}>
+                  <p style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {user?.name}
+                  </p>
+                  <p style={{ fontSize: '11px', opacity: 0.5, color: 'var(--text-secondary)', margin: 0, marginTop: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {user?.email}
+                  </p>
+                </div>
+                
+                <button
+                  onClick={() => {
+                    setShowProfileDropdown(false);
+                    navigate('/profile');
+                  }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    width: '100%',
+                    padding: '8px',
+                    borderRadius: '8px',
+                    border: 'none',
+                    background: 'transparent',
+                    color: 'var(--text-primary)',
+                    fontSize: '13px',
+                    fontWeight: 500,
+                    textAlign: 'left',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s'
+                  }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+                >
+                  <User size={14} strokeWidth={1.5} style={{ opacity: 0.7 }} />
+                  Profile
+                </button>
+
+                <button
+                  onClick={async () => {
+                    setShowProfileDropdown(false);
+                    await signOut();
+                    navigate('/login');
+                  }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    width: '100%',
+                    padding: '8px',
+                    borderRadius: '8px',
+                    border: 'none',
+                    background: 'rgba(239,68,68,0.1)',
+                    color: '#f87171',
+                    fontSize: '13px',
+                    fontWeight: 500,
+                    textAlign: 'left',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s'
+                  }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(239,68,68,0.15)'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(239,68,68,0.1)'; }}
+                >
+                  <LogOut size={14} strokeWidth={1.5} style={{ opacity: 0.9 }} />
+                  Sign Out
+                </button>
+              </div>
+            </>
+          )}
+        </div>
       </div>
     </header>
   );
