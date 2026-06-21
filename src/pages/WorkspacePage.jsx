@@ -8,7 +8,7 @@ import {
   FileText, CheckSquare, Users, MapPin, Phone, PhoneCall,
   Video, Trash2, Upload, Download, Grid, List, File,
   CloudUpload, Plus, Search, AlertCircle,
-  Calendar, Edit3, FolderKanban, X
+  Calendar, Edit3, FolderKanban, X, ArrowLeft
 } from 'lucide-react';
 import Avatar from '../components/ui/Avatar';
 import Card from '../components/ui/Card';
@@ -1282,12 +1282,14 @@ export default function WorkspacePage() {
             {/* NOTES TAB */}
             {activeTab === 'notes' && (
               <motion.div key="notes" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                className="notes-tab-container"
                 style={{ height: 'clamp(450px, calc(100vh - 240px), 700px)' }}
               >
                 <div style={{ display: 'flex', height: '100%', overflow: 'hidden', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.02)' }}>
                   
                   {/* Notes List Panel */}
                   <div
+                    className="notes-list-panel"
                     style={{
                       width: '280px',
                       flexShrink: 0,
@@ -1439,6 +1441,7 @@ export default function WorkspacePage() {
 
                   {/* Note Editor */}
                   <div
+                    className={`notes-editor-panel ${activeNoteId ? 'active' : ''}`}
                     style={{
                       flex: 1,
                       padding: '24px',
@@ -1448,7 +1451,28 @@ export default function WorkspacePage() {
                     }}
                   >
                     {activeNote ? (
-                      <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+                      <div className="notes-editor-content" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+                        <div className="notes-mobile-back-bar">
+                          <button
+                            type="button"
+                            onClick={() => setActiveNoteId(null)}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '8px',
+                              background: 'transparent',
+                              border: 'none',
+                              color: 'var(--text-secondary)',
+                              cursor: 'pointer',
+                              padding: 0,
+                              fontSize: '14px',
+                              fontWeight: 500,
+                            }}
+                          >
+                            <ArrowLeft size={16} /> Back
+                          </button>
+                        </div>
+                        <div className="notes-editor-body" style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
                         {/* Header row */}
                         <div
                           style={{
@@ -1514,6 +1538,7 @@ export default function WorkspacePage() {
                             padding: 0,
                           }}
                         />
+                        </div>
                       </div>
                     ) : (
                       <div style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: '40px 20px' }}>

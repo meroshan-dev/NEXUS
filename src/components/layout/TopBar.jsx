@@ -58,12 +58,14 @@ export default function TopBar({ onMobileMenuToggle }) {
       <div style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
         <button
           onClick={onMobileMenuToggle}
-          className="lg:hidden w-8.5 h-8.5 rounded-[var(--radius-md)] flex items-center justify-center transition-all cursor-pointer"
+          className="lg:hidden rounded-[var(--radius-md)] flex items-center justify-center transition-all cursor-pointer"
           style={{
             color: 'var(--text-secondary)',
             background: 'rgba(255,255,255,0.06)',
             border: '1px solid var(--glass-border-light)',
             flexShrink: 0,
+            width: '36px',
+            height: '36px',
           }}
           aria-label="Open menu"
         >
@@ -73,15 +75,17 @@ export default function TopBar({ onMobileMenuToggle }) {
 
       {/* Center: Compact search bar */}
       <div
-        className="hidden lg:flex"
+        className="navbar-search-wrapper"
         style={{
           flex: 1,
           display: 'flex',
           justifyContent: 'center',
           alignItems: 'center',
+          minWidth: 0,
         }}
       >
         <div
+          className="navbar-search-bar"
           style={{
             width: '100%',
             maxWidth: '300px',
@@ -112,6 +116,7 @@ export default function TopBar({ onMobileMenuToggle }) {
           <input
             ref={searchInputRef}
             type="text"
+            className="navbar-search-input"
             placeholder="Search"
             style={{
               flex: 1,
@@ -126,6 +131,7 @@ export default function TopBar({ onMobileMenuToggle }) {
             }}
           />
           <kbd
+            className="navbar-search-shortcut-hint"
             style={{
               fontSize: '11px',
               fontFamily: 'monospace',
@@ -146,6 +152,7 @@ export default function TopBar({ onMobileMenuToggle }) {
 
       {/* Right: Notifications + Avatar */}
       <div
+        className="navbar-right-container"
         style={{
           display: 'flex',
           alignItems: 'center',

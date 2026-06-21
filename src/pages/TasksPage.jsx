@@ -153,8 +153,8 @@ export default function TasksPage() {
       </header>
 
       {/* Tabs list and Create Task button row */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '20px 24px', gap: '16px', boxSizing: 'border-box', width: '100%' }}>
-        <div style={{ display: 'flex', gap: '4px', padding: '4px', background: 'rgba(255,255,255,0.05)', backdropFilter: 'blur(16px) saturate(160%)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '10px', width: 'fit-content', flexShrink: 1, minWidth: 0 }}>
+      <div className="tasks-top-bar" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '20px 24px', gap: '16px', boxSizing: 'border-box', width: '100%' }}>
+        <div className="filter-tabs" style={{ display: 'flex', gap: '4px', padding: '4px', background: 'rgba(255,255,255,0.05)', backdropFilter: 'blur(16px) saturate(160%)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '10px', width: 'fit-content', flexShrink: 1, minWidth: 0 }}>
           {[
             { id: 'all', label: 'All Tasks' },
             { id: 'my', label: 'My Tasks' },
@@ -192,6 +192,7 @@ export default function TasksPage() {
             icon={Plus}
             size="sm"
             onClick={() => setShowCreate(true)}
+            className="create-task-btn"
             style={{
               flexShrink: 0,
               whiteSpace: 'nowrap',
@@ -264,11 +265,11 @@ export default function TasksPage() {
         />
       ) : (
         <DragDropContext onDragEnd={onDragEnd}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', padding: '0 24px 24px', boxSizing: 'border-box' }}>
+          <div className="kanban-board" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', padding: '0 24px 24px', boxSizing: 'border-box' }}>
             {Object.entries(COLS).map(([colId, cfg]) => {
               const columnTasks = colId === 'todo' ? todoList : colId === 'inProgress' ? inProgressList : doneList;
               return (
-                <div key={colId} style={{ width: '100%', boxSizing: 'border-box', display: 'flex', flexDirection: 'column' }}>
+                <div key={colId} className="kanban-column" style={{ width: '100%', boxSizing: 'border-box', display: 'flex', flexDirection: 'column' }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 4px 12px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: 600, letterSpacing: '0.03em', color: 'var(--text-primary)' }}>
                       <span style={{ width: '8px', height: '8px', borderRadius: '50%', flexShrink: 0, background: cfg.dotColor }} />
