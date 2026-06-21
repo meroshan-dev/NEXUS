@@ -1,5 +1,5 @@
 /* eslint-disable react-refresh/only-export-components */
-import { createContext, useState, useContext, useEffect, useRef, useCallback } from 'react';
+import { createContext, useState, useContext, useEffect, useRef, useCallback, useMemo } from 'react';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { useAuth } from './AuthContext';
 
@@ -2361,6 +2361,166 @@ export function WorkspaceProvider({ children }) {
     }
   };
 
+  // Action: Toggle Chat Message Reaction
+  const toggleChatMessageReaction = async (workspaceId, messageId, emojiChar) => {
+    if (!workspaceId || !user?.id) return;
+
+    // Get current message reactions
+    const currentMessages = chatMessages[workspaceId] || [];
+    const targetMsg = currentMessages.find(m => m.id === messageId);
+    if (!targetMsg) return;
+
+    // Compute new reactions array
+    let reactions = Array.isArray(targetMsg.reactions) ? [...targetMsg.reactions] : [];
+    const userId = user.id;
+
+    const existingReactionIndex = reactions.findIndex(r => r.emoji === emojiChar);
+    if (existingReactionIndex !== -1) {
+      const rx = { ...reactions[existingReactionIndex] };
+      rx.users = Array.isArray(rx.users) ? [...rx.users] : [];
+      if (rx.users.includes(userId)) {
+        // Remove user reaction
+        rx.users = rx.users.filter(uid => uid !== userId);
+      } else {
+        // Add user reaction
+        rx.users.push(userId);
+      }
+
+      if (rx.users.length === 0) {
+        reactions.splice(existingReactionIndex, 1);
+      } else {
+        reactions[existingReactionIndex] = rx;
+      }
+    } else {
+      reactions.push({ emoji: emojiChar, users: [userId] });
+    }
+
+    if (isSupabaseConfigured) {
+      try {
+        const { error } = await supabase
+          .from('chat_messages')
+          .update({ reactions })
+          .eq('id', messageId);
+        
+        if (error) throw error;
+        
+        // Optimistically update local state
+        setChatMessages(prev => {
+          const msgs = prev[workspaceId] || [];
+          return {
+            ...prev,
+            [workspaceId]: msgs.map(m => m.id === messageId ? { ...m, reactions } : m)
+          };
+        });
+      } catch (err) {
+        console.error('Error toggling reaction:', err);
+      }
+    } else {
+      setChatMessages(prev => {
+        const msgs = prev[workspaceId] || [];
+        const updatedMsgs = msgs.map(m => m.id === messageId ? { ...m, reactions } : m);
+        const updated = {
+          ...prev,
+          [workspaceId]: updatedMsgs
+        };
+        localStorage.setItem(`nexus_chats_${workspaceId}`, JSON.stringify(updatedMsgs));
+        return updated;
+      });
+    }
+  };
+
+  // Action: Delete Chat Message
+  const deleteChatMessage = async (workspaceId, messageId) => {
+    if (!workspaceId || !user?.id) return;
+
+    // Security check: Verify sender is the current user
+    const currentMessages = chatMessages[workspaceId] || [];
+    const targetMsg = currentMessages.find(m => m.id === messageId);
+    if (!targetMsg || targetMsg.userId !== user.id) {
+      console.warn("Security block: Attempted to delete another user's message");
+      return;
+    }
+
+    if (isSupabaseConfigured) {
+      try {
+        const { error } = await supabase
+          .from('chat_messages')
+          .delete()
+          .eq('id', messageId);
+        
+        if (error) throw error;
+        
+        // Optimistically update local state
+        setChatMessages(prev => {
+          const msgs = prev[workspaceId] || [];
+          return {
+            ...prev,
+            [workspaceId]: msgs.filter(m => m.id !== messageId)
+          };
+        });
+      } catch (err) {
+        console.error('Error deleting chat message:', err);
+      }
+    } else {
+      setChatMessages(prev => {
+        const msgs = prev[workspaceId] || [];
+        const updatedMsgs = msgs.filter(m => m.id !== messageId);
+        const updated = {
+          ...prev,
+          [workspaceId]: updatedMsgs
+        };
+        localStorage.setItem(`nexus_chats_${workspaceId}`, JSON.stringify(updatedMsgs));
+        return updated;
+      });
+    }
+  };
+
+  // Action: Edit Chat Message
+  const editChatMessage = async (workspaceId, messageId, newText) => {
+    if (!workspaceId || !newText.trim() || !user?.id) return;
+
+    // Security check: Verify sender is the current user
+    const currentMessages = chatMessages[workspaceId] || [];
+    const targetMsg = currentMessages.find(m => m.id === messageId);
+    if (!targetMsg || targetMsg.userId !== user.id) {
+      console.warn("Security block: Attempted to edit another user's message");
+      return;
+    }
+
+    if (isSupabaseConfigured) {
+      try {
+        const { error } = await supabase
+          .from('chat_messages')
+          .update({ text: newText })
+          .eq('id', messageId);
+        
+        if (error) throw error;
+        
+        // Optimistically update local state
+        setChatMessages(prev => {
+          const msgs = prev[workspaceId] || [];
+          return {
+            ...prev,
+            [workspaceId]: msgs.map(m => m.id === messageId ? { ...m, text: newText } : m)
+          };
+        });
+      } catch (err) {
+        console.error('Error editing chat message:', err);
+      }
+    } else {
+      setChatMessages(prev => {
+        const msgs = prev[workspaceId] || [];
+        const updatedMsgs = msgs.map(m => m.id === messageId ? { ...m, text: newText } : m);
+        const updated = {
+          ...prev,
+          [workspaceId]: updatedMsgs
+        };
+        localStorage.setItem(`nexus_chats_${workspaceId}`, JSON.stringify(updatedMsgs));
+        return updated;
+      });
+    }
+  };
+
   // Action: Add File (Supabase Storage & Metadata)
   const uploadFile = async (workspaceId, fileMeta, file, onProgress) => {
     if (!user?.id || !workspaceId) return;
@@ -2812,12 +2972,23 @@ export function WorkspaceProvider({ children }) {
     }
   };
 
+  const currentUserRole = useMemo(() => {
+    if (!activeWorkspaceId || !user?.id || !workspaceMembers[activeWorkspaceId]) {
+      return 'member';
+    }
+    const currentMember = workspaceMembers[activeWorkspaceId].find(
+      m => m.id === user.id
+    );
+    return (currentMember?.role || 'member').toLowerCase();
+  }, [workspaceMembers, activeWorkspaceId, user?.id]);
+
   return (
     <WorkspaceContext.Provider
       value={{
         workspaces,
         activeWorkspaceId,
         setActiveWorkspaceId,
+        currentUserRole,
         tasks,
         chatMessages,
         files,
@@ -2831,6 +3002,9 @@ export function WorkspaceProvider({ children }) {
         addTask,
         updateTasks,
         addChatMessage,
+        toggleChatMessageReaction,
+        deleteChatMessage,
+        editChatMessage,
         uploadFile,
         downloadFile,
 

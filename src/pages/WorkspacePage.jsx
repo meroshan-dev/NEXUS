@@ -24,6 +24,7 @@ import { useAuth } from '../context/AuthContext';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 
 const PALETTE = ['#5e6ad2', '#ec4899', '#f59e0b', '#22c55e', '#3b82f6', '#8b5cf6', '#ef4444', '#14b8a6'];
+const PlusIcon14 = (props) => <Plus {...props} size={14} className="shrink-0" style={{ ...props.style, flexShrink: 0 }} />;
 
 const KANBAN_COLS = {
   todo: { title: 'To do', dotColor: '#9ca3af', accent: 'var(--bg-secondary)' },
@@ -100,7 +101,10 @@ export default function WorkspacePage() {
     // File operations
     uploadFile,
     downloadFile,
-    deleteFile
+    deleteFile,
+    toggleChatMessageReaction,
+    deleteChatMessage,
+    editChatMessage
   } = useWorkspace();
   
   const { user } = useAuth();
@@ -132,13 +136,26 @@ export default function WorkspacePage() {
   }, [loading, workspaces, navigate]);
 
   const workspace = workspaces.find((w) => w.id === id);
+  const isOwner = workspace ? workspace.ownerId === user?.id : false;
+  const currentUserRole = workspace ? (workspaceMembers[workspace.id]?.find(m => m.id === user?.id || m.userId === user?.id)?.role || 'Member').toLowerCase() : 'member';
 
   // Tab change wrapper
   const handleTabChange = (tab) => {
     setSearchParams({ tab });
   };
 
+  useEffect(() => {
+    if (!loading && workspace && activeTab === 'settings' && !isOwner) {
+      alert("Only the workspace owner can access settings.");
+      handleTabChange('overview');
+    }
+  }, [activeTab, isOwner, workspace, loading]);
+
   // Modals & Local states
+  const [activeEmojiPickerMessageId, setActiveEmojiPickerMessageId] = useState(null);
+  const [activeMenuMessageId, setActiveMenuMessageId] = useState(null);
+  const [editingMessageId, setEditingMessageId] = useState(null);
+  const [editingText, setEditingText] = useState('');
   const [showInvite, setShowInvite] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteError, setInviteError] = useState('');
@@ -318,8 +335,6 @@ export default function WorkspacePage() {
     );
   }
 
-  const isOwner = workspace.ownerId === user?.id;
-  const currentUserRole = (workspaceMembers[workspace.id]?.find(m => m.id === user?.id || m.userId === user?.id)?.role || 'Member').toLowerCase();
   const wsFiles = files[workspace.id] || [];
 
   const workspaceTabs = [
@@ -404,6 +419,10 @@ export default function WorkspacePage() {
   // Settings updating
   const handleUpdateSettings = async (e) => {
     e.preventDefault();
+    if (!isOwner) {
+      alert("Only the workspace owner can update settings.");
+      return;
+    }
     if (!renameValue.trim()) return;
     if (isSupabaseConfigured) {
       try {
@@ -636,6 +655,8 @@ export default function WorkspacePage() {
         paddingTop: '24px',
         boxSizing: 'border-box',
         width: '100%',
+        maxWidth: '100%',
+        overflowX: 'hidden',
         minWidth: 0
       }}
     >
@@ -728,19 +749,81 @@ export default function WorkspacePage() {
 
                 {/* Active Workspace Huddle Box (only if active) */}
                 {activeCalls[workspace.id] && (
-                  <div className="glass-card p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 animate-pulse" style={{ borderColor: 'rgba(16,185,129,0.25)', position: 'static', margin: 0 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                      <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0" style={{ background: 'rgba(16,185,129,0.15)', color: '#34d399' }}>
-                        <PhoneCall size={18} strokeWidth={1.5} />
+                  <div
+                    className="glass-card animate-pulse"
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      gap: '12px',
+                      padding: '14px 20px',
+                      boxSizing: 'border-box',
+                      overflow: 'hidden',
+                      width: '100%',
+                      borderColor: 'rgba(16,185,129,0.25)',
+                      position: 'static',
+                      margin: 0
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0, flex: 1 }}>
+                      <div
+                        style={{
+                          width: '36px',
+                          height: '36px',
+                          borderRadius: '50%',
+                          flexShrink: 0,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          background: 'rgba(16,185,129,0.15)',
+                          color: '#34d399'
+                        }}
+                      >
+                        <PhoneCall size={16} strokeWidth={1.5} />
                       </div>
-                      <div>
-                        <h3 className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Ongoing Workspace Huddle</h3>
-                        <p className="text-xs mt-0.5" style={{ color: 'var(--text-secondary)' }}>
+                      <div style={{ minWidth: 0, overflow: 'hidden' }}>
+                        <h3
+                          style={{
+                            fontSize: '14px',
+                            fontWeight: 600,
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                            color: 'var(--text-primary)',
+                            margin: 0
+                          }}
+                        >
+                          Ongoing Workspace Huddle
+                        </h3>
+                        <p
+                          style={{
+                            fontSize: '12px',
+                            opacity: 0.5,
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                            color: 'var(--text-secondary)',
+                            margin: '2px 0 0 0'
+                          }}
+                        >
                           Started by {activeCalls[workspace.id].callerName} · {activeCalls[workspace.id].participants?.length || 1} participant(s) in call
                         </p>
                       </div>
                     </div>
-                    <Button variant="primary" size="sm" className="shrink-0" style={{ background: 'rgba(16,185,129,0.5)', borderColor: 'rgba(16,185,129,0.4)' }} onClick={() => joinCall(workspace.id)}>
+                    <Button
+                      variant="primary"
+                      className="shrink-0"
+                      style={{
+                        flexShrink: 0,
+                        whiteSpace: 'nowrap',
+                        padding: '8px 18px',
+                        borderRadius: '10px',
+                        background: 'rgba(16,185,129,0.5)',
+                        borderColor: 'rgba(16,185,129,0.4)',
+                        height: 'auto'
+                      }}
+                      onClick={() => joinCall(workspace.id)}
+                    >
                       Join Huddle
                     </Button>
                   </div>
@@ -1198,70 +1281,246 @@ export default function WorkspacePage() {
 
             {/* NOTES TAB */}
             {activeTab === 'notes' && (
-              <motion.div key="notes" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                <div className="flex flex-col md:flex-row gap-6 items-stretch min-h-[450px]">
+              <motion.div key="notes" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                style={{ height: 'clamp(450px, calc(100vh - 240px), 700px)' }}
+              >
+                <div style={{ display: 'flex', height: '100%', overflow: 'hidden', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.02)' }}>
                   
-                  {/* Sidebar list */}
-                  <div className="w-full md:w-64 shrink-0 flex flex-col gap-3.5 border-r border-[var(--border-color)] pr-4">
-                    <div className="flex items-center justify-between">
-                      <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--text-secondary)]">Notes list</h3>
-                      <button onClick={createNewNote} className="w-6 h-6 rounded border border-[var(--border-color)] hover:bg-[var(--bg-hover)] text-[var(--text-secondary)] flex items-center justify-center cursor-pointer">
-                        <Plus size={12} />
+                  {/* Notes List Panel */}
+                  <div
+                    style={{
+                      width: '280px',
+                      flexShrink: 0,
+                      height: '100%',
+                      boxSizing: 'border-box',
+                      padding: '16px',
+                      background: 'rgba(255,255,255,0.04)',
+                      backdropFilter: 'blur(20px) saturate(160%)',
+                      WebkitBackdropFilter: 'blur(20px) saturate(160%)',
+                      borderRight: '1px solid rgba(255,255,255,0.08)',
+                      overflowY: 'auto',
+                      display: 'flex',
+                      flexDirection: 'column',
+                    }}
+                  >
+                    {/* Label row */}
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        marginBottom: '12px',
+                        flexShrink: 0,
+                      }}
+                    >
+                      <span
+                        style={{
+                          fontSize: '11px',
+                          opacity: 0.5,
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.06em',
+                          fontWeight: 600,
+                          color: 'var(--text-primary)',
+                        }}
+                      >
+                        Notes list
+                      </span>
+                      <button
+                        onClick={createNewNote}
+                        style={{
+                          width: '26px',
+                          height: '26px',
+                          borderRadius: '8px',
+                          background: 'rgba(255,255,255,0.06)',
+                          border: '1px solid rgba(255,255,255,0.1)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          flexShrink: 0,
+                          cursor: 'pointer',
+                          color: 'var(--text-secondary)',
+                          transition: 'all 0.15s',
+                        }}
+                        onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.1)'; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; }}
+                      >
+                        <Plus size={13} strokeWidth={2} />
                       </button>
                     </div>
 
+                    {/* Note items */}
                     {notes.length === 0 ? (
-                      <p className="text-[11px] text-center text-[var(--text-tertiary)] py-12">No workspace notes.</p>
+                      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <p style={{ fontSize: '11px', color: 'var(--text-tertiary)', textAlign: 'center', opacity: 0.6 }}>No workspace notes.</p>
+                      </div>
                     ) : (
-                      <div className="space-y-1.5 flex-1 overflow-y-auto">
-                        {notes.map(n => (
-                          <div
-                            key={n.id}
-                            onClick={() => setActiveNoteId(n.id)}
-                            className={`p-3 rounded-lg border text-left cursor-pointer transition-colors group flex items-center justify-between gap-3 ${activeNoteId === n.id ? 'bg-[var(--bg-active)] border-[var(--border-focus)]' : 'bg-[var(--bg-primary)] border-[var(--border-color)] hover:bg-[var(--bg-hover)]'}`}
-                          >
-                            <div className="min-w-0 flex-1">
-                              <p className="text-xs font-semibold text-[var(--text-primary)] truncate">{n.title || 'Untitled Note'}</p>
-                              <p className="text-[9px] text-[var(--text-tertiary)] mt-0.5 font-mono">{new Date(n.updatedAt).toLocaleDateString([], { month: 'short', day: 'numeric' })}</p>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flex: 1, overflowY: 'auto' }}>
+                        {notes.map(n => {
+                          const isActive = activeNoteId === n.id;
+                          return (
+                            <div
+                              key={n.id}
+                              onClick={() => setActiveNoteId(n.id)}
+                              className="group"
+                              style={{
+                                width: '100%',
+                                boxSizing: 'border-box',
+                                padding: '12px 14px',
+                                borderRadius: '12px',
+                                overflow: 'hidden',
+                                cursor: 'pointer',
+                                transition: 'all 0.15s',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                                gap: '8px',
+                                background: isActive ? 'rgba(255,255,255,0.08)' : 'transparent',
+                                border: isActive ? '1px solid rgba(255,255,255,0.15)' : '1px solid transparent',
+                              }}
+                              onMouseEnter={(e) => { if (!isActive) e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; }}
+                              onMouseLeave={(e) => { if (!isActive) e.currentTarget.style.background = 'transparent'; }}
+                            >
+                              <div style={{ minWidth: 0, flex: 1 }}>
+                                <p
+                                  style={{
+                                    fontSize: '14px',
+                                    fontWeight: 600,
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    whiteSpace: 'nowrap',
+                                    marginBottom: '2px',
+                                    color: 'var(--text-primary)',
+                                    margin: '0 0 2px 0',
+                                  }}
+                                >
+                                  {n.title || 'Untitled Note'}
+                                </p>
+                                <p
+                                  style={{
+                                    fontSize: '11px',
+                                    opacity: 0.45,
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    whiteSpace: 'nowrap',
+                                    color: 'var(--text-primary)',
+                                    margin: 0,
+                                  }}
+                                >
+                                  {new Date(n.updatedAt).toLocaleDateString([], { month: 'short', day: 'numeric' })}
+                                </p>
+                              </div>
+                              <button
+                                onClick={(e) => { e.stopPropagation(); handleDeleteNote(n.id); }}
+                                className="opacity-0 group-hover:opacity-100"
+                                style={{
+                                  padding: '4px',
+                                  borderRadius: '6px',
+                                  cursor: 'pointer',
+                                  flexShrink: 0,
+                                  color: 'var(--text-tertiary)',
+                                  background: 'transparent',
+                                  border: 'none',
+                                  transition: 'all 0.15s',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                }}
+                                onMouseEnter={(e) => { e.currentTarget.style.color = '#f87171'; e.currentTarget.style.background = 'rgba(239,68,68,0.1)'; }}
+                                onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-tertiary)'; e.currentTarget.style.background = 'transparent'; }}
+                              >
+                                <Trash2 size={12} />
+                              </button>
                             </div>
-                            <button onClick={(e) => { e.stopPropagation(); handleDeleteNote(n.id); }} className="opacity-0 group-hover:opacity-100 hover:text-red-500 text-[var(--text-tertiary)] p-1 transition-all shrink-0">
-                              <Trash2 size={11} />
-                            </button>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     )}
                   </div>
 
                   {/* Note Editor */}
-                  <div className="flex-1 min-w-0">
+                  <div
+                    style={{
+                      flex: 1,
+                      padding: '24px',
+                      boxSizing: 'border-box',
+                      overflowY: 'auto',
+                      minWidth: 0,
+                    }}
+                  >
                     {activeNote ? (
-                      <div className="space-y-4">
-                        <div className="flex items-center justify-between pb-2 border-b border-[var(--border-color)]">
+                      <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+                        {/* Header row */}
+                        <div
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            gap: '12px',
+                            marginBottom: '16px',
+                            paddingBottom: '16px',
+                            borderBottom: '1px solid rgba(255,255,255,0.08)',
+                            flexShrink: 0,
+                          }}
+                        >
                           <input
                             type="text"
                             value={activeNote.title}
                             onChange={(e) => handleEditNote(activeNote.id, e.target.value, activeNote.content)}
                             placeholder="Untitled Note"
-                            className="bg-transparent border-none text-base font-bold text-[var(--text-primary)] focus:outline-none flex-1 min-w-0"
+                            style={{
+                              flex: 1,
+                              minWidth: 0,
+                              fontSize: '20px',
+                              fontWeight: 700,
+                              background: 'transparent',
+                              border: 'none',
+                              outline: 'none',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              color: 'var(--text-primary)',
+                              padding: 0,
+                            }}
                           />
-                          <span className="text-[9px] text-[var(--text-tertiary)] font-mono">
+                          <span
+                            style={{
+                              fontSize: '11px',
+                              opacity: 0.4,
+                              flexShrink: 0,
+                              whiteSpace: 'nowrap',
+                              letterSpacing: '0.04em',
+                              color: 'var(--text-primary)',
+                            }}
+                          >
                             Auto-saved
                           </span>
                         </div>
+                        {/* Textarea */}
                         <textarea
                           placeholder="Start typing note content here…"
                           value={activeNote.content}
                           onChange={(e) => handleEditNote(activeNote.id, activeNote.title, e.target.value)}
-                          className="w-full min-h-[300px] bg-transparent border-none text-xs leading-relaxed focus:outline-none resize-none text-[var(--text-secondary)]"
+                          style={{
+                            width: '100%',
+                            boxSizing: 'border-box',
+                            minHeight: '400px',
+                            flex: 1,
+                            background: 'transparent',
+                            border: 'none',
+                            outline: 'none',
+                            fontSize: '14px',
+                            lineHeight: 1.7,
+                            resize: 'none',
+                            color: 'var(--text-secondary)',
+                            padding: 0,
+                          }}
                         />
                       </div>
                     ) : (
-                      <div className="h-full flex flex-col items-center justify-center text-center py-20">
-                        <Edit3 className="w-10 h-10 text-[var(--text-tertiary)] mb-3 animate-pulse" />
-                        <p className="text-xs font-semibold text-[var(--text-primary)]">No note selected</p>
-                        <p className="text-[10px] text-[var(--text-tertiary)] mt-0.5">Select an existing note or click below to create one.</p>
-                        <Button variant="secondary" size="sm" className="mt-4 h-7.5 text-[11px]" onClick={createNewNote}>
+                      <div style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: '40px 20px' }}>
+                        <Edit3 style={{ width: '40px', height: '40px', color: 'var(--text-tertiary)', marginBottom: '12px', opacity: 0.5 }} />
+                        <p style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)', margin: '0 0 4px 0' }}>No note selected</p>
+                        <p style={{ fontSize: '12px', color: 'var(--text-tertiary)', margin: '0 0 16px 0', opacity: 0.6 }}>Select an existing note or click below to create one.</p>
+                        <Button variant="secondary" size="sm" className="h-7.5 text-[11px]" onClick={createNewNote}>
                           Create Note
                         </Button>
                       </div>
@@ -1273,39 +1532,73 @@ export default function WorkspacePage() {
 
             {/* CHAT TAB */}
             {activeTab === 'chat' && (
-              <motion.div key="chat" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                <Card
-                  padding={false}
-                  className="flex flex-col min-w-0 bg-[var(--bg-primary)] border-[var(--border-color)] overflow-hidden shadow-sm rounded-[var(--radius-xl)]"
+              <motion.div key="chat" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                style={{ height: isMobile ? (isKeyboardVisible ? 'calc(100dvh - 130px)' : 'calc(100dvh - 200px)') : 'clamp(400px, calc(100vh - 240px), 700px)' }}
+              >
+                {/* Main chat panel — glass card */}
+                <div
                   style={{
-                    height: isMobile
-                      ? (isKeyboardVisible ? 'calc(100dvh - 130px)' : 'calc(100dvh - 200px)')
-                      : 'clamp(400px, calc(100vh - 240px), 700px)',
-                    minHeight: isMobile ? '280px' : '400px'
+                    flex: 1,
+                    minWidth: 0,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    borderRadius: '16px',
+                    background: 'rgba(255,255,255,0.04)',
+                    backdropFilter: 'blur(20px) saturate(160%)',
+                    WebkitBackdropFilter: 'blur(20px) saturate(160%)',
+                    border: '1px solid rgba(255,255,255,0.08)',
+                    overflow: 'hidden',
+                    height: '100%',
                   }}
                 >
+                  {/* Header row */}
                   <div
-                    className="flex items-center justify-between px-5 py-3 border-b"
-                    style={{ borderColor: 'var(--border-color)', background: 'var(--bg-subtle)' }}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      padding: '14px 16px',
+                      borderBottom: '1px solid rgba(255,255,255,0.08)',
+                      overflow: 'hidden',
+                      flexShrink: 0,
+                    }}
                   >
-                    <div className="flex items-center gap-2 min-w-0">
-                      <Hash size={15} className="text-[var(--accent)] shrink-0" />
-                      <span className="text-xs font-bold text-[var(--text-primary)] truncate">
-                        general
-                      </span>
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
-                      <span className="text-[10px] text-[var(--text-tertiary)] hidden sm:inline truncate">Company general workspace discussions</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[var(--bg-secondary)] text-[var(--text-secondary)] border border-[var(--border-color)]">
-                        {messages.length} messages
-                      </span>
-                    </div>
+                    <Hash size={15} style={{ color: 'var(--accent)', flexShrink: 0 }} />
+                    <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)', flexShrink: 0 }}>
+                      #general
+                    </span>
+                    <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#10b981', flexShrink: 0 }} />
+                    <span
+                      style={{
+                        fontSize: '12px',
+                        opacity: 0.5,
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                        flex: 1,
+                        minWidth: 0,
+                        color: 'var(--text-primary)',
+                      }}
+                    >
+                      Company general workspace discussions
+                    </span>
+                    <span
+                      style={{
+                        fontSize: '12px',
+                        opacity: 0.4,
+                        flexShrink: 0,
+                        whiteSpace: 'nowrap',
+                        color: 'var(--text-primary)',
+                      }}
+                    >
+                      {messages.length} messages
+                    </span>
                   </div>
 
-                  <div className="flex-1 overflow-y-auto px-5 py-5 space-y-1.5 scrollbar-thin">
+                  {/* Messages area */}
+                  <div style={{ flex: 1, overflowY: 'auto', padding: '16px 0' }}>
                     {messages.length === 0 ? (
-                      <div className="h-full flex items-center justify-center">
+                      <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         <EmptyState
                           icon={MessageSquare}
                           title="No messages"
@@ -1314,7 +1607,7 @@ export default function WorkspacePage() {
                         />
                       </div>
                     ) : (
-                      <div className="space-y-1">
+                      <div style={{ display: 'flex', flexDirection: 'column' }}>
                         {messages.map((msg, i) => {
                            const sender =
                             members.find((m) => m.id === msg.userId) ||
@@ -1325,48 +1618,445 @@ export default function WorkspacePage() {
                            return (
                             <motion.div
                               key={msg.id}
-                              initial={{ opacity: 0, y: 3 }}
+                               initial={{ opacity: 0, y: 3 }}
                               animate={{ opacity: 1, y: 0 }}
-                              className={`flex gap-3 group px-2.5 py-1 rounded-lg transition-all min-w-0 relative ${showHeader ? 'mt-3 first:mt-0 pt-0.5 hover:bg-[var(--bg-hover)]' : 'hover:bg-[var(--bg-hover)]'}`}
+                              className="group"
+                              style={{
+                                display: 'flex',
+                                gap: '10px',
+                                padding: showHeader ? '8px 16px 4px 16px' : '2px 16px',
+                                alignItems: 'flex-start',
+                                overflow: 'visible',
+                                position: 'relative',
+                                marginTop: showHeader && i > 0 ? '8px' : '0',
+                                transition: 'background 0.1s',
+                              }}
+                              onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.03)'; }}
+                              onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
                             >
-                              <div className="w-7.5 shrink-0 flex justify-center">
+                              {/* Avatar / hover timestamp */}
+                              <div style={{ width: '32px', flexShrink: 0, display: 'flex', justifyContent: 'center', paddingTop: showHeader ? '2px' : '0' }}>
                                 {showHeader ? (
                                   <Avatar
                                     name={sender?.name}
                                     initials={sender?.initials}
                                     color={sender?.color || 'var(--accent)'}
-                                    size="xs"
+                                    size="sm"
                                   />
                                 ) : (
-                                  <span className="text-[9px] opacity-0 group-hover:opacity-100 transition-opacity select-none self-center pr-1 text-[var(--text-tertiary)] font-medium">
+                                  <span
+                                    className="opacity-0 group-hover:opacity-100"
+                                    style={{
+                                      fontSize: '10px',
+                                      opacity: 0,
+                                      color: 'var(--text-tertiary)',
+                                      whiteSpace: 'nowrap',
+                                      textAlign: 'right',
+                                      width: '32px',
+                                      alignSelf: 'center',
+                                      transition: 'opacity 0.15s',
+                                      userSelect: 'none',
+                                    }}
+                                  >
                                     {messageTime.includes('at') ? messageTime.split('at')[1].trim() : messageTime}
                                   </span>
                                 )}
                               </div>
-                              <div className="flex-1 min-w-0 pt-0.5 overflow-hidden">
+                              {/* Content */}
+                              <div style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
                                 {showHeader && (
-                                  <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 mb-0.5">
-                                    <span className="text-truncate" style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)', cursor: 'pointer' }}>
+                                  <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginBottom: '2px' }}>
+                                    <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', flexShrink: 0 }}>
                                       {sender?.name}
                                     </span>
-                                    <span className="text-[9px] text-[var(--text-tertiary)] shrink-0">
+                                    <span style={{ fontSize: '11px', opacity: 0.4, flexShrink: 0, whiteSpace: 'nowrap', color: 'var(--text-primary)' }}>
                                       {messageTime}
                                     </span>
                                   </div>
                                 )}
-                                <p style={{ fontSize: '12px', lineHeight: 1.6, color: 'var(--text-secondary)', whiteSpace: 'pre-wrap', wordBreak: 'break-word', maxWidth: '100%' }}>
-                                  {msg.text}
-                                </p>
+                                
+                                {editingMessageId === msg.id ? (
+                                  <div style={{ marginTop: '4px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                    <textarea
+                                      value={editingText}
+                                      onChange={(e) => setEditingText(e.target.value)}
+                                      rows={2}
+                                      style={{
+                                        width: '100%',
+                                        boxSizing: 'border-box',
+                                        padding: '8px 12px',
+                                        borderRadius: '8px',
+                                        background: 'rgba(255,255,255,0.06)',
+                                        border: '1px solid rgba(255,255,255,0.15)',
+                                        color: 'var(--text-primary)',
+                                        fontSize: '13px',
+                                        lineHeight: 1.4,
+                                        resize: 'none',
+                                        outline: 'none',
+                                      }}
+                                    />
+                                    <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
+                                      <button
+                                        type="button"
+                                        onClick={() => setEditingMessageId(null)}
+                                        style={{
+                                          padding: '4px 10px',
+                                          borderRadius: '6px',
+                                          fontSize: '11px',
+                                          fontWeight: 500,
+                                          background: 'rgba(255,255,255,0.05)',
+                                          color: 'var(--text-secondary)',
+                                          border: '1px solid rgba(255,255,255,0.08)',
+                                          cursor: 'pointer',
+                                          transition: 'all 0.1s',
+                                        }}
+                                        onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; }}
+                                        onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; }}
+                                      >
+                                        Cancel
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={async () => {
+                                          if (editingText.trim()) {
+                                            await editChatMessage(workspace.id, msg.id, editingText);
+                                            setEditingMessageId(null);
+                                          }
+                                        }}
+                                        style={{
+                                          padding: '4px 10px',
+                                          borderRadius: '6px',
+                                          fontSize: '11px',
+                                          fontWeight: 500,
+                                          background: 'rgba(99,102,241,0.3)',
+                                          color: 'var(--accent)',
+                                          border: '1px solid rgba(99,102,241,0.4)',
+                                          cursor: 'pointer',
+                                          transition: 'all 0.1s',
+                                        }}
+                                        onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(99,102,241,0.4)'; }}
+                                        onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(99,102,241,0.3)'; }}
+                                      >
+                                        Save
+                                      </button>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <>
+                                    <p style={{ fontSize: '14px', lineHeight: 1.5, color: 'var(--text-secondary)', whiteSpace: 'pre-wrap', wordBreak: 'break-word', overflowWrap: 'break-word', margin: 0 }}>
+                                      {msg.text}
+                                    </p>
+                                    
+                                    {/* Render Reactions */}
+                                    {msg.reactions && msg.reactions.length > 0 && (
+                                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '6px' }}>
+                                        {msg.reactions.map((r, ri) => {
+                                          const hasReacted = r.users?.includes(user?.id);
+                                          return (
+                                            <button
+                                              key={ri}
+                                              type="button"
+                                              onClick={() => toggleChatMessageReaction(workspace.id, msg.id, r.emoji)}
+                                              style={{
+                                                display: 'inline-flex',
+                                                alignItems: 'center',
+                                                gap: '4px',
+                                                padding: '2px 6px',
+                                                borderRadius: '6px',
+                                                background: hasReacted ? 'rgba(99,102,241,0.15)' : 'rgba(255,255,255,0.04)',
+                                                border: hasReacted ? '1px solid rgba(99,102,241,0.35)' : '1px solid rgba(255,255,255,0.08)',
+                                                cursor: 'pointer',
+                                                transition: 'all 0.15s',
+                                                fontSize: '11px',
+                                                color: hasReacted ? 'var(--accent)' : 'var(--text-secondary)',
+                                              }}
+                                              onMouseEnter={(e) => {
+                                                if (!hasReacted) {
+                                                  e.currentTarget.style.background = 'rgba(255,255,255,0.08)';
+                                                  e.currentTarget.style.borderColor = 'rgba(255,255,255,0.15)';
+                                                }
+                                              }}
+                                              onMouseLeave={(e) => {
+                                                if (!hasReacted) {
+                                                  e.currentTarget.style.background = 'rgba(255,255,255,0.04)';
+                                                  e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)';
+                                                }
+                                              }}
+                                            >
+                                              <span style={{ fontSize: '12px' }}>{r.emoji}</span>
+                                              <span style={{ fontWeight: 600 }}>{r.users?.length || 0}</span>
+                                            </button>
+                                          );
+                                        })}
+                                      </div>
+                                    )}
+                                  </>
+                                )}
                               </div>
 
-                              <div className="absolute right-2.5 -top-2 opacity-0 group-hover:opacity-100 transition-all duration-150 flex items-center gap-0.5 bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-md p-0.5 shadow-sm z-10">
-                                <button type="button" className="p-1 rounded hover:bg-[var(--bg-hover)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors cursor-pointer" title="React with emoji">
-                                  <Smile size={12} />
+                              {/* Hover actions */}
+                              <div
+                                className="opacity-0 group-hover:opacity-100"
+                                style={{
+                                  position: 'absolute',
+                                  right: '12px',
+                                  top: '-4px',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '2px',
+                                  background: 'rgba(15,15,35,0.92)',
+                                  backdropFilter: 'blur(12px)',
+                                  border: '1px solid rgba(255,255,255,0.12)',
+                                  borderRadius: '8px',
+                                  padding: '2px',
+                                  boxShadow: '0 4px 16px rgba(0,0,0,0.3)',
+                                  zIndex: 10,
+                                  transition: 'opacity 0.15s',
+                                }}
+                              >
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setActiveEmojiPickerMessageId(prev => prev === msg.id ? null : msg.id);
+                                    setActiveMenuMessageId(null);
+                                  }}
+                                  style={{ padding: '4px', borderRadius: '5px', cursor: 'pointer', background: activeEmojiPickerMessageId === msg.id ? 'rgba(255,255,255,0.1)' : 'transparent', border: 'none', color: activeEmojiPickerMessageId === msg.id ? 'var(--text-primary)' : 'var(--text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s' }}
+                                  title="React with emoji"
+                                  onMouseEnter={(e) => { if (activeEmojiPickerMessageId !== msg.id) { e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; e.currentTarget.style.color = 'var(--text-primary)'; } }}
+                                  onMouseLeave={(e) => { if (activeEmojiPickerMessageId !== msg.id) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-secondary)'; } }}
+                                >
+                                  <Smile size={13} />
                                 </button>
-                                <button type="button" className="p-1 rounded hover:bg-[var(--bg-hover)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors cursor-pointer" title="More options">
-                                  <MoreHorizontal size={12} />
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setActiveMenuMessageId(prev => prev === msg.id ? null : msg.id);
+                                    setActiveEmojiPickerMessageId(null);
+                                  }}
+                                  style={{ padding: '4px', borderRadius: '5px', cursor: 'pointer', background: activeMenuMessageId === msg.id ? 'rgba(255,255,255,0.1)' : 'transparent', border: 'none', color: activeMenuMessageId === msg.id ? 'var(--text-primary)' : 'var(--text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s' }}
+                                  title="More options"
+                                  onMouseEnter={(e) => { if (activeMenuMessageId !== msg.id) { e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; e.currentTarget.style.color = 'var(--text-primary)'; } }}
+                                  onMouseLeave={(e) => { if (activeMenuMessageId !== msg.id) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-secondary)'; } }}
+                                >
+                                  <MoreHorizontal size={13} />
                                 </button>
                               </div>
+
+                              {/* Custom Glassmorphic Emoji Picker Popover */}
+                              {activeEmojiPickerMessageId === msg.id && (
+                                <>
+                                  <div
+                                    style={{
+                                      position: 'fixed',
+                                      top: 0,
+                                      left: 0,
+                                      right: 0,
+                                      bottom: 0,
+                                      zIndex: 40,
+                                      background: 'transparent',
+                                      cursor: 'default',
+                                    }}
+                                    onClick={() => setActiveEmojiPickerMessageId(null)}
+                                  />
+                                  <div
+                                    style={{
+                                      position: 'absolute',
+                                      top: '24px',
+                                      right: '12px',
+                                      zIndex: 50,
+                                      width: '240px',
+                                      padding: '10px',
+                                      borderRadius: '12px',
+                                      background: 'rgba(15,15,35,0.92)',
+                                      backdropFilter: 'blur(20px) saturate(160%)',
+                                      border: '1px solid rgba(255,255,255,0.15)',
+                                      boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+                                    }}
+                                  >
+                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '6px' }}>
+                                      {[
+                                        '👍', '❤️', '🔥', '😂', '🎉', '✅', '👀',
+                                        '💡', '🚀', '👏', '🥳', '💯', '🤔', '🌟',
+                                        '✨', '🙏', '🤷', '🙅', '🙌', '😍', '😎',
+                                        '🤣', '😭', '😢', '👎', '💔', '💩', '🍻'
+                                      ].map((emojiChar) => (
+                                        <button
+                                          key={emojiChar}
+                                          type="button"
+                                          onClick={() => {
+                                            toggleChatMessageReaction(workspace.id, msg.id, emojiChar);
+                                            setActiveEmojiPickerMessageId(null);
+                                          }}
+                                          style={{
+                                            fontSize: '16px',
+                                            padding: '4px',
+                                            borderRadius: '6px',
+                                            border: 'none',
+                                            background: 'transparent',
+                                            cursor: 'pointer',
+                                            transition: 'transform 0.1s, background 0.1s',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                          }}
+                                          onMouseEnter={(e) => {
+                                            e.currentTarget.style.background = 'rgba(255,255,255,0.08)';
+                                            e.currentTarget.style.transform = 'scale(1.2)';
+                                          }}
+                                          onMouseLeave={(e) => {
+                                            e.currentTarget.style.background = 'transparent';
+                                            e.currentTarget.style.transform = 'scale(1)';
+                                          }}
+                                        >
+                                          {emojiChar}
+                                        </button>
+                                      ))}
+                                    </div>
+                                  </div>
+                                </>
+                              )}
+
+                              {/* Custom Options Popover (3-dot Menu) */}
+                              {activeMenuMessageId === msg.id && (
+                                <>
+                                  <div
+                                    style={{
+                                      position: 'fixed',
+                                      top: 0,
+                                      left: 0,
+                                      right: 0,
+                                      bottom: 0,
+                                      zIndex: 40,
+                                      background: 'transparent',
+                                      cursor: 'default',
+                                    }}
+                                    onClick={() => setActiveMenuMessageId(null)}
+                                  />
+                                  <div
+                                    style={{
+                                      position: 'absolute',
+                                      top: '24px',
+                                      right: '12px',
+                                      zIndex: 50,
+                                      width: '140px',
+                                      padding: '4px',
+                                      borderRadius: '10px',
+                                      background: 'rgba(15,15,35,0.92)',
+                                      backdropFilter: 'blur(20px) saturate(160%)',
+                                      border: '1px solid rgba(255,255,255,0.15)',
+                                      boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+                                      display: 'flex',
+                                      flexDirection: 'column',
+                                      gap: '2px',
+                                    }}
+                                  >
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        navigator.clipboard.writeText(msg.text);
+                                        setActiveMenuMessageId(null);
+                                      }}
+                                      style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '8px',
+                                        width: '100%',
+                                        padding: '6px 8px',
+                                        borderRadius: '6px',
+                                        border: 'none',
+                                        background: 'transparent',
+                                        color: 'var(--text-secondary)',
+                                        fontSize: '12px',
+                                        cursor: 'pointer',
+                                        textAlign: 'left',
+                                        transition: 'background 0.15s, color 0.15s',
+                                      }}
+                                      onMouseEnter={(e) => {
+                                        e.currentTarget.style.background = 'rgba(255,255,255,0.06)';
+                                        e.currentTarget.style.color = 'var(--text-primary)';
+                                      }}
+                                      onMouseLeave={(e) => {
+                                        e.currentTarget.style.background = 'transparent';
+                                        e.currentTarget.style.color = 'var(--text-secondary)';
+                                      }}
+                                    >
+                                      <Copy size={12} />
+                                      Copy Text
+                                    </button>
+                                    
+                                    {msg.userId === user?.id && (
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setEditingMessageId(msg.id);
+                                          setEditingText(msg.text);
+                                          setActiveMenuMessageId(null);
+                                        }}
+                                        style={{
+                                          display: 'flex',
+                                          alignItems: 'center',
+                                          gap: '8px',
+                                          width: '100%',
+                                          padding: '6px 8px',
+                                          borderRadius: '6px',
+                                          border: 'none',
+                                          background: 'transparent',
+                                          color: 'var(--text-secondary)',
+                                          fontSize: '12px',
+                                          cursor: 'pointer',
+                                          textAlign: 'left',
+                                          transition: 'background 0.15s, color 0.15s',
+                                        }}
+                                        onMouseEnter={(e) => {
+                                          e.currentTarget.style.background = 'rgba(255,255,255,0.06)';
+                                          e.currentTarget.style.color = 'var(--text-primary)';
+                                        }}
+                                        onMouseLeave={(e) => {
+                                          e.currentTarget.style.background = 'transparent';
+                                          e.currentTarget.style.color = 'var(--text-secondary)';
+                                        }}
+                                      >
+                                        <Edit3 size={12} />
+                                        Edit Message
+                                      </button>
+                                    )}
+
+                                    {msg.userId === user?.id && (
+                                      <button
+                                        type="button"
+                                        onClick={async () => {
+                                          await deleteChatMessage(workspace.id, msg.id);
+                                          setActiveMenuMessageId(null);
+                                        }}
+                                        style={{
+                                          display: 'flex',
+                                          alignItems: 'center',
+                                          gap: '8px',
+                                          width: '100%',
+                                          padding: '6px 8px',
+                                          borderRadius: '6px',
+                                          border: 'none',
+                                          background: 'transparent',
+                                          color: '#ef4444',
+                                          fontSize: '12px',
+                                          cursor: 'pointer',
+                                          textAlign: 'left',
+                                          transition: 'background 0.15s, color 0.15s',
+                                        }}
+                                        onMouseEnter={(e) => {
+                                          e.currentTarget.style.background = 'rgba(239,68,68,0.1)';
+                                        }}
+                                        onMouseLeave={(e) => {
+                                          e.currentTarget.style.background = 'transparent';
+                                        }}
+                                      >
+                                        <Trash2 size={12} />
+                                        Delete
+                                      </button>
+                                    )}
+                                  </div>
+                                </>
+                              )}
                             </motion.div>
                           );
                         })}
@@ -1375,12 +2065,13 @@ export default function WorkspacePage() {
                     <div ref={chatEndRef} />
                   </div>
 
+                  {/* Typing indicator */}
                   {activeTyping.length > 0 && (
-                    <div className="px-5 py-1 text-[10px] flex items-center gap-1.5 text-[var(--text-secondary)] bg-[var(--bg-secondary)] border-t border-[var(--border-color)]">
-                      <span className="flex gap-0.5 items-center">
-                        <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent)] animate-bounce" style={{ animationDelay: '0ms' }} />
-                        <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent)] animate-bounce" style={{ animationDelay: '150ms' }} />
-                        <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent)] animate-bounce" style={{ animationDelay: '300ms' }} />
+                    <div style={{ padding: '6px 16px', fontSize: '10px', display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-secondary)', borderTop: '1px solid rgba(255,255,255,0.06)', flexShrink: 0 }}>
+                      <span style={{ display: 'flex', gap: '2px', alignItems: 'center' }}>
+                        <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: 'var(--accent)' }} className="animate-bounce" />
+                        <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: 'var(--accent)', animationDelay: '150ms' }} className="animate-bounce" />
+                        <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: 'var(--accent)', animationDelay: '300ms' }} className="animate-bounce" />
                       </span>
                       <span>
                         {activeTyping.join(', ')} {activeTyping.length === 1 ? 'is' : 'are'} typing…
@@ -1388,14 +2079,42 @@ export default function WorkspacePage() {
                     </div>
                   )}
 
-                  <form onSubmit={handleSendMessage} className="p-4 bg-[var(--bg-secondary)] border-t flex gap-2.5 items-end relative" style={{ borderColor: 'var(--border-color)' }}>
+                  {/* Message input bar */}
+                  <form
+                    onSubmit={handleSendMessage}
+                    style={{
+                      padding: '12px 16px',
+                      borderTop: '1px solid rgba(255,255,255,0.08)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '10px',
+                      flexShrink: 0,
+                    }}
+                  >
                     <textarea
                       ref={textareaRef}
                       rows={1}
                       value={message}
                       onChange={(e) => setMessage(e.target.value)}
                       placeholder="Type your message in #general…"
-                      className="input-base text-xs max-h-32 resize-none flex-1 py-3.5 pr-12 pl-4 border-[var(--border-color)]"
+                      style={{
+                        flex: 1,
+                        minWidth: 0,
+                        boxSizing: 'border-box',
+                        padding: '10px 14px',
+                        borderRadius: '12px',
+                        background: 'rgba(255,255,255,0.06)',
+                        border: '1px solid rgba(255,255,255,0.1)',
+                        color: 'var(--text-primary)',
+                        fontSize: '13px',
+                        lineHeight: 1.5,
+                        resize: 'none',
+                        maxHeight: '120px',
+                        outline: 'none',
+                        transition: 'border-color 0.15s',
+                      }}
+                      onFocus={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)'; }}
+                      onBlur={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'; }}
                       onKeyDown={(e) => {
                         if (e.key === 'Enter' && !e.shiftKey) {
                           e.preventDefault();
@@ -1403,22 +2122,45 @@ export default function WorkspacePage() {
                         }
                       }}
                     />
-                    <div className="absolute right-6.5 bottom-7.5 flex items-center gap-2">
-                      <button type="submit" disabled={!message.trim()} className="p-1.5 rounded-md hover:bg-[var(--bg-hover)] text-[var(--text-brand)] hover:opacity-90 disabled:opacity-30 disabled:hover:bg-transparent cursor-pointer transition-colors" title="Send message">
-                        <Send size={14} />
-                      </button>
-                    </div>
+                    <button
+                      type="submit"
+                      disabled={!message.trim()}
+                      style={{
+                        flexShrink: 0,
+                        width: '32px',
+                        height: '32px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        borderRadius: '10px',
+                        border: 'none',
+                        background: message.trim() ? 'rgba(99,102,241,0.3)' : 'rgba(255,255,255,0.06)',
+                        color: message.trim() ? 'var(--accent)' : 'var(--text-tertiary)',
+                        cursor: message.trim() ? 'pointer' : 'default',
+                        transition: 'all 0.15s',
+                        opacity: message.trim() ? 1 : 0.4,
+                      }}
+                      title="Send message"
+                    >
+                      <Send size={14} />
+                    </button>
                   </form>
-                </Card>
+                </div>
               </motion.div>
             )}
 
             {/* MEETINGS TAB */}
             {activeTab === 'meetings' && (
-              <motion.div key="meetings" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-6">
+              <motion.div
+                key="meetings"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                style={{ display: 'flex', flexDirection: 'column', gap: '16px', width: '100%', boxSizing: 'border-box' }}
+              >
                 
                 {/* Voice Calling / Huddle Launcher Panel */}
-                <div className="glass-card" style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '16px', overflow: 'hidden', boxSizing: 'border-box' }}>
+                <div className="glass-card" style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '16px', overflow: 'hidden', boxSizing: 'border-box', margin: 0, width: '100%' }}>
                   <div style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '16px' }}>
                   <div className="flex items-center gap-3.5">
                     <div className="w-10 h-10 rounded-full bg-indigo-500/10 text-indigo-500 flex items-center justify-center shrink-0 border border-indigo-500/10">
@@ -1432,26 +2174,73 @@ export default function WorkspacePage() {
                     </div>
                   </div>
                   {activeCalls[workspace.id] ? (
-                    <Button variant="primary" className="bg-emerald-500 hover:bg-emerald-600 text-white shrink-0" onClick={() => joinCall(workspace.id)}>
+                    <Button
+                      variant="primary"
+                      className="bg-emerald-500 hover:bg-emerald-600 text-white shrink-0"
+                      style={{
+                        padding: '10px 20px',
+                        boxSizing: 'border-box',
+                        whiteSpace: 'nowrap',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        borderRadius: '10px',
+                        minWidth: 'fit-content',
+                        height: 'auto'
+                      }}
+                      onClick={() => joinCall(workspace.id)}
+                    >
                       Join Huddle
                     </Button>
                   ) : (
-                    <Button variant="primary" icon={PhoneCall} className="shrink-0" onClick={() => startCall(workspace.id)}>
-                      Start Huddle
+                    <Button
+                      variant="primary"
+                      className="shrink-0"
+                      style={{
+                        padding: '10px 20px',
+                        boxSizing: 'border-box',
+                        whiteSpace: 'nowrap',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        borderRadius: '10px',
+                        minWidth: 'fit-content',
+                        height: 'auto'
+                      }}
+                      onClick={() => startCall(workspace.id)}
+                    >
+                      <PhoneCall size={16} className="shrink-0" style={{ flexShrink: 0 }} />
+                      <span>Start Huddle</span>
                     </Button>
                   )}
                   </div>
                 </div>
 
                 {/* Scheduled Meetings list */}
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between pb-2 border-b border-[var(--border-light)]">
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', margin: 0, padding: 0, width: '100%', boxSizing: 'border-box' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', width: '100%', boxSizing: 'border-box', padding: 0, margin: 0 }} className="pb-2 border-b border-[var(--border-light)]">
                     <div className="flex items-center gap-2">
                       <Calendar size={15} style={{ color: 'var(--text-tertiary)' }} />
                       <h3 className="section-label">Scheduled Meetings</h3>
                     </div>
-                    <Button icon={Plus} size="sm" onClick={() => setShowScheduleMeeting(true)}>
-                      Schedule Meeting
+                    <Button
+                      size="sm"
+                      style={{
+                        padding: '9px 18px',
+                        boxSizing: 'border-box',
+                        whiteSpace: 'nowrap',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        borderRadius: '10px',
+                        minWidth: 'fit-content',
+                        fontSize: '14px',
+                        height: 'auto'
+                      }}
+                      onClick={() => setShowScheduleMeeting(true)}
+                    >
+                      <Plus size={14} className="shrink-0" style={{ flexShrink: 0 }} />
+                      <span>Schedule Meeting</span>
                     </Button>
                   </div>
 
@@ -1462,32 +2251,69 @@ export default function WorkspacePage() {
                       description="Create a meeting timeline to synchronize with workspace partners."
                       actionLabel="Schedule Meeting"
                       onAction={() => setShowScheduleMeeting(true)}
+                      actionIcon={PlusIcon14}
+                      style={{
+                        padding: '32px 24px',
+                        boxSizing: 'border-box',
+                        overflow: 'hidden',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        gap: '8px',
+                        height: 'auto',
+                        minHeight: 'auto',
+                        width: '100%',
+                        margin: 0
+                      }}
+                      iconStyle={{ marginBottom: '4px' }}
+                      titleStyle={{ margin: 0 }}
+                      descStyle={{ margin: '0 0 8px 0' }}
+                      buttonStyle={{
+                        padding: '9px 18px',
+                        boxSizing: 'border-box',
+                        whiteSpace: 'nowrap',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        borderRadius: '10px',
+                        minWidth: 'fit-content',
+                        fontSize: '14px',
+                        height: 'auto',
+                        marginTop: '4px',
+                        marginBottom: '0px'
+                      }}
                     />
                   ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '16px', width: '100%', boxSizing: 'border-box', margin: 0 }}>
                       {meetings.map(m => {
                         const mtgDateTime = new Date(`${m.date}T${m.time}`);
                         const timeStr = mtgDateTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
                         const dateStr = mtgDateTime.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
                         
                         return (
-                          <div key={m.id} className="surface-panel p-5 border border-[var(--border-color)] hover:border-[var(--border-focus)] transition-colors flex flex-col justify-between min-h-[140px]">
-                            <div className="space-y-1">
-                              <div className="flex items-start justify-between gap-4">
-                                <h4 className="text-xs font-bold text-[var(--text-primary)] leading-snug">{m.title}</h4>
-                                <button onClick={() => handleDeleteMeeting(m.id)} className="text-[var(--text-tertiary)] hover:text-red-500 p-1 rounded hover:bg-[var(--bg-hover)]">
+                          <div
+                            key={m.id}
+                            className="surface-panel border border-[var(--border-color)] hover:border-[var(--border-focus)] transition-colors"
+                            style={{ width: '100%', boxSizing: 'border-box', padding: '16px 18px', borderRadius: '14px', overflow: 'hidden', display: 'flex', flexDirection: 'column', gap: '8px' }}
+                          >
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', width: '100%', boxSizing: 'border-box' }}>
+                              <div style={{ display: 'flex', alignItems: 'start', justifyContent: 'space-between', gap: '16px', width: '100%', boxSizing: 'border-box' }}>
+                                <h4 style={{ fontSize: '15px', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, minWidth: 0, margin: 0, color: 'var(--text-primary)' }}>{m.title}</h4>
+                                <button onClick={() => handleDeleteMeeting(m.id)} className="text-[var(--text-tertiary)] hover:text-red-500 p-1 rounded hover:bg-[var(--bg-hover)]" style={{ flexShrink: 0, margin: 0 }}>
                                   <Trash2 size={11} />
                                 </button>
                               </div>
                               {m.description && (
-                                <p className="text-[10px] text-[var(--text-secondary)] leading-relaxed line-clamp-2">{m.description}</p>
+                                <p style={{ fontSize: '13px', opacity: 0.6, lineHeight: 1.5, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', wordBreak: 'break-word', width: '100%', boxSizing: 'border-box', margin: 0, color: 'var(--text-secondary)' }}>
+                                  {m.description}
+                                </p>
                               )}
                             </div>
-                            <div className="flex items-center justify-between border-t border-[var(--border-light)] pt-3.5 mt-3.5 text-[9px] text-[var(--text-tertiary)]">
-                              <span className="flex items-center gap-1">
-                                <Calendar size={10} /> {dateStr} at {timeStr}
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', marginTop: '8px', paddingTop: '8px', borderTop: '1px solid rgba(255,255,255,0.08)', width: '100%', boxSizing: 'border-box' }}>
+                              <span style={{ fontSize: '12px', opacity: 0.5, display: 'flex', alignItems: 'center', gap: '4px', whiteSpace: 'nowrap', flexShrink: 0, color: 'var(--text-tertiary)' }}>
+                                <Calendar size={12} style={{ flexShrink: 0 }} /> {dateStr} at {timeStr}
                               </span>
-                              <span className="font-semibold text-indigo-500">
+                              <span style={{ fontSize: '12px', opacity: 0.6, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '150px', flexShrink: 1, color: 'var(--accent)', fontWeight: 600 }}>
                                 Host: {m.createdBy}
                               </span>
                             </div>
@@ -1503,9 +2329,14 @@ export default function WorkspacePage() {
             {/* MEMBERS TAB */}
             {activeTab === 'members' && (
               <motion.div key="members" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-5">
-                <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pb-2 border-b border-[var(--border-light)]">
+                <div style={{ padding: '0 0 20px 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', width: '100%', boxSizing: 'border-box' }} className="border-b border-[var(--border-light)]">
                   <h3 className="section-label">Workspace Members ({members.length})</h3>
-                  <Button icon={UserPlus} size="sm" onClick={() => { setShowInvite(true); setInviteError(''); setInviteSuccess(false); setInviteEmail(''); }}>
+                  <Button
+                    icon={UserPlus}
+                    size="sm"
+                    style={{ padding: '9px 18px', whiteSpace: 'nowrap', flexShrink: 0, display: 'flex', alignItems: 'center', gap: '6px', borderRadius: '10px' }}
+                    onClick={() => { setShowInvite(true); setInviteError(''); setInviteSuccess(false); setInviteEmail(''); }}
+                  >
                     Invite Teammate
                   </Button>
                 </div>
@@ -1546,10 +2377,14 @@ export default function WorkspacePage() {
             {/* SETTINGS TAB */}
             {activeTab === 'settings' && isOwner && (
               <motion.div key="settings" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-6">
-                <Card className="space-y-6">
+                <Card className="space-y-6" style={{ boxSizing: 'border-box', padding: '24px', overflow: 'hidden', borderRadius: '16px' }} padding={false}>
                   <div>
-                    <h3 className="section-label" style={{ marginBottom: '4px' }}>Workspace configurations</h3>
-                    <p style={{ fontSize: '12px', marginTop: '4px', color: 'var(--text-secondary)' }}>Rename the workspace or update theme colors.</p>
+                    <h3 style={{ fontSize: '16px', fontWeight: 600, margin: '0 0 4px 0', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-primary)' }}>
+                      Workspace configurations
+                    </h3>
+                    <p style={{ fontSize: '13px', opacity: 0.5, margin: '0 0 16px 0', color: 'var(--text-secondary)' }}>
+                      Rename the workspace or update theme colors.
+                    </p>
                   </div>
                   
                   <form onSubmit={handleUpdateSettings} className="space-y-5 pt-3 border-t border-[var(--border-light)]">
@@ -1560,40 +2395,60 @@ export default function WorkspacePage() {
                       required
                     />
                     
-                    <div className="space-y-2">
-                      <label className="block text-xs font-semibold uppercase tracking-wider text-[var(--text-secondary)]">
-                        Workspace Theme color
-                      </label>
-                      <div className="flex flex-wrap gap-2.5">
-                        {PALETTE.map((c) => (
-                          <button
-                            key={c}
-                            type="button"
-                            onClick={() => setColorValue(c)}
-                            className="w-7 h-7 rounded-full transition-all cursor-pointer border border-transparent"
-                            style={{
-                              background: c,
-                              boxShadow: colorValue === c ? `0 0 0 1.5px var(--bg-primary), 0 0 0 3px ${c}` : 'none',
-                              transform: colorValue === c ? 'scale(1.05)' : undefined,
-                            }}
-                          />
-                        ))}
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px', width: '100%', boxSizing: 'border-box', flexWrap: 'wrap' }}>
+                      <div className="space-y-2" style={{ flex: 1, minWidth: 0 }}>
+                        <label className="block text-xs font-semibold uppercase tracking-wider text-[var(--text-secondary)]" style={{ margin: '0 0 8px 0' }}>
+                          Workspace Theme color
+                        </label>
+                        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', flex: 1, minWidth: 0 }}>
+                          {PALETTE.map((c) => (
+                            <button
+                              key={c}
+                              type="button"
+                              onClick={() => setColorValue(c)}
+                              className="w-7 h-7 rounded-full transition-all cursor-pointer border border-transparent"
+                              style={{
+                                background: c,
+                                boxShadow: colorValue === c ? `0 0 0 1.5px var(--bg-primary), 0 0 0 3px ${c}` : 'none',
+                                transform: colorValue === c ? 'scale(1.05)' : undefined,
+                              }}
+                            />
+                          ))}
+                        </div>
                       </div>
-                    </div>
-
-                    <div className="flex justify-end">
-                      <Button type="submit" size="sm">
+                      
+                      <Button
+                        type="submit"
+                        size="sm"
+                        style={{ flexShrink: 0, whiteSpace: 'nowrap', padding: '9px 18px', borderRadius: '10px' }}
+                      >
                         Save changes
                       </Button>
                     </div>
                   </form>
 
-                  <div className="pt-6 border-t border-[var(--border-color)]">
+                  <div
+                    className="glass-card"
+                    style={{
+                      boxSizing: 'border-box',
+                      padding: '20px',
+                      overflow: 'hidden',
+                      border: '1px solid rgba(239, 68, 68, 0.15)',
+                      background: 'rgba(239, 68, 68, 0.02)',
+                      borderRadius: '16px',
+                      marginTop: '24px'
+                    }}
+                  >
                     <h4 className="text-xs font-bold text-red-500 uppercase tracking-wider mb-1">Danger Zone</h4>
                     <p className="text-xs text-[var(--text-secondary)] mb-4 leading-relaxed">
                       Permanently delete this workspace, including all messages, tasks, notes, files, comments, and member profiles.
                     </p>
-                    <Button variant="danger" size="sm" onClick={() => { setShowDeleteModal(true); setDeleteConfirmName(''); setDeleteError(''); }}>
+                    <Button
+                      variant="danger"
+                      size="sm"
+                      style={{ flexShrink: 0, whiteSpace: 'nowrap', padding: '9px 18px', borderRadius: '10px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                      onClick={() => { setShowDeleteModal(true); setDeleteConfirmName(''); setDeleteError(''); }}
+                    >
                       Delete Workspace
                     </Button>
                   </div>
@@ -1604,23 +2459,50 @@ export default function WorkspacePage() {
           </AnimatePresence>
         </div>
 
-        {/* Desktop RIGHT SIDEBAR - COLLABORATORS - Visible only for CHAT tab to keep general discussion context active */}
+        {/* Desktop RIGHT SIDEBAR - COLLABORATORS - Visible only for CHAT tab */}
         {activeTab === 'chat' && (
           <motion.aside
             initial={{ opacity: 0, x: 8 }}
             animate={{ opacity: 1, x: 0 }}
-            className="hidden xl:block w-64 shrink-0"
+            className="hidden xl:block"
+            style={{ flexShrink: 0 }}
           >
-            <Card padding={false} className="border border-[var(--border-color)] bg-[var(--bg-primary)]">
+            <div
+              style={{
+                width: '240px',
+                flexShrink: 0,
+                boxSizing: 'border-box',
+                padding: '16px',
+                overflow: 'hidden',
+                borderRadius: '16px',
+                background: 'rgba(255,255,255,0.05)',
+                backdropFilter: 'blur(20px) saturate(160%)',
+                WebkitBackdropFilter: 'blur(20px) saturate(160%)',
+                border: '1px solid rgba(255,255,255,0.1)',
+              }}
+            >
+              {/* Header — sits fully inside card padding */}
               <div
-                className="flex items-center justify-between px-5 py-4 border-b border-[var(--border-color)]"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  marginBottom: '4px',
+                  padding: 0,
+                }}
               >
-                <div>
-                  <p className="text-xs font-bold uppercase tracking-wider text-[var(--text-primary)]">
-                    Members
-                  </p>
-                  <p className="text-[10px] text-[var(--text-tertiary)] mt-0.5">{members.length} total</p>
-                </div>
+                <span
+                  style={{
+                    fontSize: '11px',
+                    fontWeight: 700,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.06em',
+                    color: 'var(--text-primary)',
+                    opacity: 0.7,
+                  }}
+                >
+                  Members
+                </span>
                 <button
                   onClick={() => {
                     setShowInvite(true);
@@ -1628,27 +2510,70 @@ export default function WorkspacePage() {
                     setInviteSuccess(false);
                     setInviteEmail('');
                   }}
-                  className="w-7 h-7 rounded-md flex items-center justify-center border border-[var(--border-color)] hover:bg-[var(--bg-hover)] hover:text-[var(--accent)] transition-colors cursor-pointer text-[var(--text-secondary)]"
+                  style={{
+                    width: '26px',
+                    height: '26px',
+                    borderRadius: '8px',
+                    background: 'rgba(255,255,255,0.06)',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0,
+                    cursor: 'pointer',
+                    color: 'var(--text-secondary)',
+                    transition: 'all 0.15s',
+                  }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.1)'; e.currentTarget.style.color = 'var(--accent)'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; e.currentTarget.style.color = 'var(--text-secondary)'; }}
                 >
                   <UserPlus size={13} />
                 </button>
               </div>
+              <span
+                style={{
+                  fontSize: '11px',
+                  opacity: 0.45,
+                  marginBottom: '12px',
+                  display: 'block',
+                  color: 'var(--text-primary)',
+                }}
+              >
+                {members.length} total
+              </span>
 
               {members.length === 0 ? (
-                <p className="px-5 py-10 text-center text-xs text-[var(--text-tertiary)]">No members found.</p>
+                <p style={{ fontSize: '12px', color: 'var(--text-tertiary)', textAlign: 'center', padding: '24px 0', opacity: 0.6 }}>No members found.</p>
               ) : (
-                <div className="divide-y divide-[var(--border-light)]">
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                   {/* Online section */}
                   {onlineMembers.length > 0 && (
-                    <div className="px-3 py-4">
-                      <p className="text-[9px] font-bold text-emerald-500 uppercase tracking-wider mb-2.5 px-2">
+                    <div>
+                      <span
+                        style={{
+                          fontSize: '10px',
+                          opacity: 0.5,
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.05em',
+                          marginBottom: '8px',
+                          display: 'block',
+                          color: '#10b981',
+                          fontWeight: 600,
+                        }}
+                      >
                         Online · {onlineMembers.length}
-                      </p>
-                      <div className="space-y-0.5">
+                      </span>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                         {onlineMembers.map((member) => (
                           <div
                             key={member.id}
-                            className="flex items-center gap-2.5 px-2 py-1.5 rounded-md transition-colors hover:bg-[var(--bg-hover)] cursor-pointer"
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '10px',
+                              padding: '6px 0',
+                              overflow: 'hidden',
+                            }}
                           >
                             <Avatar
                               name={member.name}
@@ -1657,25 +2582,32 @@ export default function WorkspacePage() {
                               size="xs"
                               status="online"
                             />
-                            <div className="min-w-0 flex-1">
-                              <p className="text-xs font-semibold truncate flex items-center gap-1 text-[var(--text-primary)]">
-                                {member.name}
+                            <div style={{ minWidth: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column', gap: '1px' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', overflow: 'hidden' }}>
+                                <span style={{ fontSize: '13px', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--text-primary)' }}>
+                                  {member.name}
+                                </span>
                                 {member.id === workspace.ownerId && (
                                   <span
-                                    className="text-[8px] font-bold px-1.5 py-0.5 bg-amber-500/10 text-amber-500 border border-amber-500/20 rounded uppercase shrink-0"
+                                    style={{
+                                      fontSize: '9px',
+                                      padding: '1px 6px',
+                                      borderRadius: '999px',
+                                      background: 'rgba(251,191,36,0.15)',
+                                      color: '#fbbf24',
+                                      flexShrink: 0,
+                                      whiteSpace: 'nowrap',
+                                      fontWeight: 700,
+                                      textTransform: 'uppercase',
+                                    }}
                                   >
                                     Owner
                                   </span>
                                 )}
-                              </p>
-                              <p className="text-[10px] truncate flex items-center gap-1 text-[var(--text-tertiary)]">
-                                <span>{member.role}</span>
-                                {member.location && (
-                                  <span className="flex items-center gap-0.5 shrink-0 text-zinc-500" title={`Location: ${member.location}`}>
-                                    <MapPin size={9} /> {member.location.split(',')[0]}
-                                  </span>
-                                )}
-                              </p>
+                              </div>
+                              <span style={{ fontSize: '11px', opacity: 0.45, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--text-primary)' }}>
+                                {member.role}
+                              </span>
                             </div>
                           </div>
                         ))}
@@ -1685,15 +2617,32 @@ export default function WorkspacePage() {
 
                   {/* Away section */}
                   {awayMembers.length > 0 && (
-                    <div className="px-3 py-4">
-                      <p className="text-[9px] font-bold text-amber-500 uppercase tracking-wider mb-2.5 px-2">
+                    <div style={{ marginTop: '8px' }}>
+                      <span
+                        style={{
+                          fontSize: '10px',
+                          opacity: 0.5,
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.05em',
+                          marginBottom: '8px',
+                          display: 'block',
+                          color: '#f59e0b',
+                          fontWeight: 600,
+                        }}
+                      >
                         Away · {awayMembers.length}
-                      </p>
-                      <div className="space-y-0.5">
+                      </span>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                         {awayMembers.map((member) => (
                           <div
                             key={member.id}
-                            className="flex items-center gap-2.5 px-2 py-1.5 rounded-md transition-colors hover:bg-[var(--bg-hover)] cursor-pointer"
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '10px',
+                              padding: '6px 0',
+                              overflow: 'hidden',
+                            }}
                           >
                             <Avatar
                               name={member.name}
@@ -1702,25 +2651,32 @@ export default function WorkspacePage() {
                               size="xs"
                               status="away"
                             />
-                            <div className="min-w-0 flex-1">
-                              <p className="text-xs font-semibold truncate flex items-center gap-1 text-[var(--text-primary)]">
-                                {member.name}
+                            <div style={{ minWidth: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column', gap: '1px' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', overflow: 'hidden' }}>
+                                <span style={{ fontSize: '13px', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--text-primary)' }}>
+                                  {member.name}
+                                </span>
                                 {member.id === workspace.ownerId && (
                                   <span
-                                    className="text-[8px] font-bold px-1.5 py-0.5 bg-amber-500/10 text-amber-500 border border-amber-500/20 rounded uppercase shrink-0"
+                                    style={{
+                                      fontSize: '9px',
+                                      padding: '1px 6px',
+                                      borderRadius: '999px',
+                                      background: 'rgba(251,191,36,0.15)',
+                                      color: '#fbbf24',
+                                      flexShrink: 0,
+                                      whiteSpace: 'nowrap',
+                                      fontWeight: 700,
+                                      textTransform: 'uppercase',
+                                    }}
                                   >
                                     Owner
                                   </span>
                                 )}
-                              </p>
-                              <p className="text-[10px] truncate flex items-center gap-1 text-[var(--text-tertiary)]">
-                                <span>{member.role}</span>
-                                {member.location && (
-                                  <span className="flex items-center gap-0.5 shrink-0 text-zinc-500" title={`Location: ${member.location}`}>
-                                    <MapPin size={9} /> {member.location.split(',')[0]}
-                                  </span>
-                                )}
-                              </p>
+                              </div>
+                              <span style={{ fontSize: '11px', opacity: 0.45, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--text-primary)' }}>
+                                {member.role}
+                              </span>
                             </div>
                           </div>
                         ))}
@@ -1730,15 +2686,33 @@ export default function WorkspacePage() {
 
                   {/* Offline section */}
                   {offlineMembers.length > 0 && (
-                    <div className="px-3 py-4">
-                      <p className="text-[9px] font-bold text-[var(--text-tertiary)] uppercase tracking-wider mb-2.5 px-2">
-                        Offline
-                      </p>
-                      <div className="space-y-0.5">
+                    <div style={{ marginTop: '8px' }}>
+                      <span
+                        style={{
+                          fontSize: '10px',
+                          opacity: 0.5,
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.05em',
+                          marginBottom: '8px',
+                          display: 'block',
+                          color: 'var(--text-tertiary)',
+                          fontWeight: 600,
+                        }}
+                      >
+                        Offline · {offlineMembers.length}
+                      </span>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                         {offlineMembers.map((member) => (
                           <div
                             key={member.id}
-                            className="flex items-center gap-2.5 px-2 py-1.5 rounded-md opacity-70 transition-colors hover:bg-[var(--bg-hover)] hover:opacity-100 cursor-pointer"
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '10px',
+                              padding: '6px 0',
+                              overflow: 'hidden',
+                              opacity: 0.7,
+                            }}
                           >
                             <Avatar
                               name={member.name}
@@ -1747,25 +2721,32 @@ export default function WorkspacePage() {
                               size="xs"
                               status="offline"
                             />
-                            <div className="min-w-0 flex-1">
-                              <p className="text-xs font-semibold truncate flex items-center gap-1 text-[var(--text-primary)]">
-                                {member.name}
+                            <div style={{ minWidth: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column', gap: '1px' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', overflow: 'hidden' }}>
+                                <span style={{ fontSize: '13px', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--text-primary)' }}>
+                                  {member.name}
+                                </span>
                                 {member.id === workspace.ownerId && (
                                   <span
-                                    className="text-[8px] font-bold px-1.5 py-0.5 bg-amber-500/10 text-amber-500 border border-amber-500/20 rounded uppercase shrink-0"
+                                    style={{
+                                      fontSize: '9px',
+                                      padding: '1px 6px',
+                                      borderRadius: '999px',
+                                      background: 'rgba(251,191,36,0.15)',
+                                      color: '#fbbf24',
+                                      flexShrink: 0,
+                                      whiteSpace: 'nowrap',
+                                      fontWeight: 700,
+                                      textTransform: 'uppercase',
+                                    }}
                                   >
                                     Owner
                                   </span>
                                 )}
-                              </p>
-                              <p className="text-[10px] truncate flex flex-wrap items-center gap-1 text-[var(--text-tertiary)] mt-0.5">
-                                <span>{formatLastSeen(member.lastSeen)}</span>
-                                {member.location && (
-                                  <span className="flex items-center gap-0.5 shrink-0 text-zinc-500" title={`Location: ${member.location}`}>
-                                    <MapPin size={9} /> {member.location.split(',')[0]}
-                                  </span>
-                                )}
-                              </p>
+                              </div>
+                              <span style={{ fontSize: '11px', opacity: 0.45, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--text-primary)' }}>
+                                {formatLastSeen(member.lastSeen)}
+                              </span>
                             </div>
                           </div>
                         ))}
@@ -1774,7 +2755,7 @@ export default function WorkspacePage() {
                   )}
                 </div>
               )}
-            </Card>
+            </div>
           </motion.aside>
         )}
       </div>
@@ -1909,29 +2890,80 @@ export default function WorkspacePage() {
           setDeleteConfirmName('');
           setDeleteError('');
         }}
-        title="Delete Workspace"
+        noPadding={true}
         size="md"
       >
-        <div className="space-y-4">
-          <p className="text-xs text-[var(--text-secondary)] leading-relaxed">
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '18px',
+            padding: '24px',
+            boxSizing: 'border-box'
+          }}
+        >
+          {/* Header row (title + close button) */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', margin: 0 }}>
+            <h2 style={{ fontSize: '18px', fontWeight: 600, color: 'white', margin: 0, flex: 1 }}>Delete Workspace</h2>
+            <button
+              onClick={() => {
+                setShowDeleteModal(false);
+                setDeleteConfirmName('');
+                setDeleteError('');
+              }}
+              type="button"
+              style={{
+                width: '28px',
+                height: '28px',
+                borderRadius: '8px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                background: 'transparent',
+                border: 'none',
+                color: 'rgba(255,255,255,0.4)',
+                cursor: 'pointer',
+                flexShrink: 0,
+                padding: 0,
+              }}
+            >
+              <X size={16} strokeWidth={1.5} />
+            </button>
+          </div>
+
+          {/* Warning text block */}
+          <p style={{ fontSize: '13px', opacity: 0.6, lineHeight: 1.5, margin: 0, color: 'var(--text-secondary)' }}>
             This action is permanent and cannot be undone. All database items associated with <strong>{workspace?.name}</strong> will be permanently wiped.
           </p>
-          <p className="text-xs text-[var(--text-secondary)] leading-relaxed">
-            Please type <strong>{workspace?.name}</strong> to confirm:
-          </p>
-          <Input
-            value={deleteConfirmName}
-            onChange={(e) => setDeleteConfirmName(e.target.value)}
-            placeholder="Type workspace name here"
-            className="w-full"
-          />
-          {deleteError && (
-            <p className="text-xs text-[var(--color-danger)] font-medium">{deleteError}</p>
-          )}
-          <div className="flex gap-3 pt-3 border-t border-[var(--border-light)]">
+
+          {/* Confirmation input field group */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: 0 }}>
+            <label style={{ fontSize: '13px', opacity: 0.7, margin: 0, color: 'var(--text-primary)' }}>
+              Please type <strong>{workspace?.name}</strong> to confirm:
+            </label>
+            <input
+              type="text"
+              value={deleteConfirmName}
+              onChange={(e) => setDeleteConfirmName(e.target.value)}
+              placeholder="Type workspace name here"
+              className="input-base"
+              style={{ width: '100%', boxSizing: 'border-box', padding: '10px 14px', borderRadius: '12px', margin: 0 }}
+            />
+            {deleteError && (
+              <p style={{ fontSize: '12px', color: 'var(--color-danger)', fontWeight: 500, margin: 0 }}>{deleteError}</p>
+            )}
+          </div>
+
+          {/* Action buttons row */}
+          <div style={{ display: 'flex', gap: '10px', marginTop: '4px' }}>
             <Button
               variant="secondary"
-              className="flex-1"
+              style={{
+                flex: 1,
+                padding: '10px 24px',
+                boxSizing: 'border-box',
+                height: 'auto'
+              }}
               onClick={() => {
                 setShowDeleteModal(false);
                 setDeleteConfirmName('');
@@ -1942,7 +2974,12 @@ export default function WorkspacePage() {
             </Button>
             <Button
               variant="danger"
-              className="flex-1"
+              style={{
+                flex: 1,
+                padding: '10px 24px',
+                boxSizing: 'border-box',
+                height: 'auto'
+              }}
               onClick={handleDeleteWorkspace}
               disabled={deleteConfirmName !== workspace.name}
             >
@@ -2397,46 +3434,125 @@ export default function WorkspacePage() {
       )}
 
       {/* Schedule Meeting Modal */}
-      <Modal isOpen={showScheduleMeeting} onClose={() => setShowScheduleMeeting(false)} title="Schedule meeting">
-        <form onSubmit={handleScheduleMeetingSubmit} className="space-y-4">
-          <Input
-            label="Meeting title"
-            placeholder="e.g. Design review session"
-            value={newMeeting.title}
-            onChange={(e) => setNewMeeting({ ...newMeeting, title: e.target.value })}
-            required
-          />
-          <div className="grid grid-cols-2 gap-4">
-            <Input
-              label="Date"
-              type="date"
-              value={newMeeting.date}
-              onChange={(e) => setNewMeeting({ ...newMeeting, date: e.target.value })}
+      <Modal isOpen={showScheduleMeeting} onClose={() => setShowScheduleMeeting(false)} noPadding={true}>
+        <form
+          onSubmit={handleScheduleMeetingSubmit}
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '18px',
+            padding: '24px',
+            boxSizing: 'border-box'
+          }}
+        >
+          {/* Header row (title + close button) */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', margin: 0 }}>
+            <h2 style={{ fontSize: '18px', fontWeight: 600, color: 'white', margin: 0, flex: 1 }}>Schedule meeting</h2>
+            <button
+              onClick={() => setShowScheduleMeeting(false)}
+              type="button"
+              style={{
+                width: '28px',
+                height: '28px',
+                borderRadius: '8px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                background: 'transparent',
+                border: 'none',
+                color: 'rgba(255,255,255,0.4)',
+                cursor: 'pointer',
+                flexShrink: 0,
+                padding: 0,
+              }}
+            >
+              <X size={16} strokeWidth={1.5} />
+            </button>
+          </div>
+
+          {/* Meeting title */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            <label style={{ fontSize: '11px', opacity: 0.5, textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0, color: 'var(--text-primary)' }}>
+              Meeting title
+            </label>
+            <input
+              type="text"
+              placeholder="e.g. Design review session"
+              value={newMeeting.title}
+              onChange={(e) => setNewMeeting({ ...newMeeting, title: e.target.value })}
               required
-            />
-            <Input
-              label="Time"
-              type="time"
-              value={newMeeting.time}
-              onChange={(e) => setNewMeeting({ ...newMeeting, time: e.target.value })}
+              className="input-base"
+              style={{ width: '100%', boxSizing: 'border-box', padding: '10px 14px', borderRadius: '12px', margin: 0 }}
             />
           </div>
-          <div className="space-y-1.5">
-            <label className="block text-xs font-semibold uppercase tracking-wider text-[var(--text-secondary)]">
+
+          {/* Date + Time row */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <label style={{ fontSize: '11px', opacity: 0.5, textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0, color: 'var(--text-primary)' }}>
+                Date
+              </label>
+              <input
+                type="date"
+                value={newMeeting.date}
+                onChange={(e) => setNewMeeting({ ...newMeeting, date: e.target.value })}
+                required
+                className="input-base"
+                style={{ width: '100%', boxSizing: 'border-box', padding: '10px 14px', borderRadius: '12px', margin: 0 }}
+              />
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <label style={{ fontSize: '11px', opacity: 0.5, textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0, color: 'var(--text-primary)' }}>
+                Time
+              </label>
+              <input
+                type="time"
+                value={newMeeting.time}
+                onChange={(e) => setNewMeeting({ ...newMeeting, time: e.target.value })}
+                className="input-base"
+                style={{ width: '100%', boxSizing: 'border-box', padding: '10px 14px', borderRadius: '12px', margin: 0 }}
+              />
+            </div>
+          </div>
+
+          {/* Description / Notes */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: 0 }}>
+            <label style={{ fontSize: '11px', opacity: 0.5, textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0, color: 'var(--text-primary)' }}>
               Description / Notes
             </label>
             <textarea
               placeholder="e.g. Discussing the upcoming UI adjustments"
               value={newMeeting.description}
               onChange={(e) => setNewMeeting({ ...newMeeting, description: e.target.value })}
-              className="input-base text-xs rounded-lg p-3 w-full bg-[var(--bg-primary)] border-[var(--border-color)] text-[var(--text-primary)] focus:border-[var(--accent)] resize-none h-20"
+              className="input-base text-xs p-3 w-full bg-[var(--bg-primary)] border-[var(--border-color)] text-[var(--text-primary)] focus:border-[var(--accent)]"
+              style={{ width: '100%', boxSizing: 'border-box', minHeight: '90px', resize: 'vertical', borderRadius: '12px', margin: 0 }}
             />
           </div>
-          <div className="flex gap-3 pt-3 border-t border-[var(--border-light)]">
-            <Button variant="secondary" type="button" className="flex-1" onClick={() => setShowScheduleMeeting(false)}>
+
+          {/* Action buttons */}
+          <div style={{ display: 'flex', gap: '10px', marginTop: '4px' }}>
+            <Button
+              variant="secondary"
+              type="button"
+              style={{
+                flex: 1,
+                padding: '10px 24px',
+                boxSizing: 'border-box',
+                height: 'auto'
+              }}
+              onClick={() => setShowScheduleMeeting(false)}
+            >
               Cancel
             </Button>
-            <Button type="submit" className="flex-1">
+            <Button
+              type="submit"
+              style={{
+                flex: 1,
+                padding: '10px 24px',
+                boxSizing: 'border-box',
+                height: 'auto'
+              }}
+            >
               Schedule Meeting
             </Button>
           </div>

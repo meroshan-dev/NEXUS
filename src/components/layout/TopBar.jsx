@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Bell, Search, Menu, Check, BellOff, User, LogOut } from 'lucide-react';
 import Avatar from '../ui/Avatar';
 import { useAuth } from '../../context/AuthContext';
@@ -11,8 +11,21 @@ export default function TopBar({ onMobileMenuToggle }) {
   const { notifications, markNotificationAsRead, markAllNotificationsAsRead } = useWorkspace();
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
+  const searchInputRef = useRef(null);
 
   const unreadCount = notifications.filter((n) => !n.read).length;
+
+  // Global Ctrl+K / Cmd+K listener — focuses the inline search bar
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   const formatTime = (isoString) => {
     if (!isoString) return 'Just now';
@@ -33,14 +46,16 @@ export default function TopBar({ onMobileMenuToggle }) {
       style={{
         display: 'flex',
         alignItems: 'center',
-        padding: '0 16px',
-        gap: '8px',
+        justifyContent: 'center',
+        padding: '0 24px',
         boxSizing: 'border-box',
         width: '100%',
         overflow: 'visible',
+        position: 'relative',
       }}
     >
-      <div className="flex items-center gap-2">
+      {/* Left: Mobile menu button */}
+      <div style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
         <button
           onClick={onMobileMenuToggle}
           className="lg:hidden w-8.5 h-8.5 rounded-[var(--radius-md)] flex items-center justify-center transition-all cursor-pointer"
@@ -48,6 +63,7 @@ export default function TopBar({ onMobileMenuToggle }) {
             color: 'var(--text-secondary)',
             background: 'rgba(255,255,255,0.06)',
             border: '1px solid var(--glass-border-light)',
+            flexShrink: 0,
           }}
           aria-label="Open menu"
         >
@@ -55,25 +71,72 @@ export default function TopBar({ onMobileMenuToggle }) {
         </button>
       </div>
 
-      <div className="hidden lg:flex flex-1 max-w-sm min-w-0 mx-4 xl:mx-8">
-        <div className="relative w-full">
+      {/* Center: Compact search bar */}
+      <div
+        className="hidden lg:flex"
+        style={{
+          flex: 1,
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+        }}
+      >
+        <div
+          style={{
+            width: '100%',
+            maxWidth: '300px',
+            boxSizing: 'border-box',
+            padding: '8px 14px',
+            borderRadius: '10px',
+            background: 'rgba(255,255,255,0.05)',
+            border: '1px solid rgba(255,255,255,0.08)',
+            backdropFilter: 'blur(12px)',
+            WebkitBackdropFilter: 'blur(12px)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            transition: 'border-color 0.2s, background 0.2s',
+          }}
+        >
           <Search
             size={14}
             strokeWidth={1.5}
-            className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none"
-            style={{ color: 'var(--text-tertiary)' }}
+            style={{
+              width: '14px',
+              height: '14px',
+              opacity: 0.5,
+              flexShrink: 0,
+              color: 'var(--text-primary)',
+            }}
           />
           <input
+            ref={searchInputRef}
             type="text"
             placeholder="Search"
-            className="w-full search-capsule"
+            style={{
+              flex: 1,
+              background: 'transparent',
+              border: 'none',
+              outline: 'none',
+              color: 'var(--text-primary)',
+              fontSize: '13px',
+              fontWeight: 400,
+              opacity: 1,
+              minWidth: 0,
+            }}
           />
           <kbd
-            className="absolute right-3.5 top-1/2 -translate-y-1/2 hidden lg:flex items-center px-1.5 py-0.5 rounded-[6px] text-[10px] font-mono"
             style={{
-              border: '1px solid var(--glass-border-light)',
-              background: 'rgba(255,255,255,0.04)',
-              color: 'var(--text-tertiary)',
+              fontSize: '11px',
+              fontFamily: 'monospace',
+              opacity: 0.35,
+              padding: '2px 6px',
+              borderRadius: '4px',
+              background: 'rgba(255,255,255,0.06)',
+              color: 'var(--text-primary)',
+              flexShrink: 0,
+              lineHeight: 1.3,
+              border: 'none',
             }}
           >
             ⌘K
@@ -81,14 +144,13 @@ export default function TopBar({ onMobileMenuToggle }) {
         </div>
       </div>
 
+      {/* Right: Notifications + Avatar */}
       <div
         style={{
           display: 'flex',
           alignItems: 'center',
-          gap: '8px',
+          gap: '12px',
           flexShrink: 0,
-          marginLeft: 'auto',
-          paddingRight: '4px',
         }}
       >
         <div className="relative">

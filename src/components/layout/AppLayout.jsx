@@ -104,100 +104,7 @@ export default function AppLayout() {
                 borderRight: '1px solid rgba(255,255,255,0.08)',
               }}
             >
-              {/* Header */}
-              <div
-                style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 20px', height: 'var(--topbar-height)', flexShrink: 0, borderBottom: '1px solid rgba(255,255,255,0.08)' }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <div
-                    style={{
-                      width: '36px', height: '36px', borderRadius: '10px',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      background: 'linear-gradient(135deg, rgba(99,102,241,0.4), rgba(129,140,248,0.3))',
-                      boxShadow: '0 0 20px rgba(99,102,241,0.2)',
-                    }}
-                  >
-                    <Sparkles size={16} style={{ color: 'white' }} strokeWidth={1.5} />
-                  </div>
-                  <span style={{ fontWeight: 500, fontSize: '15px', letterSpacing: '-0.01em', color: 'var(--text-primary)' }}>Nexus</span>
-                </div>
-                <button
-                  onClick={() => setMobileOpen(false)}
-                  style={{ width: '36px', height: '36px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', background: 'rgba(255,255,255,0.06)', color: 'var(--text-secondary)', border: 'none' }}
-                >
-                  <X size={16} strokeWidth={1.5} />
-                </button>
-              </div>
-
-              {/* Nav — matches desktop sidebar */}
-              <nav style={{ flex: 1, padding: '12px 10px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                {/* Dashboard */}
-                <NavLink
-                  to="/dashboard"
-                  onClick={() => setMobileOpen(false)}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 10px', borderRadius: '10px', overflow: 'hidden',
-                    textDecoration: 'none', fontSize: '14px', transition: 'all 0.2s',
-                    background: location.pathname === '/dashboard' ? 'rgba(255,255,255,0.1)' : 'transparent',
-                    backdropFilter: location.pathname === '/dashboard' ? 'blur(12px)' : 'none',
-                    border: location.pathname === '/dashboard' ? '1px solid rgba(255,255,255,0.15)' : '1px solid transparent',
-                    color: location.pathname === '/dashboard' ? 'var(--text-primary)' : 'var(--text-secondary)',
-                    fontWeight: location.pathname === '/dashboard' ? 500 : 400,
-                  }}
-                >
-                  <LayoutDashboard size={18} strokeWidth={1.5} style={{ flexShrink: 0, opacity: location.pathname === '/dashboard' ? 1 : 0.7 }} />
-                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Dashboard</span>
-                </NavLink>
-
-                {/* Profile */}
-                <NavLink
-                  to="/profile"
-                  onClick={() => setMobileOpen(false)}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 10px', borderRadius: '10px', overflow: 'hidden',
-                    textDecoration: 'none', fontSize: '14px', transition: 'all 0.2s',
-                    background: location.pathname === '/profile' ? 'rgba(255,255,255,0.1)' : 'transparent',
-                    border: location.pathname === '/profile' ? '1px solid rgba(255,255,255,0.15)' : '1px solid transparent',
-                    color: location.pathname === '/profile' ? 'var(--text-primary)' : 'var(--text-secondary)',
-                    fontWeight: location.pathname === '/profile' ? 500 : 400,
-                  }}
-                >
-                  <User size={18} strokeWidth={1.5} style={{ flexShrink: 0, opacity: location.pathname === '/profile' ? 1 : 0.7 }} />
-                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Profile</span>
-                </NavLink>
-
-                {/* Workspaces section */}
-                {workspaces.length > 0 && (
-                  <div style={{ marginTop: '16px' }}>
-                    <p style={{ fontSize: '11px', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.06em', opacity: 0.5, color: 'var(--text-tertiary)', padding: '0 14px 8px' }}>
-                      Workspaces
-                    </p>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                      {workspaces.map((ws) => {
-                        const isActive = location.pathname === `/workspace/${ws.id}`;
-                        return (
-                          <NavLink
-                            key={ws.id}
-                            to={`/workspace/${ws.id}?tab=overview`}
-                            onClick={() => setMobileOpen(false)}
-                            style={{
-                              display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 10px', borderRadius: '10px',
-                              overflow: 'hidden', textDecoration: 'none', fontSize: '13px', transition: 'all 0.2s',
-                              background: isActive ? 'rgba(255,255,255,0.1)' : 'transparent',
-                              border: isActive ? '1px solid rgba(255,255,255,0.12)' : '1px solid transparent',
-                              color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
-                              fontWeight: isActive ? 500 : 400,
-                            }}
-                          >
-                            <span style={{ flexShrink: 0, width: '20px', textAlign: 'center', fontSize: '14px' }}>{ws.icon}</span>
-                            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, minWidth: 0 }}>{ws.name}</span>
-                          </NavLink>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-              </nav>
+              <Sidebar mobile={true} onClose={() => setMobileOpen(false)} />
             </motion.div>
           </>
         )}
@@ -315,21 +222,99 @@ export default function AppLayout() {
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
-              className="w-full max-w-sm glass-card p-6 text-center flex flex-col items-center gap-4"
+              className="glass-card"
+              style={{
+                width: '90%',
+                maxWidth: '360px',
+                boxSizing: 'border-box',
+                padding: '24px',
+                borderRadius: '20px',
+                textAlign: 'center',
+                overflow: 'hidden',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center'
+              }}
             >
-              <div className="w-16 h-16 rounded-full flex items-center justify-center" style={{ background: 'rgba(129,140,248,0.15)', color: 'var(--accent)' }}>
-                <PhoneCall size={28} className="animate-bounce" strokeWidth={1.5} />
+              <div
+                style={{
+                  width: '56px',
+                  height: '56px',
+                  borderRadius: '50%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  margin: '0 auto 12px',
+                  background: 'rgba(129,140,248,0.15)',
+                  color: 'var(--accent)',
+                  flexShrink: 0
+                }}
+              >
+                <PhoneCall size={24} className="animate-bounce" strokeWidth={1.5} />
               </div>
-              <div>
-                <h3 className="text-[10px] font-medium uppercase tracking-wider" style={{ color: 'var(--text-tertiary)' }}>Incoming call</h3>
-                <p className="text-lg font-medium mt-1" style={{ color: 'var(--text-primary)' }}>{incomingCall.callerName}</p>
-                <p className="text-xs mt-0.5" style={{ color: 'var(--text-secondary)' }}>is calling in {incomingCall.workspaceName}</p>
+              <div style={{ width: '100%' }}>
+                <h3
+                  style={{
+                    fontSize: '11px',
+                    opacity: 0.5,
+                    letterSpacing: '0.08em',
+                    marginBottom: '4px',
+                    textTransform: 'uppercase',
+                    color: 'var(--text-tertiary)',
+                    margin: '0 0 4px 0'
+                  }}
+                >
+                  Incoming call
+                </h3>
+                <p
+                  style={{
+                    fontSize: '18px',
+                    fontWeight: 700,
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                    color: 'var(--text-primary)',
+                    width: '100%',
+                    margin: '0 0 2px 0'
+                  }}
+                >
+                  {incomingCall.callerName}
+                </p>
+                <p
+                  style={{
+                    fontSize: '13px',
+                    opacity: 0.6,
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                    color: 'var(--text-secondary)',
+                    width: '100%',
+                    margin: '0 0 16px 0'
+                  }}
+                >
+                  is calling in {incomingCall.workspaceName}
+                </p>
               </div>
-              <div className="flex gap-3 w-full mt-2">
+              <div
+                style={{
+                  display: 'flex',
+                  gap: '10px',
+                  width: '100%'
+                }}
+              >
                 <button
                   onClick={declineCall}
-                  className="flex-1 py-2.5 rounded-[var(--radius-md)] text-xs font-medium cursor-pointer transition-all"
                   style={{
+                    flex: 1,
+                    boxSizing: 'border-box',
+                    padding: '10px 16px',
+                    whiteSpace: 'nowrap',
+                    borderRadius: '12px',
+                    fontSize: '14px',
+                    fontWeight: 600,
+                    height: 'auto',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s',
                     background: 'rgba(239,68,68,0.15)',
                     color: '#f87171',
                     border: '1px solid rgba(239,68,68,0.2)',
@@ -339,8 +324,21 @@ export default function AppLayout() {
                 </button>
                 <button
                   onClick={() => joinCall(incomingCall.workspaceId)}
-                  className="flex-1 py-2.5 rounded-[var(--radius-md)] text-xs font-medium cursor-pointer transition-all glass-pill-btn-primary"
-                  style={{ background: 'rgba(16,185,129,0.5)', borderColor: 'rgba(16,185,129,0.4)' }}
+                  style={{
+                    flex: 1,
+                    boxSizing: 'border-box',
+                    padding: '10px 16px',
+                    whiteSpace: 'nowrap',
+                    borderRadius: '12px',
+                    fontSize: '14px',
+                    fontWeight: 600,
+                    height: 'auto',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s',
+                    background: 'rgba(16,185,129,0.5)',
+                    color: 'white',
+                    border: '1px solid rgba(16,185,129,0.4)'
+                  }}
                 >
                   Join Call
                 </button>

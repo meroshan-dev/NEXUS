@@ -18,8 +18,8 @@ const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 async function inspect() {
   try {
-    const { data, error } = await supabase.from('profiles').select('*').limit(1);
-    console.log('Profiles table query response:');
+    const { data, error } = await supabase.from('message_reactions').select('*').limit(1);
+    console.log('message_reactions table query response:');
     console.log('Data:', data);
     console.log('Error:', error);
   } catch (err) {

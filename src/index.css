@@ -372,6 +372,11 @@ body {
   display: flex;
   flex-direction: column;
   gap: var(--section-gap);
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  padding: 24px;
+  overflow-x: hidden;
 }
 
 /* ===== Glass Card System ===== */

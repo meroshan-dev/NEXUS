@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   LayoutDashboard, CheckSquare, FileText, User, LogOut, Sparkles,
   ChevronLeft, ChevronRight, ChevronDown, Home, Plus,
-  FolderKanban, File, MessageSquare, Video, Users, Settings
+  FolderKanban, File, MessageSquare, Video, Users, Settings, X
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useWorkspace } from '../../context/WorkspaceContext';
@@ -50,9 +50,9 @@ const navLabelStyle = {
   opacity: 0.85,
 };
 
-export default function Sidebar({ collapsed, onToggle }) {
+export default function Sidebar({ collapsed, onToggle, mobile = false, onClose }) {
   const { user, signOut } = useAuth();
-  const { workspaces, activeCalls = {} } = useWorkspace();
+  const { workspaces, activeCalls = {}, currentUserRole } = useWorkspace();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -81,6 +81,241 @@ export default function Sidebar({ collapsed, onToggle }) {
   }, []);
 
   const W = collapsed ? 72 : 220;
+
+  if (mobile) {
+    return (
+      <div
+        className="flex flex-col h-full w-full"
+        style={{ background: 'transparent' }}
+      >
+        {/* Mobile Header */}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '0 20px',
+            height: 'var(--topbar-height)',
+            flexShrink: 0,
+            borderBottom: '1px solid rgba(255,255,255,0.08)'
+          }}
+        >
+          {activeWorkspace ? (
+            <div className="relative flex-1 min-w-0 overflow-hidden" ref={switcherRef}>
+              <button
+                onClick={() => setShowSwitcher(!showSwitcher)}
+                className="flex items-center gap-2.5 w-full text-left py-1.5 rounded-[var(--radius-md)] transition-all cursor-pointer select-none px-2 hover:bg-[rgba(255,255,255,0.06)]"
+              >
+                <div
+                  className="w-9 h-9 rounded-[var(--radius-md)] flex items-center justify-center text-lg shrink-0"
+                  style={{ background: activeWorkspace.color + '18' }}
+                >
+                  {activeWorkspace.icon}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate leading-tight" style={{ color: 'var(--text-primary)' }}>
+                    {activeWorkspace.name}
+                  </p>
+                  <p className="text-[11px] truncate mt-0.5" style={{ color: 'var(--text-tertiary)' }}>
+                    Workspace
+                  </p>
+                </div>
+                <ChevronDown size={14} strokeWidth={1.5} className="shrink-0" style={{ color: 'var(--text-tertiary)' }} />
+              </button>
+
+              <AnimatePresence>
+                {showSwitcher && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 6 }}
+                    transition={{ duration: 0.15 }}
+                    className="absolute top-full left-0 right-0 mt-2 py-2 z-50 max-h-72 overflow-y-auto glass-card"
+                  >
+                    <p className="text-label px-4 py-2">Switch workspace</p>
+                    {workspaces.map((ws) => (
+                      <button
+                        key={ws.id}
+                        onClick={() => {
+                          navigate(`/workspace/${ws.id}`);
+                          setShowSwitcher(false);
+                          if (onClose) onClose();
+                        }}
+                        className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-left transition-all hover:bg-[rgba(255,255,255,0.06)] cursor-pointer"
+                        style={{
+                          color: ws.id === activeWorkspaceId ? 'var(--text-brand)' : 'var(--text-primary)',
+                        }}
+                      >
+                        <span className="text-base shrink-0">{ws.icon}</span>
+                        <span className="font-medium truncate flex-1">{ws.name}</span>
+                      </button>
+                    ))}
+                    <div className="mx-3 my-2 h-px" style={{ background: 'var(--glass-border-light)' }} />
+                    <button
+                      onClick={() => {
+                        navigate('/dashboard');
+                        setShowSwitcher(false);
+                        if (onClose) onClose();
+                      }}
+                      className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-left transition-all hover:bg-[rgba(255,255,255,0.06)] cursor-pointer"
+                      style={{ color: 'var(--text-secondary)' }}
+                    >
+                      <Home size={15} strokeWidth={1.5} className="shrink-0" />
+                      <span className="font-medium">Dashboard</span>
+                    </button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div
+                style={{
+                  width: '36px', height: '36px', borderRadius: '10px',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  background: 'linear-gradient(135deg, rgba(99,102,241,0.4), rgba(129,140,248,0.3))',
+                  boxShadow: '0 0 20px rgba(99,102,241,0.2)',
+                }}
+              >
+                <Sparkles size={16} className="text-white" strokeWidth={1.5} />
+              </div>
+              <span style={{ color: 'var(--text-primary)', fontSize: '16px', fontWeight: 700, letterSpacing: '-0.01em', marginLeft: '4px' }}>
+                Nexus
+              </span>
+            </div>
+          )}
+
+          <button
+            onClick={onClose}
+            style={{
+              width: '36px',
+              height: '36px',
+              borderRadius: '10px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              background: 'rgba(255,255,255,0.06)',
+              color: 'var(--text-secondary)',
+              border: 'none'
+            }}
+          >
+            <X size={16} strokeWidth={1.5} />
+          </button>
+        </div>
+
+        {/* Mobile Navigation Content */}
+        <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', padding: '12px 10px 16px 10px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+          <nav style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+            <NavLink
+              to="/dashboard"
+              style={({ isActive }) => navItemStyle(false, isActive)}
+              onClick={onClose}
+            >
+              <LayoutDashboard size={16} strokeWidth={1.5} style={navIconStyle(location.pathname === '/dashboard')} />
+              <span style={navLabelStyle}>Dashboard</span>
+            </NavLink>
+            <NavLink
+              to="/profile"
+              style={({ isActive }) => navItemStyle(false, isActive)}
+              onClick={onClose}
+            >
+              <User size={16} strokeWidth={1.5} style={navIconStyle(location.pathname === '/profile')} />
+              <span style={navLabelStyle}>Profile</span>
+            </NavLink>
+
+            {activeWorkspace && (
+              <>
+                <p style={{ fontSize: '10px', fontWeight: 500, letterSpacing: '0.1em', textTransform: 'uppercase', opacity: 0.4, color: 'var(--text-tertiary)', padding: '12px 4px 4px', margin: '8px 0 0 0' }}>
+                  In workspace
+                </p>
+                {[
+                  { tab: 'overview', icon: FolderKanban, label: 'Overview' },
+                  { tab: 'tasks', icon: CheckSquare, label: 'Tasks' },
+                  { tab: 'files', icon: FileText, label: 'Files' },
+                  { tab: 'notes', icon: File, label: 'Notes' },
+                  { tab: 'chat', icon: MessageSquare, label: 'Chat' },
+                  { tab: 'meetings', icon: Video, label: 'Meetings' },
+                  { tab: 'members', icon: Users, label: 'Members' },
+                  currentUserRole === 'owner' ? { tab: 'settings', icon: Settings, label: 'Settings' } : null
+                ].filter(Boolean).map(item => {
+                  const isActive = isTabActive(item.tab);
+                  const Icon = item.icon;
+                  return (
+                    <NavLink
+                      key={item.tab}
+                      to={`/workspace/${activeWorkspaceId}?tab=${item.tab}`}
+                      style={navItemStyle(false, isActive)}
+                      onClick={onClose}
+                    >
+                      <Icon size={16} strokeWidth={1.5} style={navIconStyle(isActive)} />
+                      <span style={navLabelStyle}>{item.label}</span>
+                    </NavLink>
+                  );
+                })}
+              </>
+            )}
+          </nav>
+
+          {workspaces.length > 0 && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 4px 6px' }}>
+                <p style={{ fontSize: '10px', fontWeight: 500, letterSpacing: '0.1em', textTransform: 'uppercase', opacity: 0.4, color: 'var(--text-tertiary)', margin: 0 }}>Workspaces</p>
+                <button
+                  onClick={() => {
+                    navigate('/dashboard');
+                    if (onClose) onClose();
+                  }}
+                  style={{ width: '22px', height: '22px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', background: 'transparent', border: 'none', color: 'var(--text-tertiary)' }}
+                >
+                  <Plus size={13} strokeWidth={2} />
+                </button>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                {workspaces.map((ws) => {
+                  const active = ws.id === activeWorkspaceId;
+                  const hasActiveCall = !!activeCalls[ws.id];
+                  return (
+                    <NavLink
+                      key={ws.id}
+                      to={`/workspace/${ws.id}?tab=overview`}
+                      onClick={onClose}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '10px',
+                        padding: '8px 10px',
+                        borderRadius: '10px',
+                        overflow: 'hidden',
+                        minWidth: 0,
+                        fontSize: '13px',
+                        transition: 'all 0.2s',
+                        textDecoration: 'none',
+                        background: active ? 'rgba(255,255,255,0.1)' : 'transparent',
+                        border: active ? '1px solid rgba(255,255,255,0.12)' : '1px solid transparent',
+                        color: active ? 'var(--text-primary)' : 'var(--text-secondary)',
+                        fontWeight: active ? 600 : 400,
+                        opacity: active ? 1 : 0.65,
+                      }}
+                    >
+                      <span style={{ flexShrink: 0, width: '20px', textAlign: 'center', fontSize: '14px' }}>{ws.icon}</span>
+                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0, flex: 1 }}>{ws.name}</span>
+                      {hasActiveCall && (
+                        <span className="flex h-2 w-2 relative shrink-0">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                          <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                        </span>
+                      )}
+                    </NavLink>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <motion.aside
@@ -211,14 +446,56 @@ export default function Sidebar({ collapsed, onToggle }) {
 
       <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', padding: collapsed ? '12px 6px 16px 6px' : '12px 10px 16px 10px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
         <nav style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-          {!collapsed && (
-            <p style={{ fontSize: '10px', fontWeight: 500, letterSpacing: '0.1em', textTransform: 'uppercase', opacity: 0.4, color: 'var(--text-tertiary)', padding: '8px 4px 4px', margin: 0 }}>
-              {activeWorkspace ? 'In workspace' : 'Menu'}
-            </p>
-          )}
+          <NavLink
+            to="/dashboard"
+            style={({ isActive }) => navItemStyle(collapsed, isActive)}
+            onMouseEnter={(e) => {
+              const isNowActive = location.pathname === '/dashboard';
+              if (!isNowActive) {
+                e.currentTarget.style.background = 'rgba(255,255,255,0.04)';
+                e.currentTarget.style.opacity = '0.9';
+              }
+            }}
+            onMouseLeave={(e) => {
+              const isNowActive = location.pathname === '/dashboard';
+              if (!isNowActive) {
+                e.currentTarget.style.background = 'transparent';
+                e.currentTarget.style.opacity = '0.65';
+              }
+            }}
+          >
+            <LayoutDashboard size={16} strokeWidth={1.5} style={navIconStyle(location.pathname === '/dashboard')} />
+            {!collapsed && <span style={navLabelStyle}>Dashboard</span>}
+          </NavLink>
+          <NavLink
+            to="/profile"
+            style={({ isActive }) => navItemStyle(collapsed, isActive)}
+            onMouseEnter={(e) => {
+              const isNowActive = location.pathname === '/profile';
+              if (!isNowActive) {
+                e.currentTarget.style.background = 'rgba(255,255,255,0.04)';
+                e.currentTarget.style.opacity = '0.9';
+              }
+            }}
+            onMouseLeave={(e) => {
+              const isNowActive = location.pathname === '/profile';
+              if (!isNowActive) {
+                e.currentTarget.style.background = 'transparent';
+                e.currentTarget.style.opacity = '0.65';
+              }
+            }}
+          >
+            <User size={16} strokeWidth={1.5} style={navIconStyle(location.pathname === '/profile')} />
+            {!collapsed && <span style={navLabelStyle}>Profile</span>}
+          </NavLink>
 
-          {activeWorkspace ? (
+          {activeWorkspace && (
             <>
+              {!collapsed && (
+                <p style={{ fontSize: '10px', fontWeight: 500, letterSpacing: '0.1em', textTransform: 'uppercase', opacity: 0.4, color: 'var(--text-tertiary)', padding: '12px 4px 4px', margin: '8px 0 0 0' }}>
+                  In workspace
+                </p>
+              )}
               {[
                 { tab: 'overview', icon: FolderKanban, label: 'Overview' },
                 { tab: 'tasks', icon: CheckSquare, label: 'Tasks' },
@@ -227,8 +504,8 @@ export default function Sidebar({ collapsed, onToggle }) {
                 { tab: 'chat', icon: MessageSquare, label: 'Chat' },
                 { tab: 'meetings', icon: Video, label: 'Meetings' },
                 { tab: 'members', icon: Users, label: 'Members' },
-                { tab: 'settings', icon: Settings, label: 'Settings' }
-              ].map(item => {
+                currentUserRole === 'owner' ? { tab: 'settings', icon: Settings, label: 'Settings' } : null
+              ].filter(Boolean).map(item => {
                 const isActive = isTabActive(item.tab);
                 const Icon = item.icon;
                 return (
@@ -254,74 +531,6 @@ export default function Sidebar({ collapsed, onToggle }) {
                   </NavLink>
                 );
               })}
-              <div style={{ paddingTop: '12px', marginTop: '12px', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
-                <NavLink
-                  to="/dashboard"
-                  style={({ isActive }) => navItemStyle(collapsed, isActive)}
-                  onMouseEnter={(e) => {
-                    const isNowActive = false;
-                    if (!isNowActive) {
-                      e.currentTarget.style.background = 'rgba(255,255,255,0.04)';
-                      e.currentTarget.style.opacity = '0.9';
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    const isNowActive = false;
-                    if (!isNowActive) {
-                      e.currentTarget.style.background = 'transparent';
-                      e.currentTarget.style.opacity = '0.65';
-                    }
-                  }}
-                >
-                  <Home size={16} strokeWidth={1.5} style={navIconStyle(false)} />
-                  {!collapsed && <span style={navLabelStyle}>All workspaces</span>}
-                </NavLink>
-              </div>
-            </>
-          ) : (
-            <>
-              <NavLink
-                to="/dashboard"
-                style={({ isActive }) => navItemStyle(collapsed, isActive)}
-                onMouseEnter={(e) => {
-                  const isNowActive = location.pathname === '/dashboard';
-                  if (!isNowActive) {
-                    e.currentTarget.style.background = 'rgba(255,255,255,0.04)';
-                    e.currentTarget.style.opacity = '0.9';
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  const isNowActive = location.pathname === '/dashboard';
-                  if (!isNowActive) {
-                    e.currentTarget.style.background = 'transparent';
-                    e.currentTarget.style.opacity = '0.65';
-                  }
-                }}
-              >
-                <LayoutDashboard size={16} strokeWidth={1.5} style={navIconStyle(false)} />
-                {!collapsed && <span style={navLabelStyle}>Dashboard</span>}
-              </NavLink>
-              <NavLink
-                to="/profile"
-                style={({ isActive }) => navItemStyle(collapsed, isActive)}
-                onMouseEnter={(e) => {
-                  const isNowActive = location.pathname === '/profile';
-                  if (!isNowActive) {
-                    e.currentTarget.style.background = 'rgba(255,255,255,0.04)';
-                    e.currentTarget.style.opacity = '0.9';
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  const isNowActive = location.pathname === '/profile';
-                  if (!isNowActive) {
-                    e.currentTarget.style.background = 'transparent';
-                    e.currentTarget.style.opacity = '0.65';
-                  }
-                }}
-              >
-                <User size={16} strokeWidth={1.5} style={navIconStyle(false)} />
-                {!collapsed && <span style={navLabelStyle}>Profile</span>}
-              </NavLink>
             </>
           )}
         </nav>

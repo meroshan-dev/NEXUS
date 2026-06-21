@@ -260,24 +260,23 @@ ALTER TABLE public.chat_messages ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Users can manage chat messages in their own workspaces" ON public.chat_messages;
 DROP POLICY IF EXISTS "Workspace members can view and manage chat messages" ON public.chat_messages;
 DROP POLICY IF EXISTS "chat_messages_all" ON public.chat_messages;
+DROP POLICY IF EXISTS "chat_messages_select" ON public.chat_messages;
+DROP POLICY IF EXISTS "chat_messages_insert" ON public.chat_messages;
+DROP POLICY IF EXISTS "chat_messages_update" ON public.chat_messages;
+DROP POLICY IF EXISTS "chat_messages_delete" ON public.chat_messages;
 
-CREATE POLICY "chat_messages_all"
-    ON public.chat_messages FOR ALL
-    TO authenticated
-    USING (
-        EXISTS (
-            SELECT 1 FROM public.workspace_members wm
-            WHERE wm.workspace_id = chat_messages.workspace_id
-            AND wm.user_id = auth.uid()
-        )
-    )
-    WITH CHECK (
-        EXISTS (
-            SELECT 1 FROM public.workspace_members wm
-            WHERE wm.workspace_id = chat_messages.workspace_id
-            AND wm.user_id = auth.uid()
-        )
-    );
+CREATE POLICY "chat_messages_select" ON public.chat_messages FOR SELECT TO authenticated
+    USING (EXISTS (SELECT 1 FROM public.workspace_members wm WHERE wm.workspace_id = chat_messages.workspace_id AND wm.user_id = auth.uid()));
+
+CREATE POLICY "chat_messages_insert" ON public.chat_messages FOR INSERT TO authenticated
+    WITH CHECK (owner_id = auth.uid() AND EXISTS (SELECT 1 FROM public.workspace_members wm WHERE wm.workspace_id = chat_messages.workspace_id AND wm.user_id = auth.uid()));
+
+CREATE POLICY "chat_messages_update" ON public.chat_messages FOR UPDATE TO authenticated
+    USING (owner_id = auth.uid())
+    WITH CHECK (owner_id = auth.uid());
+
+CREATE POLICY "chat_messages_delete" ON public.chat_messages FOR DELETE TO authenticated
+    USING (owner_id = auth.uid());
 
 
 -- 7. Storage Bucket Setup
