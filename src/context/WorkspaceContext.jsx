@@ -2166,13 +2166,19 @@ export function WorkspaceProvider({ children }) {
           }).catch(err => console.warn('Edge function error:', err));
 
           // Trigger FCM Push notification
-          supabase.functions.invoke('send-push-notification', {
-            body: {
-              userId: data.assignee,
-              title: 'Task Assigned',
-              body: `${user.name || 'Member'} assigned task "${data.title}" to you`
-            }
-          }).catch(err => console.warn('FCM Push Edge Function error in addTask:', err));
+          console.log('Triggering task assignment push notification for:', data.assignee);
+          try {
+            const pushResult = await supabase.functions.invoke('send-push-notification', {
+              body: {
+                userId: data.assignee,
+                title: 'Task Assigned',
+                body: `${user.name || 'Member'} assigned task "${data.title}" to you`
+              }
+            });
+            console.log('Task assignment push notification result:', pushResult);
+          } catch (pushErr) {
+            console.warn('FCM Push Edge Function error in addTask:', pushErr);
+          }
         }
 
         setWorkspaces(prev =>
@@ -2359,18 +2365,39 @@ export function WorkspaceProvider({ children }) {
           });
         await Promise.all(notificationPromises);
 
-        // Send push notifications
-        const pushPromises = members
-          .filter(m => m.id !== user.id)
-          .map(member => {
-            return supabase.functions.invoke('send-push-notification', {
+        // Send push notifications dynamically using database workspace_members records
+        let dbMembers = [];
+        try {
+          const { data: memberData, error: memberErr } = await supabase
+            .from('workspace_members')
+            .select('user_id')
+            .eq('workspace_id', localMessage.workspaceId)
+            .neq('user_id', user.id);
+          
+          if (!memberErr && memberData) {
+            dbMembers = memberData;
+          }
+        } catch (dbErr) {
+          console.error('Failed to fetch workspace members for push notification:', dbErr);
+        }
+
+        console.log(`FCM push: Found ${dbMembers.length} other members to notify`);
+        const pushPromises = dbMembers.map(async (member) => {
+          console.log('Triggering push notification for member:', member.user_id);
+          try {
+            const result = await supabase.functions.invoke('send-push-notification', {
               body: {
-                userId: member.id,
-                title: `New message in #${workspaceName}`,
-                body: `${user.name || 'Member'}: ${localMessage.text}`
+                userId: member.user_id,
+                title: `New message from ${user.name || 'Member'}`,
+                body: localMessage.text
               }
-            }).catch(pushErr => console.warn('Push notification invoke failed for user:', member.id, pushErr));
-          });
+            });
+            console.log('Push notification function result for', member.user_id, ':', result);
+            return result;
+          } catch (pushErr) {
+            console.warn('Push notification invoke failed for user:', member.user_id, pushErr);
+          }
+        });
         await Promise.all(pushPromises);
 
         setWorkspaces(prev =>
@@ -3005,13 +3032,19 @@ export function WorkspaceProvider({ children }) {
           }).catch(err => console.warn('Edge function error:', err));
 
           // Trigger FCM Push notification
-          supabase.functions.invoke('send-push-notification', {
-            body: {
-              userId: updatedFields.assignee,
-              title: 'Task Assigned',
-              body: `${user.name || 'Member'} assigned task "${finalTaskTitle}" to you`
-            }
-          }).catch(err => console.warn('FCM Push Edge Function error in updateTaskDetails:', err));
+          console.log('Triggering task details update push notification for:', updatedFields.assignee);
+          try {
+            const pushResult = await supabase.functions.invoke('send-push-notification', {
+              body: {
+                userId: updatedFields.assignee,
+                title: 'Task Assigned',
+                body: `${user.name || 'Member'} assigned task "${finalTaskTitle}" to you`
+              }
+            });
+            console.log('Task details update push notification result:', pushResult);
+          } catch (pushErr) {
+            console.warn('FCM Push Edge Function error in updateTaskDetails:', pushErr);
+          }
         }
       } catch (err) {
         console.error('Error updating task details:', err);

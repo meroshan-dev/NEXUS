@@ -18,10 +18,10 @@ const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 async function inspect() {
   try {
-    const { data, error } = await supabase.from('message_reactions').select('*').limit(1);
-    console.log('message_reactions table query response:');
-    console.log('Data:', data);
-    console.log('Error:', error);
+    const { data, error } = await supabase.from('profiles').select('id, name, email, push_token').limit(20);
+    console.log('Profiles push tokens:');
+    console.log(JSON.stringify(data, null, 2));
+    if (error) console.error('Query error:', error);
   } catch (err) {
     console.error('Inspector error:', err);
   }
