@@ -722,6 +722,12 @@ export default function WorkspacePage() {
                       </div>
                       <span className="text-truncate" style={{ fontSize: '11px', fontWeight: 500, color: 'var(--text-primary)', maxWidth: '100%' }}>Start Call</span>
                     </button>
+                    <button onClick={() => handleTabChange('chat')} className="workspace-action-btn">
+                      <div className="workspace-action-icon-wrapper">
+                        <MessageSquare size={18} strokeWidth={1.5} className="icon-glow" style={{ color: 'var(--text-tertiary)' }} />
+                      </div>
+                      <span className="text-truncate" style={{ fontSize: '11px', fontWeight: 500, color: 'var(--text-primary)', maxWidth: '100%' }}>Text</span>
+                    </button>
                     {currentUserRole === 'owner' && (
                       <button onClick={() => { handleTabChange('meetings'); setShowScheduleMeeting(true); }} className="workspace-action-btn">
                         <div className="workspace-action-icon-wrapper">
