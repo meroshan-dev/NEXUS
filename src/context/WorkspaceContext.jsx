@@ -2,6 +2,9 @@
 import { createContext, useState, useContext, useEffect, useRef, useCallback, useMemo } from 'react';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { db } from '../lib/db';
+import { Network } from '@capacitor/network';
+import { PushNotifications } from '@capacitor/push-notifications';
+import { Capacitor } from '@capacitor/core';
 import { useAuth } from './AuthContext';
 
 const WorkspaceContext = createContext();
@@ -2161,6 +2164,15 @@ export function WorkspaceProvider({ children }) {
               workspaceName: workspaces.find(w => w.id === workspaceId)?.name || 'Workspace'
             }
           }).catch(err => console.warn('Edge function error:', err));
+
+          // Trigger FCM Push notification
+          supabase.functions.invoke('send-push-notification', {
+            body: {
+              userId: data.assignee,
+              title: 'Task Assigned',
+              body: `${user.name || 'Member'} assigned task "${data.title}" to you`
+            }
+          }).catch(err => console.warn('FCM Push Edge Function error in addTask:', err));
         }
 
         setWorkspaces(prev =>
@@ -2347,6 +2359,20 @@ export function WorkspaceProvider({ children }) {
           });
         await Promise.all(notificationPromises);
 
+        // Send push notifications
+        const pushPromises = members
+          .filter(m => m.id !== user.id)
+          .map(member => {
+            return supabase.functions.invoke('send-push-notification', {
+              body: {
+                userId: member.id,
+                title: `New message in #${workspaceName}`,
+                body: `${user.name || 'Member'}: ${localMessage.text}`
+              }
+            }).catch(pushErr => console.warn('Push notification invoke failed for user:', member.id, pushErr));
+          });
+        await Promise.all(pushPromises);
+
         setWorkspaces(prev =>
           prev.map(ws => (ws.id === localMessage.workspaceId ? { ...ws, lastActivity: '1 min ago' } : ws))
         );
@@ -2495,6 +2521,19 @@ export function WorkspaceProvider({ children }) {
     });
 
     await trySync(updatedMsg);
+  };
+
+  const syncPendingMessages = async () => {
+    try {
+      const pending = await db.outbox.where('status').equals('pending').toArray();
+      console.log('Pending messages found:', pending.length, pending);
+
+      for (const msg of pending) {
+        await trySync(msg);
+      }
+    } catch (e) {
+      console.error('Error syncing pending messages:', e);
+    }
   };
 
   // Action: Toggle Chat Message Reaction
@@ -2964,6 +3003,15 @@ export function WorkspaceProvider({ children }) {
               workspaceName: workspaces.find(w => w.id === workspaceId)?.name || 'Workspace'
             }
           }).catch(err => console.warn('Edge function error:', err));
+
+          // Trigger FCM Push notification
+          supabase.functions.invoke('send-push-notification', {
+            body: {
+              userId: updatedFields.assignee,
+              title: 'Task Assigned',
+              body: `${user.name || 'Member'} assigned task "${finalTaskTitle}" to you`
+            }
+          }).catch(err => console.warn('FCM Push Edge Function error in updateTaskDetails:', err));
         }
       } catch (err) {
         console.error('Error updating task details:', err);
@@ -3109,19 +3157,108 @@ export function WorkspaceProvider({ children }) {
   };
 
   useEffect(() => {
-    const handleOnline = async () => {
+    let networkListener = null;
+
+    const setupListener = async () => {
       try {
-        const pending = await db.outbox.where('status').equals('pending').toArray();
-        for (const msg of pending) {
-          await trySync(msg);
+        const status = await Network.getStatus();
+        console.log('Initial network status connected:', status.connected);
+        if (status.connected) {
+          await syncPendingMessages();
         }
-      } catch (e) {
-        console.error('Error in handleOnline sync:', e);
+
+        networkListener = await Network.addListener('networkStatusChange', async (status) => {
+          console.log('Network status changed:', status.connected);
+          if (status.connected) {
+            console.log('Back online — attempting to sync pending messages');
+            await syncPendingMessages();
+          }
+        });
+      } catch (err) {
+        console.warn('Capacitor Network status listener setup failed, falling back to window online listener:', err);
+        // Fallback for desktop/non-native browsers
+        const handleOnline = async () => {
+          console.log('Back online (browser event) — attempting to sync pending messages');
+          await syncPendingMessages();
+        };
+        window.addEventListener('online', handleOnline);
+        networkListener = {
+          remove: () => window.removeEventListener('online', handleOnline)
+        };
       }
     };
-    window.addEventListener('online', handleOnline);
-    return () => window.removeEventListener('online', handleOnline);
-  }, [user?.id, chatMessages, isSupabaseConfigured]);
+
+    setupListener();
+
+    return () => {
+      if (networkListener) {
+        networkListener.remove();
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    const setupPushNotifications = async () => {
+      if (!user?.id) return;
+      if (!Capacitor.isNativePlatform()) {
+        console.log('Non-native platform detected, skipping Capacitor Push Notifications setup.');
+        return;
+      }
+
+      try {
+        console.log('Initiating push notifications setup...');
+        let permStatus = await PushNotifications.checkPermissions();
+        console.log('Current push permission status:', permStatus.receive);
+
+        if (permStatus.receive !== 'granted') {
+          permStatus = await PushNotifications.requestPermissions();
+        }
+
+        if (permStatus.receive === 'granted') {
+          await PushNotifications.register();
+        } else {
+          console.warn('Push notification permissions denied.');
+        }
+
+        // Token registration callback
+        await PushNotifications.addListener('registration', async (token) => {
+          console.log('Push registration token received:', token.value);
+          if (isSupabaseConfigured) {
+            try {
+              const { error } = await supabase
+                .from('profiles')
+                .update({ push_token: token.value })
+                .eq('id', user.id);
+              if (error) throw error;
+              console.log('Push token saved to profiles successfully');
+            } catch (err) {
+              console.error('Failed to update push token in database:', err);
+            }
+          }
+        });
+
+        // Error registration callback
+        await PushNotifications.addListener('registrationError', (err) => {
+          console.error('Push notification registration error:', err);
+        });
+
+        // Foreground notification handler
+        await PushNotifications.addListener('pushNotificationReceived', (notification) => {
+          console.log('Push received in foreground:', notification);
+        });
+
+        // Action/Tap handler
+        await PushNotifications.addListener('pushNotificationActionPerformed', (action) => {
+          console.log('Push notification action performed (tapped):', action);
+        });
+
+      } catch (err) {
+        console.error('Error during push notification setup:', err);
+      }
+    };
+
+    setupPushNotifications();
+  }, [user?.id]);
 
   const currentUserRole = useMemo(() => {
     if (!activeWorkspaceId || !user?.id || !workspaceMembers[activeWorkspaceId]) {
