@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Outlet, NavLink, useLocation } from 'react-router-dom';
+import { Outlet, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import Sidebar from './Sidebar';
 import TopBar from './TopBar';
-import { X, LayoutDashboard, FolderKanban, User, Sparkles, PhoneCall } from 'lucide-react';
+import { X, LayoutDashboard, FolderKanban, User, Sparkles, PhoneCall, ChevronRight } from 'lucide-react';
 import { useWorkspace } from '../../context/WorkspaceContext';
 import DailyCallScreen from '../ui/DailyCallScreen';
 
@@ -53,7 +53,9 @@ function useKeyboardVisible() {
 export default function AppLayout() {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [showWorkspaceSheet, setShowWorkspaceSheet] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
   const isKeyboardVisible = useKeyboardVisible();
   const { incomingCall, joinCall, declineCall, activeCall, leaveCall, workspaces = [], activeWorkspaceId: lastActiveWorkspaceId } = useWorkspace();
 
@@ -161,19 +163,20 @@ export default function AppLayout() {
             <LayoutDashboard size={20} strokeWidth={1.5} />
             <span style={{ fontSize: '9px', fontWeight: 500 }}>Home</span>
           </NavLink>
-          <NavLink
-            to={targetWorkspaceId ? `/workspace/${targetWorkspaceId}?tab=overview` : '/dashboard'}
+          <button
+            onClick={() => setShowWorkspaceSheet(true)}
             style={{
               display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '2px',
               padding: '6px 16px', borderRadius: '12px', textDecoration: 'none',
-              color: location.pathname.startsWith('/workspace/') ? 'white' : 'var(--text-tertiary)',
-              background: location.pathname.startsWith('/workspace/') ? 'rgba(255,255,255,0.1)' : 'transparent',
-              transition: 'all 0.15s ease'
+              color: location.pathname.startsWith('/workspace/') || showWorkspaceSheet ? 'white' : 'var(--text-tertiary)',
+              background: location.pathname.startsWith('/workspace/') || showWorkspaceSheet ? 'rgba(255,255,255,0.1)' : 'transparent',
+              transition: 'all 0.15s ease',
+              border: 'none', cursor: 'pointer', outline: 'none',
             }}
           >
             <FolderKanban size={20} strokeWidth={1.5} />
             <span style={{ fontSize: '9px', fontWeight: 500 }}>Workspace</span>
-          </NavLink>
+          </button>
           <NavLink
             to="/profile"
             style={{
@@ -188,6 +191,165 @@ export default function AppLayout() {
             <span style={{ fontSize: '9px', fontWeight: 500 }}>Profile</span>
           </NavLink>
         </nav>
+
+        {/* Workspace Bottom Sheet */}
+        <AnimatePresence>
+          {showWorkspaceSheet && (
+            <>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                onClick={() => setShowWorkspaceSheet(false)}
+                style={{
+                  position: 'fixed', inset: 0, zIndex: 200,
+                  background: 'rgba(0,0,0,0.5)',
+                  backdropFilter: 'blur(6px)',
+                  WebkitBackdropFilter: 'blur(6px)',
+                }}
+              />
+              <motion.div
+                initial={{ y: '100%' }}
+                animate={{ y: 0 }}
+                exit={{ y: '100%' }}
+                transition={{ type: 'spring', damping: 28, stiffness: 320 }}
+                style={{
+                  position: 'fixed',
+                  bottom: 0, left: 0, right: 0,
+                  zIndex: 201,
+                  maxHeight: '70vh',
+                  borderRadius: '20px 20px 0 0',
+                  background: 'rgba(18, 18, 40, 0.97)',
+                  backdropFilter: 'blur(24px)',
+                  WebkitBackdropFilter: 'blur(24px)',
+                  border: '1px solid rgba(255,255,255,0.08)',
+                  borderBottom: 'none',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  overflow: 'hidden',
+                }}
+              >
+                {/* Drag handle */}
+                <div style={{ display: 'flex', justifyContent: 'center', padding: '10px 0 4px' }}>
+                  <div style={{
+                    width: '36px', height: '4px', borderRadius: '2px',
+                    background: 'rgba(255,255,255,0.2)',
+                  }} />
+                </div>
+
+                {/* Header */}
+                <div style={{
+                  padding: '12px 20px 16px',
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  borderBottom: '1px solid rgba(255,255,255,0.06)',
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <FolderKanban size={18} strokeWidth={1.5} style={{ color: 'var(--accent, #818cf8)' }} />
+                    <h3 style={{
+                      fontSize: '15px', fontWeight: 600, color: 'white',
+                      margin: 0, letterSpacing: '-0.01em',
+                    }}>All Workspaces</h3>
+                  </div>
+                  <span style={{
+                    fontSize: '11px', fontWeight: 500,
+                    color: 'var(--text-tertiary, rgba(255,255,255,0.4))',
+                    background: 'rgba(255,255,255,0.06)',
+                    padding: '3px 10px', borderRadius: '999px',
+                  }}>{workspaces.length}</span>
+                </div>
+
+                {/* Workspace List */}
+                <div style={{
+                  overflowY: 'auto', flex: 1,
+                  padding: '8px 12px 20px',
+                  paddingBottom: 'calc(20px + env(safe-area-inset-bottom, 0px))',
+                }}>
+                  {workspaces.length === 0 ? (
+                    <div style={{
+                      padding: '40px 20px', textAlign: 'center',
+                      display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px',
+                    }}>
+                      <div style={{
+                        width: '44px', height: '44px', borderRadius: '12px',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        background: 'rgba(99,102,241,0.1)',
+                      }}>
+                        <FolderKanban size={22} strokeWidth={1.5} style={{ color: '#818cf8', opacity: 0.6 }} />
+                      </div>
+                      <p style={{ fontSize: '13px', color: 'var(--text-tertiary)', margin: 0 }}>
+                        No workspaces yet
+                      </p>
+                    </div>
+                  ) : (
+                    workspaces.map((ws, index) => (
+                      <motion.button
+                        key={ws.id}
+                        initial={{ opacity: 0, y: 12 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: index * 0.04, duration: 0.2 }}
+                        onClick={() => {
+                          setShowWorkspaceSheet(false);
+                          navigate(`/workspace/${ws.id}?tab=overview`);
+                        }}
+                        style={{
+                          width: '100%',
+                          display: 'flex', alignItems: 'center', gap: '12px',
+                          padding: '14px 12px',
+                          borderRadius: '14px',
+                          border: 'none', outline: 'none',
+                          cursor: 'pointer',
+                          background: location.pathname === `/workspace/${ws.id}`
+                            ? 'rgba(99,102,241,0.12)'
+                            : 'transparent',
+                          transition: 'background 0.15s ease',
+                          textAlign: 'left',
+                        }}
+                        onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.background = location.pathname === `/workspace/${ws.id}`
+                            ? 'rgba(99,102,241,0.12)' : 'transparent';
+                        }}
+                      >
+                        {/* Workspace Icon */}
+                        <div style={{
+                          width: '40px', height: '40px', borderRadius: '12px',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          flexShrink: 0, fontSize: '18px',
+                          background: (ws.color || '#6366f1') + '18',
+                          border: `1px solid ${(ws.color || '#6366f1')}25`,
+                        }}>
+                          {ws.icon || '⚡'}
+                        </div>
+
+                        {/* Workspace Info */}
+                        <div style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
+                          <p style={{
+                            fontSize: '14px', fontWeight: 600, color: 'white',
+                            margin: 0,
+                            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                          }}>{ws.name}</p>
+                          {ws.description && (
+                            <p style={{
+                              fontSize: '11px', color: 'rgba(255,255,255,0.35)',
+                              margin: '3px 0 0', lineHeight: 1.3,
+                              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                            }}>{ws.description}</p>
+                          )}
+                        </div>
+
+                        {/* Arrow */}
+                        <ChevronRight size={16} strokeWidth={1.5} style={{
+                          color: 'rgba(255,255,255,0.2)', flexShrink: 0,
+                        }} />
+                      </motion.button>
+                    ))
+                  )}
+                </div>
+              </motion.div>
+            </>
+          )}
+        </AnimatePresence>
       </div>
 
       {/* Desktop */}
