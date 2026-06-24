@@ -104,7 +104,8 @@ export default function WorkspacePage() {
     deleteFile,
     toggleChatMessageReaction,
     deleteChatMessage,
-    editChatMessage
+    editChatMessage,
+    retryChatMessage
   } = useWorkspace();
   
   const { user } = useAuth();
@@ -848,11 +849,11 @@ export default function WorkspacePage() {
                     <span style={{ fontSize: '16px', lineHeight: 1, flexShrink: 0, marginTop: '1px' }}>⚠️</span>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <p style={{ fontSize: '12px', fontWeight: 700, color: '#fca5a5', marginBottom: '3px' }}>Call failed to start</p>
-                      <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.55)', lineHeight: 1.6, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{callError}</p>
+                      <p style={{ fontSize: '11px', color: 'var(--text-secondary)', lineHeight: 1.6, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{callError}</p>
                     </div>
                     <button
                       onClick={clearCallError}
-                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.4)', fontSize: '16px', lineHeight: 1, padding: '0', flexShrink: 0 }}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-tertiary)', fontSize: '16px', lineHeight: 1, padding: '0', flexShrink: 0 }}
                       title="Dismiss"
                     >×</button>
                   </div>
@@ -933,7 +934,7 @@ export default function WorkspacePage() {
                                 alignItems: 'flex-start',
                                 gap: '10px',
                                 padding: '10px 0',
-                                borderBottom: isLast ? 'none' : '1px solid rgba(255,255,255,0.05)',
+                                borderBottom: isLast ? 'none' : '1px solid var(--glass-bg-light)',
                                 overflow: 'hidden',
                                 position: 'static',
                                 margin: 0
@@ -983,7 +984,7 @@ export default function WorkspacePage() {
             {activeTab === 'tasks' && (
               <motion.div key="tasks" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-5" style={{ overflowX: 'hidden', width: '100%', boxSizing: 'border-box' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '20px 24px', gap: '16px', boxSizing: 'border-box', width: '100%' }}>
-                  <div style={{ display: 'flex', gap: '4px', padding: '4px', background: 'rgba(255,255,255,0.05)', backdropFilter: 'blur(16px) saturate(160%)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '10px', width: 'fit-content', flexShrink: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', gap: '4px', padding: '4px', background: 'var(--glass-bg-light)', backdropFilter: 'blur(16px) saturate(160%)', border: '1px solid var(--glass-border)', borderRadius: '10px', width: 'fit-content', flexShrink: 1, minWidth: 0 }}>
                     {[
                       { id: 'all', label: 'All Tasks' },
                       { id: 'my', label: 'My Tasks' },
@@ -1000,9 +1001,9 @@ export default function WorkspacePage() {
                           whiteSpace: 'nowrap',
                           cursor: 'pointer',
                           opacity: tasksFilter === tab.id ? 1 : 0.6,
-                          background: tasksFilter === tab.id ? 'rgba(255,255,255,0.12)' : 'transparent',
+                          background: tasksFilter === tab.id ? 'var(--glass-border)' : 'transparent',
                           backdropFilter: tasksFilter === tab.id ? 'blur(10px)' : 'none',
-                          border: tasksFilter === tab.id ? '1px solid rgba(255,255,255,0.15)' : '1px solid transparent',
+                          border: tasksFilter === tab.id ? '1px solid var(--glass-border)' : '1px solid transparent',
                           fontWeight: tasksFilter === tab.id ? 500 : 400,
                           transition: 'all 0.2s',
                           outline: 'none',
@@ -1027,7 +1028,7 @@ export default function WorkspacePage() {
                       borderRadius: '10px',
                       background: 'rgba(99,102,241,0.85)',
                       backdropFilter: 'blur(10px)',
-                      border: '1px solid rgba(255,255,255,0.15)',
+                      border: '1px solid var(--glass-border)',
                       boxShadow: '0 4px 16px rgba(99,102,241,0.3)'
                     }}
                   >
@@ -1113,11 +1114,11 @@ export default function WorkspacePage() {
                                     minHeight: '320px',
                                     borderRadius: '16px',
                                     padding: '12px',
-                                    background: snapshot.isDraggingOver ? cfg.accent : 'rgba(255,255,255,0.04)',
+                                    background: snapshot.isDraggingOver ? cfg.accent : 'var(--bg-primary)',
                                     backdropFilter: 'blur(20px) saturate(160%)',
                                     WebkitBackdropFilter: 'blur(20px) saturate(160%)',
-                                    border: snapshot.isDraggingOver ? `1px dashed ${cfg.dotColor}55` : '1px solid rgba(255,255,255,0.08)',
-                                    boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.06)',
+                                    border: snapshot.isDraggingOver ? `1px dashed ${cfg.dotColor}55` : '1px solid var(--glass-border-light)',
+                                    boxShadow: 'inset 0 1px 0 var(--bg-hover)',
                                     overflow: 'hidden',
                                     display: 'flex',
                                     flexDirection: 'column',
@@ -1158,7 +1159,7 @@ export default function WorkspacePage() {
                                                   {task.description}
                                                 </p>
                                               )}
-                                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', paddingTop: '8px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+                                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', paddingTop: '8px', borderTop: '1px solid var(--bg-hover)' }}>
                                                 <div className="flex items-center gap-2">
                                                   {assignee && (
                                                     <Avatar name={assignee.name} initials={assignee.initials} color={assignee.color} size="xs" />
@@ -1291,7 +1292,7 @@ export default function WorkspacePage() {
                 className="notes-tab-container"
                 style={{ height: 'clamp(450px, calc(100vh - 240px), 700px)' }}
               >
-                <div style={{ display: 'flex', height: '100%', overflow: 'hidden', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.02)' }}>
+                <div style={{ display: 'flex', height: '100%', overflow: 'hidden', borderRadius: '16px', border: '1px solid var(--glass-border-light)', background: 'var(--bg-subtle)' }}>
                   
                   {/* Notes List Panel */}
                   <div
@@ -1302,10 +1303,10 @@ export default function WorkspacePage() {
                       height: '100%',
                       boxSizing: 'border-box',
                       padding: '16px',
-                      background: 'rgba(255,255,255,0.04)',
+                      background: 'var(--bg-primary)',
                       backdropFilter: 'blur(20px) saturate(160%)',
                       WebkitBackdropFilter: 'blur(20px) saturate(160%)',
-                      borderRight: '1px solid rgba(255,255,255,0.08)',
+                      borderRight: '1px solid var(--glass-border-light)',
                       overflowY: 'auto',
                       display: 'flex',
                       flexDirection: 'column',
@@ -1339,8 +1340,8 @@ export default function WorkspacePage() {
                           width: '26px',
                           height: '26px',
                           borderRadius: '8px',
-                          background: 'rgba(255,255,255,0.06)',
-                          border: '1px solid rgba(255,255,255,0.1)',
+                          background: 'var(--bg-hover)',
+                          border: '1px solid var(--glass-border)',
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
@@ -1349,8 +1350,8 @@ export default function WorkspacePage() {
                           color: 'var(--text-secondary)',
                           transition: 'all 0.15s',
                         }}
-                        onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.1)'; }}
-                        onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; }}
+                        onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--glass-border)'; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--bg-hover)'; }}
                       >
                         <Plus size={13} strokeWidth={2} />
                       </button>
@@ -1382,10 +1383,10 @@ export default function WorkspacePage() {
                                 alignItems: 'center',
                                 justifyContent: 'space-between',
                                 gap: '8px',
-                                background: isActive ? 'rgba(255,255,255,0.08)' : 'transparent',
-                                border: isActive ? '1px solid rgba(255,255,255,0.15)' : '1px solid transparent',
+                                background: isActive ? 'var(--glass-border-light)' : 'transparent',
+                                border: isActive ? '1px solid var(--glass-border)' : '1px solid transparent',
                               }}
-                              onMouseEnter={(e) => { if (!isActive) e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; }}
+                              onMouseEnter={(e) => { if (!isActive) e.currentTarget.style.background = 'var(--bg-primary)'; }}
                               onMouseLeave={(e) => { if (!isActive) e.currentTarget.style.background = 'transparent'; }}
                             >
                               <div style={{ minWidth: 0, flex: 1 }}>
@@ -1488,7 +1489,7 @@ export default function WorkspacePage() {
                             gap: '12px',
                             marginBottom: '16px',
                             paddingBottom: '16px',
-                            borderBottom: '1px solid rgba(255,255,255,0.08)',
+                            borderBottom: '1px solid var(--glass-border-light)',
                             flexShrink: 0,
                           }}
                         >
@@ -1574,10 +1575,10 @@ export default function WorkspacePage() {
                     display: 'flex',
                     flexDirection: 'column',
                     borderRadius: '16px',
-                    background: 'rgba(255,255,255,0.04)',
+                    background: 'var(--bg-primary)',
                     backdropFilter: 'blur(20px) saturate(160%)',
                     WebkitBackdropFilter: 'blur(20px) saturate(160%)',
-                    border: '1px solid rgba(255,255,255,0.08)',
+                    border: '1px solid var(--glass-border-light)',
                     overflow: 'hidden',
                     height: '100%',
                   }}
@@ -1589,7 +1590,7 @@ export default function WorkspacePage() {
                       alignItems: 'center',
                       gap: '8px',
                       padding: '14px 16px',
-                      borderBottom: '1px solid rgba(255,255,255,0.08)',
+                      borderBottom: '1px solid var(--glass-border-light)',
                       overflow: 'hidden',
                       flexShrink: 0,
                     }}
@@ -1662,7 +1663,7 @@ export default function WorkspacePage() {
                                 marginTop: showHeader && i > 0 ? '8px' : '0',
                                 transition: 'background 0.1s',
                               }}
-                              onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.03)'; }}
+                              onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--bg-secondary)'; }}
                               onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
                             >
                               {/* Avatar / hover timestamp */}
@@ -1717,8 +1718,8 @@ export default function WorkspacePage() {
                                         boxSizing: 'border-box',
                                         padding: '8px 12px',
                                         borderRadius: '8px',
-                                        background: 'rgba(255,255,255,0.06)',
-                                        border: '1px solid rgba(255,255,255,0.15)',
+                                        background: 'var(--bg-hover)',
+                                        border: '1px solid var(--glass-border)',
                                         color: 'var(--text-primary)',
                                         fontSize: '13px',
                                         lineHeight: 1.4,
@@ -1735,14 +1736,14 @@ export default function WorkspacePage() {
                                           borderRadius: '6px',
                                           fontSize: '11px',
                                           fontWeight: 500,
-                                          background: 'rgba(255,255,255,0.05)',
+                                          background: 'var(--glass-bg-light)',
                                           color: 'var(--text-secondary)',
-                                          border: '1px solid rgba(255,255,255,0.08)',
+                                          border: '1px solid var(--glass-border-light)',
                                           cursor: 'pointer',
                                           transition: 'all 0.1s',
                                         }}
-                                        onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; }}
-                                        onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; }}
+                                        onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--glass-border-light)'; }}
+                                        onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--glass-bg-light)'; }}
                                       >
                                         Cancel
                                       </button>
@@ -1774,9 +1775,43 @@ export default function WorkspacePage() {
                                   </div>
                                 ) : (
                                   <>
-                                    <p style={{ fontSize: '14px', lineHeight: 1.5, color: 'var(--text-secondary)', whiteSpace: 'pre-wrap', wordBreak: 'break-word', overflowWrap: 'break-word', margin: 0 }}>
+                                    <p
+                                      style={{
+                                        fontSize: '14px',
+                                        lineHeight: 1.5,
+                                        color: msg.status === 'pending' ? '#ef4444' : msg.status === 'failed' ? '#f59e0b' : 'var(--text-secondary)',
+                                        opacity: (msg.status === 'pending' || msg.status === 'failed') ? 0.85 : 1,
+                                        transition: 'color 0.3s ease, opacity 0.3s ease',
+                                        whiteSpace: 'pre-wrap',
+                                        wordBreak: 'break-word',
+                                        overflowWrap: 'break-word',
+                                        margin: 0
+                                      }}
+                                    >
                                       {msg.text}
                                     </p>
+                                    {msg.status === 'failed' && (
+                                      <div style={{ marginTop: '4px' }}>
+                                        <button
+                                          type="button"
+                                          onClick={() => retryChatMessage(workspace.id, msg.id)}
+                                          style={{
+                                            fontSize: '11px',
+                                            color: '#f59e0b',
+                                            background: 'transparent',
+                                            border: 'none',
+                                            padding: 0,
+                                            textDecoration: 'underline',
+                                            cursor: 'pointer',
+                                            display: 'inline-flex',
+                                            alignItems: 'center',
+                                            gap: '4px'
+                                          }}
+                                        >
+                                          Tap to retry
+                                        </button>
+                                      </div>
+                                    )}
                                     
                                     {/* Render Reactions */}
                                     {msg.reactions && msg.reactions.length > 0 && (
@@ -1794,8 +1829,8 @@ export default function WorkspacePage() {
                                                 gap: '4px',
                                                 padding: '2px 6px',
                                                 borderRadius: '6px',
-                                                background: hasReacted ? 'rgba(99,102,241,0.15)' : 'rgba(255,255,255,0.04)',
-                                                border: hasReacted ? '1px solid rgba(99,102,241,0.35)' : '1px solid rgba(255,255,255,0.08)',
+                                                background: hasReacted ? 'rgba(99,102,241,0.15)' : 'var(--bg-primary)',
+                                                border: hasReacted ? '1px solid rgba(99,102,241,0.35)' : '1px solid var(--glass-border-light)',
                                                 cursor: 'pointer',
                                                 transition: 'all 0.15s',
                                                 fontSize: '11px',
@@ -1803,14 +1838,14 @@ export default function WorkspacePage() {
                                               }}
                                               onMouseEnter={(e) => {
                                                 if (!hasReacted) {
-                                                  e.currentTarget.style.background = 'rgba(255,255,255,0.08)';
-                                                  e.currentTarget.style.borderColor = 'rgba(255,255,255,0.15)';
+                                                  e.currentTarget.style.background = 'var(--glass-border-light)';
+                                                  e.currentTarget.style.borderColor = 'var(--glass-border)';
                                                 }
                                               }}
                                               onMouseLeave={(e) => {
                                                 if (!hasReacted) {
-                                                  e.currentTarget.style.background = 'rgba(255,255,255,0.04)';
-                                                  e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)';
+                                                  e.currentTarget.style.background = 'var(--bg-primary)';
+                                                  e.currentTarget.style.borderColor = 'var(--glass-border-light)';
                                                 }
                                               }}
                                             >
@@ -1837,7 +1872,7 @@ export default function WorkspacePage() {
                                   gap: '2px',
                                   background: 'rgba(15,15,35,0.92)',
                                   backdropFilter: 'blur(12px)',
-                                  border: '1px solid rgba(255,255,255,0.12)',
+                                  border: '1px solid var(--glass-border)',
                                   borderRadius: '8px',
                                   padding: '2px',
                                   boxShadow: '0 4px 16px rgba(0,0,0,0.3)',
@@ -1851,9 +1886,9 @@ export default function WorkspacePage() {
                                     setActiveEmojiPickerMessageId(prev => prev === msg.id ? null : msg.id);
                                     setActiveMenuMessageId(null);
                                   }}
-                                  style={{ padding: '4px', borderRadius: '5px', cursor: 'pointer', background: activeEmojiPickerMessageId === msg.id ? 'rgba(255,255,255,0.1)' : 'transparent', border: 'none', color: activeEmojiPickerMessageId === msg.id ? 'var(--text-primary)' : 'var(--text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s' }}
+                                  style={{ padding: '4px', borderRadius: '5px', cursor: 'pointer', background: activeEmojiPickerMessageId === msg.id ? 'var(--glass-border)' : 'transparent', border: 'none', color: activeEmojiPickerMessageId === msg.id ? 'var(--text-primary)' : 'var(--text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s' }}
                                   title="React with emoji"
-                                  onMouseEnter={(e) => { if (activeEmojiPickerMessageId !== msg.id) { e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; e.currentTarget.style.color = 'var(--text-primary)'; } }}
+                                  onMouseEnter={(e) => { if (activeEmojiPickerMessageId !== msg.id) { e.currentTarget.style.background = 'var(--glass-border-light)'; e.currentTarget.style.color = 'var(--text-primary)'; } }}
                                   onMouseLeave={(e) => { if (activeEmojiPickerMessageId !== msg.id) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-secondary)'; } }}
                                 >
                                   <Smile size={13} />
@@ -1864,9 +1899,9 @@ export default function WorkspacePage() {
                                     setActiveMenuMessageId(prev => prev === msg.id ? null : msg.id);
                                     setActiveEmojiPickerMessageId(null);
                                   }}
-                                  style={{ padding: '4px', borderRadius: '5px', cursor: 'pointer', background: activeMenuMessageId === msg.id ? 'rgba(255,255,255,0.1)' : 'transparent', border: 'none', color: activeMenuMessageId === msg.id ? 'var(--text-primary)' : 'var(--text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s' }}
+                                  style={{ padding: '4px', borderRadius: '5px', cursor: 'pointer', background: activeMenuMessageId === msg.id ? 'var(--glass-border)' : 'transparent', border: 'none', color: activeMenuMessageId === msg.id ? 'var(--text-primary)' : 'var(--text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s' }}
                                   title="More options"
-                                  onMouseEnter={(e) => { if (activeMenuMessageId !== msg.id) { e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; e.currentTarget.style.color = 'var(--text-primary)'; } }}
+                                  onMouseEnter={(e) => { if (activeMenuMessageId !== msg.id) { e.currentTarget.style.background = 'var(--glass-border-light)'; e.currentTarget.style.color = 'var(--text-primary)'; } }}
                                   onMouseLeave={(e) => { if (activeMenuMessageId !== msg.id) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-secondary)'; } }}
                                 >
                                   <MoreHorizontal size={13} />
@@ -1900,7 +1935,7 @@ export default function WorkspacePage() {
                                       borderRadius: '12px',
                                       background: 'rgba(15,15,35,0.92)',
                                       backdropFilter: 'blur(20px) saturate(160%)',
-                                      border: '1px solid rgba(255,255,255,0.15)',
+                                      border: '1px solid var(--glass-border)',
                                       boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
                                     }}
                                   >
@@ -1931,7 +1966,7 @@ export default function WorkspacePage() {
                                             justifyContent: 'center',
                                           }}
                                           onMouseEnter={(e) => {
-                                            e.currentTarget.style.background = 'rgba(255,255,255,0.08)';
+                                            e.currentTarget.style.background = 'var(--glass-border-light)';
                                             e.currentTarget.style.transform = 'scale(1.2)';
                                           }}
                                           onMouseLeave={(e) => {
@@ -1974,7 +2009,7 @@ export default function WorkspacePage() {
                                       borderRadius: '10px',
                                       background: 'rgba(15,15,35,0.92)',
                                       backdropFilter: 'blur(20px) saturate(160%)',
-                                      border: '1px solid rgba(255,255,255,0.15)',
+                                      border: '1px solid var(--glass-border)',
                                       boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
                                       display: 'flex',
                                       flexDirection: 'column',
@@ -2003,7 +2038,7 @@ export default function WorkspacePage() {
                                         transition: 'background 0.15s, color 0.15s',
                                       }}
                                       onMouseEnter={(e) => {
-                                        e.currentTarget.style.background = 'rgba(255,255,255,0.06)';
+                                        e.currentTarget.style.background = 'var(--bg-hover)';
                                         e.currentTarget.style.color = 'var(--text-primary)';
                                       }}
                                       onMouseLeave={(e) => {
@@ -2039,7 +2074,7 @@ export default function WorkspacePage() {
                                           transition: 'background 0.15s, color 0.15s',
                                         }}
                                         onMouseEnter={(e) => {
-                                          e.currentTarget.style.background = 'rgba(255,255,255,0.06)';
+                                          e.currentTarget.style.background = 'var(--bg-hover)';
                                           e.currentTarget.style.color = 'var(--text-primary)';
                                         }}
                                         onMouseLeave={(e) => {
@@ -2098,7 +2133,7 @@ export default function WorkspacePage() {
 
                   {/* Typing indicator */}
                   {activeTyping.length > 0 && (
-                    <div style={{ padding: '6px 16px', fontSize: '10px', display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-secondary)', borderTop: '1px solid rgba(255,255,255,0.06)', flexShrink: 0 }}>
+                    <div style={{ padding: '6px 16px', fontSize: '10px', display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-secondary)', borderTop: '1px solid var(--bg-hover)', flexShrink: 0 }}>
                       <span style={{ display: 'flex', gap: '2px', alignItems: 'center' }}>
                         <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: 'var(--accent)' }} className="animate-bounce" />
                         <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: 'var(--accent)', animationDelay: '150ms' }} className="animate-bounce" />
@@ -2115,7 +2150,7 @@ export default function WorkspacePage() {
                     onSubmit={handleSendMessage}
                     style={{
                       padding: '12px 16px',
-                      borderTop: '1px solid rgba(255,255,255,0.08)',
+                      borderTop: '1px solid var(--glass-border-light)',
                       display: 'flex',
                       alignItems: 'center',
                       gap: '10px',
@@ -2134,8 +2169,8 @@ export default function WorkspacePage() {
                         boxSizing: 'border-box',
                         padding: '10px 14px',
                         borderRadius: '12px',
-                        background: 'rgba(255,255,255,0.06)',
-                        border: '1px solid rgba(255,255,255,0.1)',
+                        background: 'var(--bg-hover)',
+                        border: '1px solid var(--glass-border)',
                         color: 'var(--text-primary)',
                         fontSize: '13px',
                         lineHeight: 1.5,
@@ -2144,8 +2179,8 @@ export default function WorkspacePage() {
                         outline: 'none',
                         transition: 'border-color 0.15s',
                       }}
-                      onFocus={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)'; }}
-                      onBlur={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'; }}
+                      onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--glass-border)'; }}
+                      onBlur={(e) => { e.currentTarget.style.borderColor = 'var(--glass-border)'; }}
                       onKeyDown={(e) => {
                         if (e.key === 'Enter' && !e.shiftKey) {
                           e.preventDefault();
@@ -2165,7 +2200,7 @@ export default function WorkspacePage() {
                         justifyContent: 'center',
                         borderRadius: '10px',
                         border: 'none',
-                        background: message.trim() ? 'rgba(99,102,241,0.3)' : 'rgba(255,255,255,0.06)',
+                        background: message.trim() ? 'rgba(99,102,241,0.3)' : 'var(--bg-hover)',
                         color: message.trim() ? 'var(--accent)' : 'var(--text-tertiary)',
                         cursor: message.trim() ? 'pointer' : 'default',
                         transition: 'all 0.15s',
@@ -2340,7 +2375,7 @@ export default function WorkspacePage() {
                                 </p>
                               )}
                             </div>
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', marginTop: '8px', paddingTop: '8px', borderTop: '1px solid rgba(255,255,255,0.08)', width: '100%', boxSizing: 'border-box' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', marginTop: '8px', paddingTop: '8px', borderTop: '1px solid var(--glass-border-light)', width: '100%', boxSizing: 'border-box' }}>
                               <span style={{ fontSize: '12px', opacity: 0.5, display: 'flex', alignItems: 'center', gap: '4px', whiteSpace: 'nowrap', flexShrink: 0, color: 'var(--text-tertiary)' }}>
                                 <Calendar size={12} style={{ flexShrink: 0 }} /> {dateStr} at {timeStr}
                               </span>
@@ -2506,10 +2541,10 @@ export default function WorkspacePage() {
                 padding: '16px',
                 overflow: 'hidden',
                 borderRadius: '16px',
-                background: 'rgba(255,255,255,0.05)',
+                background: 'var(--glass-bg-light)',
                 backdropFilter: 'blur(20px) saturate(160%)',
                 WebkitBackdropFilter: 'blur(20px) saturate(160%)',
-                border: '1px solid rgba(255,255,255,0.1)',
+                border: '1px solid var(--glass-border)',
               }}
             >
               {/* Header — sits fully inside card padding */}
@@ -2545,8 +2580,8 @@ export default function WorkspacePage() {
                     width: '26px',
                     height: '26px',
                     borderRadius: '8px',
-                    background: 'rgba(255,255,255,0.06)',
-                    border: '1px solid rgba(255,255,255,0.1)',
+                    background: 'var(--bg-hover)',
+                    border: '1px solid var(--glass-border)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -2555,8 +2590,8 @@ export default function WorkspacePage() {
                     color: 'var(--text-secondary)',
                     transition: 'all 0.15s',
                   }}
-                  onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.1)'; e.currentTarget.style.color = 'var(--accent)'; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; e.currentTarget.style.color = 'var(--text-secondary)'; }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--glass-border)'; e.currentTarget.style.color = 'var(--accent)'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--bg-hover)'; e.currentTarget.style.color = 'var(--text-secondary)'; }}
                 >
                   <UserPlus size={13} />
                 </button>
@@ -2807,7 +2842,7 @@ export default function WorkspacePage() {
         >
           {/* Section 1 — Header */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', margin: 0 }}>
-            <h2 style={{ fontSize: '18px', fontWeight: 600, color: 'white', margin: 0, flex: 1 }}>Invite member</h2>
+            <h2 style={{ fontSize: '18px', fontWeight: 600, color: 'var(--text-primary)', margin: 0, flex: 1 }}>Invite member</h2>
             <button
               onClick={() => setShowInvite(false)}
               type="button"
@@ -2820,7 +2855,7 @@ export default function WorkspacePage() {
                 justifyContent: 'center',
                 background: 'transparent',
                 border: 'none',
-                color: 'rgba(255,255,255,0.4)',
+                color: 'var(--text-tertiary)',
                 cursor: 'pointer',
                 flexShrink: 0,
                 padding: 0,
@@ -2935,7 +2970,7 @@ export default function WorkspacePage() {
         >
           {/* Header row (title + close button) */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', margin: 0 }}>
-            <h2 style={{ fontSize: '18px', fontWeight: 600, color: 'white', margin: 0, flex: 1 }}>Delete Workspace</h2>
+            <h2 style={{ fontSize: '18px', fontWeight: 600, color: 'var(--text-primary)', margin: 0, flex: 1 }}>Delete Workspace</h2>
             <button
               onClick={() => {
                 setShowDeleteModal(false);
@@ -2952,7 +2987,7 @@ export default function WorkspacePage() {
                 justifyContent: 'center',
                 background: 'transparent',
                 border: 'none',
-                color: 'rgba(255,255,255,0.4)',
+                color: 'var(--text-tertiary)',
                 cursor: 'pointer',
                 flexShrink: 0,
                 padding: 0,
@@ -3034,7 +3069,7 @@ export default function WorkspacePage() {
         >
           {/* Section 1 — Header */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', margin: 0 }}>
-            <h2 style={{ fontSize: '18px', fontWeight: 600, color: 'white', margin: 0, flex: 1 }}>Create task</h2>
+            <h2 style={{ fontSize: '18px', fontWeight: 600, color: 'var(--text-primary)', margin: 0, flex: 1 }}>Create task</h2>
             <button
               onClick={() => setShowCreateTask(false)}
               type="button"
@@ -3047,7 +3082,7 @@ export default function WorkspacePage() {
                 justifyContent: 'center',
                 background: 'transparent',
                 border: 'none',
-                color: 'rgba(255,255,255,0.4)',
+                color: 'var(--text-tertiary)',
                 cursor: 'pointer',
                 flexShrink: 0,
                 padding: 0,
@@ -3170,7 +3205,7 @@ export default function WorkspacePage() {
           >
             {/* Header */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', margin: 0 }}>
-              <h2 style={{ fontSize: '18px', fontWeight: 600, color: 'white', margin: 0, flex: 1 }}>
+              <h2 style={{ fontSize: '18px', fontWeight: 600, color: 'var(--text-primary)', margin: 0, flex: 1 }}>
                 {isOwner ? "Edit Task" : "Task Details"}
               </h2>
               <button
@@ -3185,7 +3220,7 @@ export default function WorkspacePage() {
                   justifyContent: 'center',
                   background: 'transparent',
                   border: 'none',
-                  color: 'rgba(255,255,255,0.4)',
+                  color: 'var(--text-tertiary)',
                   cursor: 'pointer',
                   flexShrink: 0,
                   padding: 0,
@@ -3260,19 +3295,19 @@ export default function WorkspacePage() {
                               alignItems: 'start',
                               padding: '10px',
                               borderRadius: '8px',
-                              border: '1px solid rgba(255,255,255,0.08)',
-                              backgroundColor: 'rgba(255,255,255,0.03)'
+                              border: '1px solid var(--glass-border-light)',
+                              backgroundColor: 'var(--bg-secondary)'
                             }}
                           >
                             <Avatar name={commSender.name} initials={commSender.initials} size="xs" />
                             <div style={{ minWidth: 0, flex: 1 }}>
                               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: '8px' }}>
-                                <span style={{ fontSize: '11px', fontWeight: 600, color: 'white' }}>{commSender.name}</span>
-                                <span style={{ fontSize: '9px', opacity: 0.4, color: 'white' }}>
+                                <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-primary)' }}>{commSender.name}</span>
+                                <span style={{ fontSize: '9px', opacity: 0.4, color: 'var(--text-primary)' }}>
                                   {new Date(comment.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                                 </span>
                               </div>
-                              <p style={{ fontSize: '11px', opacity: 0.7, margin: '4px 0 0 0', wordBreak: 'break-word', lineHeight: 1.4, color: 'white' }}>
+                              <p style={{ fontSize: '11px', opacity: 0.7, margin: '4px 0 0 0', wordBreak: 'break-word', lineHeight: 1.4, color: 'var(--text-primary)' }}>
                                 {comment.text}
                               </p>
                             </div>
@@ -3478,7 +3513,7 @@ export default function WorkspacePage() {
         >
           {/* Header row (title + close button) */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', margin: 0 }}>
-            <h2 style={{ fontSize: '18px', fontWeight: 600, color: 'white', margin: 0, flex: 1 }}>Schedule meeting</h2>
+            <h2 style={{ fontSize: '18px', fontWeight: 600, color: 'var(--text-primary)', margin: 0, flex: 1 }}>Schedule meeting</h2>
             <button
               onClick={() => setShowScheduleMeeting(false)}
               type="button"
@@ -3491,7 +3526,7 @@ export default function WorkspacePage() {
                 justifyContent: 'center',
                 background: 'transparent',
                 border: 'none',
-                color: 'rgba(255,255,255,0.4)',
+                color: 'var(--text-tertiary)',
                 cursor: 'pointer',
                 flexShrink: 0,
                 padding: 0,

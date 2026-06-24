@@ -32,7 +32,7 @@ export default function EmptyState({
         <div
           className={`${compact ? 'w-10 h-10 mb-4' : 'w-12 h-12 mb-5'} rounded-[var(--radius-lg)] flex items-center justify-center transition-transform duration-300 hover:scale-105`}
           style={{
-            background: 'rgba(255, 255, 255, 0.06)',
+            background: 'var(--bg-hover)',
             border: '1px solid var(--glass-border-light)',
             boxShadow: 'var(--shadow-sm)',
             ...iconStyle

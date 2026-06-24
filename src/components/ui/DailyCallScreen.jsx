@@ -135,14 +135,14 @@ export default function DailyCallScreen({ activeCall, onLeave }) {
       background: '#0B0B1E',
       display: 'flex',
       flexDirection: 'column',
-      color: 'white',
+      color: 'var(--text-primary)',
       fontFamily: 'Inter, system-ui, sans-serif'
     }}>
       {/* Header */}
       <div style={{
         padding: '14px 24px',
         background: 'rgba(11, 11, 30, 0.88)',
-        borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+        borderBottom: '1px solid var(--glass-border-light)',
         backdropFilter: 'blur(12px)',
         display: 'flex',
         alignItems: 'center',
@@ -158,7 +158,7 @@ export default function DailyCallScreen({ activeCall, onLeave }) {
             boxShadow: `0 0 10px ${loading ? '#f59e0b' : error ? '#ef4444' : '#10B981'}`,
             transition: 'all 0.3s ease'
           }} />
-          <span style={{ fontSize: '13px', fontWeight: 600, color: 'rgba(255,255,255,0.9)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
             Huddle: {activeCall?.workspaceName || 'Nexus Workspace'}
             {loading && (
               <Loader2 size={13} className="animate-spin" style={{ color: '#f59e0b' }} />
@@ -175,9 +175,9 @@ export default function DailyCallScreen({ activeCall, onLeave }) {
               gap: '5px',
               padding: '7px 12px',
               borderRadius: '10px',
-              background: 'rgba(255, 255, 255, 0.06)',
-              border: '1px solid rgba(255, 255, 255, 0.12)',
-              color: 'rgba(255,255,255,0.6)',
+              background: 'var(--bg-hover)',
+              border: '1px solid var(--glass-border)',
+              color: 'var(--text-secondary)',
               fontSize: '11px',
               fontWeight: 500,
               cursor: 'pointer',
@@ -246,10 +246,10 @@ export default function DailyCallScreen({ activeCall, onLeave }) {
               <Mic size={28} style={{ color: '#818cf8' }} />
             </div>
             <div style={{ maxWidth: '360px' }}>
-              <p style={{ fontSize: '16px', fontWeight: 700, marginBottom: '8px', color: 'rgba(255,255,255,0.95)' }}>
+              <p style={{ fontSize: '16px', fontWeight: 700, marginBottom: '8px', color: 'var(--text-primary)' }}>
                 Connecting to huddle…
               </p>
-              <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.4)', lineHeight: 1.65 }}>
+              <p style={{ fontSize: '12px', color: 'var(--text-tertiary)', lineHeight: 1.65 }}>
                 {statusMsg}
               </p>
             </div>
@@ -297,14 +297,14 @@ export default function DailyCallScreen({ activeCall, onLeave }) {
               <p style={{ fontSize: '15px', fontWeight: 700, marginBottom: '6px' }}>Connection issue</p>
               <p style={{
                 fontSize: '11px',
-                color: 'rgba(255,255,255,0.45)',
+                color: 'var(--text-tertiary)',
                 lineHeight: 1.65,
                 whiteSpace: 'pre-wrap',
                 textAlign: 'left',
-                background: 'rgba(255,255,255,0.03)',
+                background: 'var(--bg-secondary)',
                 borderRadius: '8px',
                 padding: '12px 14px',
-                border: '1px solid rgba(255,255,255,0.06)',
+                border: '1px solid var(--bg-hover)',
                 fontFamily: 'monospace'
               }}>
                 {error}
@@ -338,9 +338,9 @@ export default function DailyCallScreen({ activeCall, onLeave }) {
                   gap: '6px',
                   padding: '8px 18px',
                   borderRadius: '8px',
-                  background: 'rgba(255,255,255,0.08)',
-                  border: '1px solid rgba(255,255,255,0.15)',
-                  color: 'white',
+                  background: 'var(--glass-border-light)',
+                  border: '1px solid var(--glass-border)',
+                  color: 'var(--text-primary)',
                   fontSize: '12px',
                   fontWeight: 600,
                   cursor: 'pointer'
@@ -353,9 +353,9 @@ export default function DailyCallScreen({ activeCall, onLeave }) {
                 style={{
                   padding: '8px 18px',
                   borderRadius: '8px',
-                  background: 'rgba(255,255,255,0.05)',
-                  border: '1px solid rgba(255,255,255,0.1)',
-                  color: 'rgba(255,255,255,0.5)',
+                  background: 'var(--glass-bg-light)',
+                  border: '1px solid var(--glass-border)',
+                  color: 'var(--text-secondary)',
                   fontSize: '12px',
                   fontWeight: 600,
                   cursor: 'pointer'

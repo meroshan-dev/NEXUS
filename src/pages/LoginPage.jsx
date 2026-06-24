@@ -142,9 +142,9 @@ export default function LoginPage() {
 
           {/* Separator */}
           <div className="flex items-center gap-3" style={{ marginBottom: '20px' }}>
-            <div className="flex-1 h-px" style={{ background: 'rgba(255,255,255,0.06)' }} />
+            <div className="flex-1 h-px" style={{ background: 'var(--bg-hover)' }} />
             <span className="text-[10px] font-medium uppercase tracking-wider" style={{ color: 'var(--text-tertiary)' }}>or email</span>
-            <div className="flex-1 h-px" style={{ background: 'rgba(255,255,255,0.06)' }} />
+            <div className="flex-1 h-px" style={{ background: 'var(--bg-hover)' }} />
           </div>
 
           {/* Form — ALL labels INSIDE the card */}

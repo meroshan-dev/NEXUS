@@ -31,9 +31,9 @@ export default function CustomSelect({ value, onChange, options, disabled = fals
           boxSizing: 'border-box',
           padding: '10px 14px',
           borderRadius: '12px',
-          background: 'rgba(255,255,255,0.06)',
-          border: '1px solid rgba(255,255,255,0.1)',
-          color: 'white',
+          background: 'var(--bg-hover)',
+          border: '1px solid var(--glass-border)',
+          color: 'var(--text-primary)',
           fontSize: '14px',
           display: 'flex',
           alignItems: 'center',
@@ -59,7 +59,7 @@ export default function CustomSelect({ value, onChange, options, disabled = fals
           background: 'rgba(20,20,40,0.95)',
           backdropFilter: 'blur(30px) saturate(180%)',
           WebkitBackdropFilter: 'blur(30px) saturate(180%)',
-          border: '1px solid rgba(255,255,255,0.12)',
+          border: '1px solid var(--glass-border)',
           borderRadius: '12px',
           padding: '4px',
           boxShadow: '0 12px 32px rgba(0,0,0,0.4)',
@@ -81,7 +81,7 @@ export default function CustomSelect({ value, onChange, options, disabled = fals
                   borderRadius: '8px',
                   fontSize: '13px',
                   color: isSelected ? 'var(--text-brand, #818cf8)' : 'white',
-                  background: isSelected ? 'rgba(255,255,255,0.05)' : 'transparent',
+                  background: isSelected ? 'var(--glass-bg-light)' : 'transparent',
                   cursor: 'pointer',
                   fontWeight: isSelected ? 500 : 400,
                   transition: 'background 0.15s ease',
@@ -90,7 +90,7 @@ export default function CustomSelect({ value, onChange, options, disabled = fals
                   whiteSpace: 'nowrap'
                 }}
                 onMouseEnter={e => {
-                  if (!isSelected) e.currentTarget.style.background = 'rgba(255,255,255,0.08)';
+                  if (!isSelected) e.currentTarget.style.background = 'var(--glass-border-light)';
                 }}
                 onMouseLeave={e => {
                   if (!isSelected) e.currentTarget.style.background = 'transparent';

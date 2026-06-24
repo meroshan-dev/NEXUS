@@ -61,7 +61,7 @@ export default function TopBar({ onMobileMenuToggle }) {
           className="lg:hidden rounded-[var(--radius-md)] flex items-center justify-center transition-all cursor-pointer"
           style={{
             color: 'var(--text-secondary)',
-            background: 'rgba(255,255,255,0.06)',
+            background: 'var(--bg-hover)',
             border: '1px solid var(--glass-border-light)',
             flexShrink: 0,
             width: '36px',
@@ -92,8 +92,8 @@ export default function TopBar({ onMobileMenuToggle }) {
             boxSizing: 'border-box',
             padding: '8px 14px',
             borderRadius: '10px',
-            background: 'rgba(255,255,255,0.05)',
-            border: '1px solid rgba(255,255,255,0.08)',
+            background: 'var(--glass-bg-light)',
+            border: '1px solid var(--glass-border-light)',
             backdropFilter: 'blur(12px)',
             WebkitBackdropFilter: 'blur(12px)',
             display: 'flex',
@@ -138,7 +138,7 @@ export default function TopBar({ onMobileMenuToggle }) {
               opacity: 0.35,
               padding: '2px 6px',
               borderRadius: '4px',
-              background: 'rgba(255,255,255,0.06)',
+              background: 'var(--bg-hover)',
               color: 'var(--text-primary)',
               flexShrink: 0,
               lineHeight: 1.3,
@@ -173,7 +173,7 @@ export default function TopBar({ onMobileMenuToggle }) {
               justifyContent: 'center',
               flexShrink: 0,
               overflow: 'visible',
-              background: 'rgba(255,255,255,0.06)',
+              background: 'var(--bg-hover)',
               border: '1px solid var(--glass-border-light)',
               color: 'var(--text-secondary)',
             }}
@@ -203,7 +203,7 @@ export default function TopBar({ onMobileMenuToggle }) {
                   background: 'rgba(10, 10, 30, 0.92)',
                   backdropFilter: 'blur(40px) saturate(200%)',
                   WebkitBackdropFilter: 'blur(40px) saturate(200%)',
-                  border: '1px solid rgba(255,255,255,0.18)',
+                  border: '1px solid var(--glass-border)',
                   borderRadius: '16px',
                   padding: '16px 18px',
                   boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
@@ -212,7 +212,7 @@ export default function TopBar({ onMobileMenuToggle }) {
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-                  <span style={{ fontSize: '14px', fontWeight: 600, color: 'white' }}>
+                  <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>
                     Notifications
                   </span>
                   {unreadCount > 0 && (
@@ -228,18 +228,18 @@ export default function TopBar({ onMobileMenuToggle }) {
                 <div style={{ maxHeight: '340px', overflowY: 'auto', overflowX: 'hidden', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   {notifications.length === 0 ? (
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '32px 12px', textAlign: 'center' }}>
-                      <div style={{ padding: '12px', borderRadius: '50%', marginBottom: '12px', background: 'rgba(255,255,255,0.06)' }}>
-                        <BellOff size={18} style={{ color: 'rgba(255,255,255,0.4)' }} />
+                      <div style={{ padding: '12px', borderRadius: '50%', marginBottom: '12px', background: 'var(--bg-hover)' }}>
+                        <BellOff size={18} style={{ color: 'var(--text-tertiary)' }} />
                       </div>
-                      <p style={{ fontSize: '13px', fontWeight: 500, color: 'white' }}>No notifications</p>
-                      <p style={{ fontSize: '11px', marginTop: '4px', color: 'rgba(255,255,255,0.45)' }}>We'll notify you here when things change.</p>
+                      <p style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)' }}>No notifications</p>
+                      <p style={{ fontSize: '11px', marginTop: '4px', color: 'var(--text-tertiary)' }}>We'll notify you here when things change.</p>
                     </div>
                   ) : (
                     notifications.map((notif) => (
                       <div
                         key={notif.id}
                         style={{
-                          background: !notif.read ? 'rgba(129,140,248,0.1)' : 'rgba(255,255,255,0.06)',
+                          background: !notif.read ? 'rgba(129,140,248,0.1)' : 'var(--bg-hover)',
                           borderRadius: '10px',
                           padding: '10px 12px',
                           overflow: 'hidden',
@@ -247,13 +247,13 @@ export default function TopBar({ onMobileMenuToggle }) {
                         }}
                       >
                         <div style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
-                          <p style={{ fontSize: '13px', fontWeight: 600, color: 'white', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          <p style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                             {notif.title}
                           </p>
-                          <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.75)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: '3px' }}>
+                          <p style={{ fontSize: '12px', color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: '3px' }}>
                             {notif.body || notif.text}
                           </p>
-                          <span style={{ fontSize: '10px', color: 'rgba(255,255,255,0.35)', display: 'block', marginTop: '5px' }}>
+                          <span style={{ fontSize: '10px', color: 'var(--text-tertiary)', display: 'block', marginTop: '5px' }}>
                             {formatTime(notif.created_at)}
                           </span>
                         </div>
@@ -262,7 +262,7 @@ export default function TopBar({ onMobileMenuToggle }) {
                             onClick={() => markNotificationAsRead(notif.id)}
                             style={{
                               padding: '5px', borderRadius: '6px', cursor: 'pointer', flexShrink: 0,
-                              color: 'rgba(255,255,255,0.5)', background: 'rgba(255,255,255,0.06)',
+                              color: 'var(--text-secondary)', background: 'var(--bg-hover)',
                               border: 'none', transition: 'all 0.15s', display: 'flex', alignItems: 'center', justifyContent: 'center',
                             }}
                             onMouseEnter={(e) => {
@@ -270,8 +270,8 @@ export default function TopBar({ onMobileMenuToggle }) {
                               e.currentTarget.style.color = '#818cf8';
                             }}
                             onMouseLeave={(e) => {
-                              e.currentTarget.style.background = 'rgba(255,255,255,0.06)';
-                              e.currentTarget.style.color = 'rgba(255,255,255,0.5)';
+                              e.currentTarget.style.background = 'var(--bg-hover)';
+                              e.currentTarget.style.color = 'var(--text-secondary)';
                             }}
                           >
                             <Check size={11} />
@@ -322,7 +322,7 @@ export default function TopBar({ onMobileMenuToggle }) {
                   background: 'rgba(15,15,35,0.92)',
                   backdropFilter: 'blur(30px)',
                   WebkitBackdropFilter: 'blur(30px)',
-                  border: '1px solid rgba(255,255,255,0.12)',
+                  border: '1px solid var(--glass-border)',
                   borderRadius: '14px',
                   padding: '12px',
                   minWidth: '200px',
@@ -333,7 +333,7 @@ export default function TopBar({ onMobileMenuToggle }) {
                   gap: '8px'
                 }}
               >
-                <div style={{ padding: '4px 8px', borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '8px', marginBottom: '4px' }}>
+                <div style={{ padding: '4px 8px', borderBottom: '1px solid var(--glass-border-light)', paddingBottom: '8px', marginBottom: '4px' }}>
                   <p style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {user?.name}
                   </p>
@@ -363,7 +363,7 @@ export default function TopBar({ onMobileMenuToggle }) {
                     cursor: 'pointer',
                     transition: 'all 0.2s'
                   }}
-                  onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--bg-hover)'; }}
                   onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
                 >
                   <User size={14} strokeWidth={1.5} style={{ opacity: 0.7 }} />

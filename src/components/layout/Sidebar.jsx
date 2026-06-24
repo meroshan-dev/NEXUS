@@ -26,10 +26,10 @@ const navItemStyle = (collapsed, isActive) => ({
   transition: 'all 0.2s',
   textDecoration: 'none',
   boxSizing: 'border-box',
-  background: isActive ? 'rgba(255,255,255,0.1)' : 'transparent',
+  background: isActive ? 'var(--glass-border)' : 'transparent',
   backdropFilter: isActive ? 'blur(12px)' : 'none',
   WebkitBackdropFilter: isActive ? 'blur(12px)' : 'none',
-  border: isActive ? '1px solid rgba(255,255,255,0.12)' : '1px solid transparent',
+  border: isActive ? '1px solid var(--glass-border)' : '1px solid transparent',
   color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
   fontWeight: isActive ? 600 : 400,
   opacity: isActive ? 1 : 0.65,
@@ -97,14 +97,14 @@ export default function Sidebar({ collapsed, onToggle, mobile = false, onClose }
             padding: '0 20px',
             height: 'var(--topbar-height)',
             flexShrink: 0,
-            borderBottom: '1px solid rgba(255,255,255,0.08)'
+            borderBottom: '1px solid var(--glass-border-light)'
           }}
         >
           {activeWorkspace ? (
             <div className="relative flex-1 min-w-0 overflow-hidden" ref={switcherRef}>
               <button
                 onClick={() => setShowSwitcher(!showSwitcher)}
-                className="flex items-center gap-2.5 w-full text-left py-1.5 rounded-[var(--radius-md)] transition-all cursor-pointer select-none px-2 hover:bg-[rgba(255,255,255,0.06)]"
+                className="flex items-center gap-2.5 w-full text-left py-1.5 rounded-[var(--radius-md)] transition-all cursor-pointer select-none px-2 hover:bg-[var(--bg-hover)]"
               >
                 <div
                   className="w-9 h-9 rounded-[var(--radius-md)] flex items-center justify-center text-lg shrink-0"
@@ -141,7 +141,7 @@ export default function Sidebar({ collapsed, onToggle, mobile = false, onClose }
                           setShowSwitcher(false);
                           if (onClose) onClose();
                         }}
-                        className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-left transition-all hover:bg-[rgba(255,255,255,0.06)] cursor-pointer"
+                        className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-left transition-all hover:bg-[var(--bg-hover)] cursor-pointer"
                         style={{
                           color: ws.id === activeWorkspaceId ? 'var(--text-brand)' : 'var(--text-primary)',
                         }}
@@ -157,7 +157,7 @@ export default function Sidebar({ collapsed, onToggle, mobile = false, onClose }
                         setShowSwitcher(false);
                         if (onClose) onClose();
                       }}
-                      className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-left transition-all hover:bg-[rgba(255,255,255,0.06)] cursor-pointer"
+                      className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-left transition-all hover:bg-[var(--bg-hover)] cursor-pointer"
                       style={{ color: 'var(--text-secondary)' }}
                     >
                       <Home size={15} strokeWidth={1.5} className="shrink-0" />
@@ -195,7 +195,7 @@ export default function Sidebar({ collapsed, onToggle, mobile = false, onClose }
               alignItems: 'center',
               justifyContent: 'center',
               cursor: 'pointer',
-              background: 'rgba(255,255,255,0.06)',
+              background: 'var(--bg-hover)',
               color: 'var(--text-secondary)',
               border: 'none'
             }}
@@ -291,8 +291,8 @@ export default function Sidebar({ collapsed, onToggle, mobile = false, onClose }
                         fontSize: '13px',
                         transition: 'all 0.2s',
                         textDecoration: 'none',
-                        background: active ? 'rgba(255,255,255,0.1)' : 'transparent',
-                        border: active ? '1px solid rgba(255,255,255,0.12)' : '1px solid transparent',
+                        background: active ? 'var(--glass-border)' : 'transparent',
+                        border: active ? '1px solid var(--glass-border)' : '1px solid transparent',
                         color: active ? 'var(--text-primary)' : 'var(--text-secondary)',
                         fontWeight: active ? 600 : 400,
                         opacity: active ? 1 : 0.65,
@@ -337,7 +337,7 @@ export default function Sidebar({ collapsed, onToggle, mobile = false, onClose }
             <button
               onClick={() => !collapsed && setShowSwitcher(!showSwitcher)}
               className={`flex items-center gap-2.5 w-full text-left py-1.5 rounded-[var(--radius-md)] transition-all cursor-pointer select-none ${
-                collapsed ? 'justify-center' : 'px-2 hover:bg-[rgba(255,255,255,0.06)]'
+                collapsed ? 'justify-center' : 'px-2 hover:bg-[var(--bg-hover)]'
               }`}
             >
               <div
@@ -378,7 +378,7 @@ export default function Sidebar({ collapsed, onToggle, mobile = false, onClose }
                         navigate(`/workspace/${ws.id}`);
                         setShowSwitcher(false);
                       }}
-                      className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-left transition-all hover:bg-[rgba(255,255,255,0.06)] cursor-pointer"
+                      className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-left transition-all hover:bg-[var(--bg-hover)] cursor-pointer"
                       style={{
                         color: ws.id === activeWorkspaceId ? 'var(--text-brand)' : 'var(--text-primary)',
                       }}
@@ -393,7 +393,7 @@ export default function Sidebar({ collapsed, onToggle, mobile = false, onClose }
                       navigate('/dashboard');
                       setShowSwitcher(false);
                     }}
-                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-left transition-all hover:bg-[rgba(255,255,255,0.06)] cursor-pointer"
+                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-left transition-all hover:bg-[var(--bg-hover)] cursor-pointer"
                     style={{ color: 'var(--text-secondary)' }}
                   >
                     <Home size={15} strokeWidth={1.5} className="shrink-0" />
@@ -431,7 +431,7 @@ export default function Sidebar({ collapsed, onToggle, mobile = false, onClose }
           className="w-8 h-8 rounded-[var(--radius-sm)] flex items-center justify-center transition-all shrink-0 cursor-pointer icon-glow"
           style={{ color: 'var(--text-tertiary)' }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.background = 'rgba(255,255,255,0.06)';
+            e.currentTarget.style.background = 'var(--bg-hover)';
             e.currentTarget.style.color = 'var(--text-primary)';
           }}
           onMouseLeave={(e) => {
@@ -452,7 +452,7 @@ export default function Sidebar({ collapsed, onToggle, mobile = false, onClose }
             onMouseEnter={(e) => {
               const isNowActive = location.pathname === '/dashboard';
               if (!isNowActive) {
-                e.currentTarget.style.background = 'rgba(255,255,255,0.04)';
+                e.currentTarget.style.background = 'var(--bg-primary)';
                 e.currentTarget.style.opacity = '0.9';
               }
             }}
@@ -473,7 +473,7 @@ export default function Sidebar({ collapsed, onToggle, mobile = false, onClose }
             onMouseEnter={(e) => {
               const isNowActive = location.pathname === '/profile';
               if (!isNowActive) {
-                e.currentTarget.style.background = 'rgba(255,255,255,0.04)';
+                e.currentTarget.style.background = 'var(--bg-primary)';
                 e.currentTarget.style.opacity = '0.9';
               }
             }}
@@ -515,7 +515,7 @@ export default function Sidebar({ collapsed, onToggle, mobile = false, onClose }
                     style={navItemStyle(collapsed, isActive)}
                     onMouseEnter={(e) => {
                       if (!isActive) {
-                        e.currentTarget.style.background = 'rgba(255,255,255,0.04)';
+                        e.currentTarget.style.background = 'var(--bg-primary)';
                         e.currentTarget.style.opacity = '0.9';
                       }
                     }}
@@ -543,7 +543,7 @@ export default function Sidebar({ collapsed, onToggle, mobile = false, onClose }
                 onClick={() => navigate('/dashboard')}
                 style={{ width: '22px', height: '22px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', background: 'transparent', border: 'none', color: 'var(--text-tertiary)', transition: 'all 0.2s' }}
                 title="Create workspace"
-                onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--bg-hover)'; }}
                 onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
               >
                 <Plus size={13} strokeWidth={2} />
@@ -568,15 +568,15 @@ export default function Sidebar({ collapsed, onToggle, mobile = false, onClose }
                       fontSize: '13px',
                       transition: 'all 0.2s',
                       textDecoration: 'none',
-                      background: active ? 'rgba(255,255,255,0.1)' : 'transparent',
-                      border: active ? '1px solid rgba(255,255,255,0.12)' : '1px solid transparent',
+                      background: active ? 'var(--glass-border)' : 'transparent',
+                      border: active ? '1px solid var(--glass-border)' : '1px solid transparent',
                       color: active ? 'var(--text-primary)' : 'var(--text-secondary)',
                       fontWeight: active ? 600 : 400,
                       opacity: active ? 1 : 0.65,
                     }}
                     onMouseEnter={(e) => {
                       if (!active) {
-                        e.currentTarget.style.background = 'rgba(255,255,255,0.04)';
+                        e.currentTarget.style.background = 'var(--bg-primary)';
                         e.currentTarget.style.opacity = '0.9';
                       }
                     }}

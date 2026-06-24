@@ -100,10 +100,10 @@ export default function AppLayout() {
               className="fixed left-0 top-0 h-full z-50 lg:hidden flex flex-col"
               style={{
                 width: SIDEBAR_FULL,
-                background: 'rgba(255,255,255,0.05)',
+                background: 'var(--glass-bg-light)',
                 backdropFilter: 'blur(20px)',
                 WebkitBackdropFilter: 'blur(20px)',
-                borderRight: '1px solid rgba(255,255,255,0.08)',
+                borderRight: '1px solid var(--glass-border-light)',
               }}
             >
               <Sidebar mobile={true} onClose={() => setMobileOpen(false)} />
@@ -144,7 +144,7 @@ export default function AppLayout() {
             background: 'rgba(10,10,30,0.85)',
             backdropFilter: 'blur(20px)',
             WebkitBackdropFilter: 'blur(20px)',
-            borderTop: '1px solid rgba(255,255,255,0.08)',
+            borderTop: '1px solid var(--glass-border-light)',
             zIndex: 100,
             paddingBottom: 'env(safe-area-inset-bottom, 0px)',
           }}
@@ -156,7 +156,7 @@ export default function AppLayout() {
               display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '2px',
               padding: '6px 16px', borderRadius: '12px', textDecoration: 'none',
               color: location.pathname === '/dashboard' ? 'white' : 'var(--text-tertiary)',
-              background: location.pathname === '/dashboard' ? 'rgba(255,255,255,0.1)' : 'transparent',
+              background: location.pathname === '/dashboard' ? 'var(--glass-border)' : 'transparent',
               transition: 'all 0.15s ease'
             }}
           >
@@ -169,7 +169,7 @@ export default function AppLayout() {
               display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '2px',
               padding: '6px 16px', borderRadius: '12px', textDecoration: 'none',
               color: location.pathname.startsWith('/workspace/') || showWorkspaceSheet ? 'white' : 'var(--text-tertiary)',
-              background: location.pathname.startsWith('/workspace/') || showWorkspaceSheet ? 'rgba(255,255,255,0.1)' : 'transparent',
+              background: location.pathname.startsWith('/workspace/') || showWorkspaceSheet ? 'var(--glass-border)' : 'transparent',
               transition: 'all 0.15s ease',
               border: 'none', cursor: 'pointer', outline: 'none',
             }}
@@ -183,7 +183,7 @@ export default function AppLayout() {
               display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '2px',
               padding: '6px 16px', borderRadius: '12px', textDecoration: 'none',
               color: location.pathname === '/profile' ? 'white' : 'var(--text-tertiary)',
-              background: location.pathname === '/profile' ? 'rgba(255,255,255,0.1)' : 'transparent',
+              background: location.pathname === '/profile' ? 'var(--glass-border)' : 'transparent',
               transition: 'all 0.15s ease'
             }}
           >
@@ -223,7 +223,7 @@ export default function AppLayout() {
                   background: 'rgba(18, 18, 40, 0.97)',
                   backdropFilter: 'blur(24px)',
                   WebkitBackdropFilter: 'blur(24px)',
-                  border: '1px solid rgba(255,255,255,0.08)',
+                  border: '1px solid var(--glass-border-light)',
                   borderBottom: 'none',
                   display: 'flex',
                   flexDirection: 'column',
@@ -234,7 +234,7 @@ export default function AppLayout() {
                 <div style={{ display: 'flex', justifyContent: 'center', padding: '10px 0 4px' }}>
                   <div style={{
                     width: '36px', height: '4px', borderRadius: '2px',
-                    background: 'rgba(255,255,255,0.2)',
+                    background: 'var(--glass-border)',
                   }} />
                 </div>
 
@@ -242,19 +242,19 @@ export default function AppLayout() {
                 <div style={{
                   padding: '12px 20px 16px',
                   display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                  borderBottom: '1px solid rgba(255,255,255,0.06)',
+                  borderBottom: '1px solid var(--bg-hover)',
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <FolderKanban size={18} strokeWidth={1.5} style={{ color: 'var(--accent, #818cf8)' }} />
                     <h3 style={{
-                      fontSize: '15px', fontWeight: 600, color: 'white',
+                      fontSize: '15px', fontWeight: 600, color: 'var(--text-primary)',
                       margin: 0, letterSpacing: '-0.01em',
                     }}>All Workspaces</h3>
                   </div>
                   <span style={{
                     fontSize: '11px', fontWeight: 500,
-                    color: 'var(--text-tertiary, rgba(255,255,255,0.4))',
-                    background: 'rgba(255,255,255,0.06)',
+                    color: 'var(--text-tertiary, var(--text-tertiary))',
+                    background: 'var(--bg-hover)',
                     padding: '3px 10px', borderRadius: '999px',
                   }}>{workspaces.length}</span>
                 </div>
@@ -305,7 +305,7 @@ export default function AppLayout() {
                           transition: 'background 0.15s ease',
                           textAlign: 'left',
                         }}
-                        onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; }}
+                        onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--bg-hover)'; }}
                         onMouseLeave={(e) => {
                           e.currentTarget.style.background = location.pathname === `/workspace/${ws.id}`
                             ? 'rgba(99,102,241,0.12)' : 'transparent';
@@ -325,13 +325,13 @@ export default function AppLayout() {
                         {/* Workspace Info */}
                         <div style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
                           <p style={{
-                            fontSize: '14px', fontWeight: 600, color: 'white',
+                            fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)',
                             margin: 0,
                             overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                           }}>{ws.name}</p>
                           {ws.description && (
                             <p style={{
-                              fontSize: '11px', color: 'rgba(255,255,255,0.35)',
+                              fontSize: '11px', color: 'var(--text-tertiary)',
                               margin: '3px 0 0', lineHeight: 1.3,
                               overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                             }}>{ws.description}</p>
@@ -340,7 +340,7 @@ export default function AppLayout() {
 
                         {/* Arrow */}
                         <ChevronRight size={16} strokeWidth={1.5} style={{
-                          color: 'rgba(255,255,255,0.2)', flexShrink: 0,
+                          color: 'var(--glass-border)', flexShrink: 0,
                         }} />
                       </motion.button>
                     ))
@@ -498,7 +498,7 @@ export default function AppLayout() {
                     cursor: 'pointer',
                     transition: 'all 0.2s',
                     background: 'rgba(16,185,129,0.5)',
-                    color: 'white',
+                    color: 'var(--text-primary)',
                     border: '1px solid rgba(16,185,129,0.4)'
                   }}
                 >

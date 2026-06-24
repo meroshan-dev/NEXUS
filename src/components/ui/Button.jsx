@@ -6,7 +6,7 @@ const variants = {
   secondary:
     'glass-pill-btn',
   ghost:
-    'bg-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[rgba(255,255,255,0.06)]',
+    'bg-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)]',
   danger:
     'bg-[rgba(239,68,68,0.2)] backdrop-blur-lg border border-[rgba(239,68,68,0.3)] text-red-400 hover:bg-[rgba(239,68,68,0.3)]',
   success:

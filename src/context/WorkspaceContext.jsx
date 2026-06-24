@@ -1,6 +1,7 @@
 /* eslint-disable react-refresh/only-export-components */
 import { createContext, useState, useContext, useEffect, useRef, useCallback, useMemo } from 'react';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
+import { db } from '../lib/db';
 import { useAuth } from './AuthContext';
 
 const WorkspaceContext = createContext();
@@ -1173,7 +1174,19 @@ export function WorkspaceProvider({ children }) {
             reactions: m.reactions || [],
             createdAt: m.created_at
           }));
-          setChatMessages(prev => ({ ...prev, [workspaceId]: msgs }));
+          
+          let localMsgs = [];
+          try {
+            const pending = await db.outbox.where('status').equals('pending').toArray();
+            const failed = await db.outbox.where('status').equals('failed').toArray();
+            localMsgs = [...pending, ...failed].filter(m => m.workspaceId === workspaceId);
+          } catch (outboxErr) {
+            console.error('Error fetching outbox messages in Supabase loader:', outboxErr);
+          }
+          
+          const outboxIds = new Set(localMsgs.map(m => m.id));
+          const filteredMsgs = msgs.filter(m => !outboxIds.has(m.id));
+          setChatMessages(prev => ({ ...prev, [workspaceId]: [...filteredMsgs, ...localMsgs] }));
         }
 
         // 3. Fetch Files
@@ -1324,6 +1337,22 @@ export function WorkspaceProvider({ children }) {
                 setChatMessages(prev => {
                   const currentMsgs = prev[workspaceId] || [];
                   if (currentMsgs.some(m => m.id === formattedMsg.id)) return prev;
+                  if (formattedMsg.userId === user?.id) {
+                    const localDuplicateIndex = currentMsgs.findIndex(m => 
+                      m.text === formattedMsg.text && 
+                      (m.status === 'pending' || m.status === 'sent' || m.id.startsWith('local_'))
+                    );
+                    if (localDuplicateIndex !== -1) {
+                      return {
+                        ...prev,
+                        [workspaceId]: currentMsgs.map((m, index) => 
+                          index === localDuplicateIndex 
+                            ? { ...m, id: formattedMsg.id, status: 'sent', createdAt: formattedMsg.createdAt } 
+                            : m
+                        )
+                      };
+                    }
+                  }
                   return {
                     ...prev,
                     [workspaceId]: [...currentMsgs, formattedMsg]
@@ -1609,18 +1638,33 @@ export function WorkspaceProvider({ children }) {
         ...prev,
         [workspaceId]: localTasks ? JSON.parse(localTasks) : { todo: [], inProgress: [], done: [] }
       }));
+      const baseChats = localChats ? JSON.parse(localChats) : [
+        {
+          id: `msg_welcome_${workspaceId}`,
+          userId: 'usr_002',
+          text: `Welcome to the workspace! Start collaborating here.`,
+          timestamp: 'Just now',
+          reactions: []
+        }
+      ];
       setChatMessages(prev => ({
         ...prev,
-        [workspaceId]: localChats ? JSON.parse(localChats) : [
-          {
-            id: `msg_welcome_${workspaceId}`,
-            userId: 'usr_002',
-            text: `Welcome to the workspace! Start collaborating here.`,
-            timestamp: 'Just now',
-            reactions: []
-          }
-        ]
+        [workspaceId]: baseChats
       }));
+      db.outbox.where('status').equals('pending').toArray().then(pending => {
+        db.outbox.where('status').equals('failed').toArray().then(failed => {
+          const outboxMsgs = [...pending, ...failed].filter(m => m.workspaceId === workspaceId);
+          setChatMessages(prev => {
+            const current = prev[workspaceId] || baseChats;
+            const currentIds = new Set(current.map(m => m.id));
+            const uniqueOutbox = outboxMsgs.filter(m => !currentIds.has(m.id));
+            return {
+              ...prev,
+              [workspaceId]: [...current, ...uniqueOutbox]
+            };
+          });
+        }).catch(err => console.error('Error fetching failed outbox in fallback:', err));
+      }).catch(err => console.error('Error fetching pending outbox in fallback:', err));
       setFiles(prev => ({
         ...prev,
         [workspaceId]: localFiles ? JSON.parse(localFiles) : []
@@ -2240,44 +2284,46 @@ export function WorkspaceProvider({ children }) {
   };
 
   // Action: Add Chat Message
-  const addChatMessage = async (workspaceId, text) => {
-    if (!workspaceId || !user?.id) return;
-
-    const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
+  // Sync chat message to database / remote endpoint
+  const trySync = async (localMessage) => {
     if (isSupabaseConfigured) {
       try {
         const { data, error } = await supabase
           .from('chat_messages')
           .insert({
-            workspace_id: workspaceId,
-            owner_id: user.id,
-            user_id: user.id,
-            text,
-            timestamp
+            workspace_id: localMessage.workspaceId,
+            owner_id: localMessage.userId,
+            user_id: localMessage.userId,
+            text: localMessage.text,
+            timestamp: localMessage.timestamp
           })
           .select()
           .single();
 
         if (error) throw error;
 
-        const formattedMsg = {
-          id: data.id,
-          userId: data.user_id,
-          text: data.text,
-          timestamp: data.timestamp,
-          reactions: data.reactions || [],
-          createdAt: data.created_at
-        };
+        // Successfully synced! Update locally and in UI
+        try {
+          await db.outbox.update(localMessage.id, { status: 'sent' });
+        } catch (dbErr) {
+          console.warn('Failed to update outbox status in IndexedDB:', dbErr);
+        }
 
-        setChatMessages(prev => ({
-          ...prev,
-          [workspaceId]: [...(prev[workspaceId] || []), formattedMsg]
-        }));
+        setChatMessages(prev => {
+          const workspaceMsgs = prev[localMessage.workspaceId] || [];
+          return {
+            ...prev,
+            [localMessage.workspaceId]: workspaceMsgs.map(m =>
+              m.id === localMessage.id
+                ? { ...m, id: data.id, status: 'sent', createdAt: data.created_at }
+                : m
+            )
+          };
+        });
 
-        // Create notifications for all workspace members except the sender
-        const members = workspaceMembers[workspaceId] || [];
-        const workspaceName = workspaces.find(w => w.id === workspaceId)?.name || 'workspace';
+        // Trigger notifications and activity feed logging
+        const members = workspaceMembers[localMessage.workspaceId] || [];
+        const workspaceName = workspaces.find(w => w.id === localMessage.workspaceId)?.name || 'workspace';
         const notificationPromises = members
           .filter(m => m.id !== user.id)
           .map(member => {
@@ -2286,79 +2332,169 @@ export function WorkspaceProvider({ children }) {
             const emailTag = `@${member.email.split('@')[0]}`;
             
             const containsMention = 
-              text.toLowerCase().includes(nameTag.toLowerCase()) ||
-              text.toLowerCase().includes(firstNameTag.toLowerCase()) ||
-              text.toLowerCase().includes(emailTag.toLowerCase());
+              localMessage.text.toLowerCase().includes(nameTag.toLowerCase()) ||
+              localMessage.text.toLowerCase().includes(firstNameTag.toLowerCase()) ||
+              localMessage.text.toLowerCase().includes(emailTag.toLowerCase());
 
             const title = containsMention ? 'Chat Mention' : `New Message in #${workspaceName}`;
             return createNotification(
               member.id,
               title,
-              text,
-              workspaceId,
+              localMessage.text,
+              localMessage.workspaceId,
               'chat_message'
             );
           });
         await Promise.all(notificationPromises);
 
         setWorkspaces(prev =>
-          prev.map(ws => (ws.id === workspaceId ? { ...ws, lastActivity: '1 min ago' } : ws))
+          prev.map(ws => (ws.id === localMessage.workspaceId ? { ...ws, lastActivity: '1 min ago' } : ws))
         );
 
-        await logActivity(workspaceId, 'message_sent', 'sent a message in #general');
+        await logActivity(localMessage.workspaceId, 'message_sent', 'sent a message in #general');
 
         await supabase
           .from('workspaces')
           .update({ last_activity: '1 min ago' })
-          .eq('id', workspaceId);
+          .eq('id', localMessage.workspaceId);
 
       } catch (err) {
-        console.error('Error adding chat message:', err);
+        console.error('Error syncing chat message:', err);
+        const newRetries = (localMessage.retries || 0) + 1;
+        const newStatus = newRetries >= 3 ? 'failed' : 'pending';
+        
+        try {
+          await db.outbox.update(localMessage.id, { retries: newRetries, status: newStatus });
+        } catch (dbErr) {
+          console.warn('Failed to update outbox retry count in IndexedDB:', dbErr);
+        }
+        
+        setChatMessages(prev => {
+          const workspaceMsgs = prev[localMessage.workspaceId] || [];
+          return {
+            ...prev,
+            [localMessage.workspaceId]: workspaceMsgs.map(m =>
+              m.id === localMessage.id
+                ? { ...m, retries: newRetries, status: newStatus }
+                : m
+            )
+          };
+        });
       }
     } else {
-      const newMsg = {
-        id: `msg_${Date.now()}`,
-        userId: user.id,
-        text,
-        timestamp,
-        reactions: [],
-        createdAt: new Date().toISOString()
-      };
-
-      setChatMessages(prev => {
-        const updated = {
-          ...prev,
-          [workspaceId]: [...(prev[workspaceId] || []), newMsg]
-        };
-        localStorage.setItem(`nexus_chats_${workspaceId}`, JSON.stringify(updated[workspaceId]));
-        return updated;
-      });
-
-      // Local mock @mention parser
-      const members = workspaceMembers[workspaceId] || [];
-      members.forEach(member => {
-        if (member.id !== user.id) {
-          const nameTag = `@${member.name}`;
-          const containsMention = text.toLowerCase().includes(nameTag.toLowerCase());
-          if (containsMention) {
-            createNotification(
-              member.id,
-              'Chat Mention',
-              `${user.name} mentioned you in workspace`,
-              workspaceId
-            );
-          }
+      // Mock mode
+      try {
+        try {
+          await db.outbox.update(localMessage.id, { status: 'sent' });
+        } catch (dbErr) {
+          console.warn('Failed to update outbox status in IndexedDB:', dbErr);
         }
-      });
+        
+        setChatMessages(prev => {
+          const workspaceMsgs = prev[localMessage.workspaceId] || [];
+          return {
+            ...prev,
+            [localMessage.workspaceId]: workspaceMsgs.map(m =>
+              m.id === localMessage.id ? { ...m, status: 'sent' } : m
+            )
+          };
+        });
 
-      await logActivity(workspaceId, 'message_sent', 'sent a message');
+        // Mock notification logic
+        const members = workspaceMembers[localMessage.workspaceId] || [];
+        members.forEach(member => {
+          if (member.id !== user.id) {
+            const nameTag = `@${member.name}`;
+            const containsMention = localMessage.text.toLowerCase().includes(nameTag.toLowerCase());
+            if (containsMention) {
+              createNotification(
+                member.id,
+                'Chat Mention',
+                `${user.name} mentioned you in workspace`,
+                localMessage.workspaceId
+              );
+            }
+          }
+        });
 
-      setWorkspaces(prev => {
-        const updated = prev.map(ws => (ws.id === workspaceId ? { ...ws, lastActivity: '1 min ago' } : ws));
-        localStorage.setItem(`nexus_workspaces_${user.id}`, JSON.stringify(updated));
-        return updated;
-      });
+        await logActivity(localMessage.workspaceId, 'message_sent', 'sent a message');
+
+        setWorkspaces(prev => {
+          const updated = prev.map(ws => (ws.id === localMessage.workspaceId ? { ...ws, lastActivity: '1 min ago' } : ws));
+          localStorage.setItem(`nexus_workspaces_${user.id}`, JSON.stringify(updated));
+          return updated;
+        });
+
+      } catch (err) {
+        console.error('Error in mock sync:', err);
+      }
     }
+  };
+
+  // Action: Add Chat Message
+  const addChatMessage = async (workspaceId, text) => {
+    if (!workspaceId || !user?.id) return;
+
+    const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const localId = `local_${(typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : Math.random().toString(36).substring(2, 15)}`;
+    const localMessage = {
+      id: localId,
+      userId: user.id,
+      text,
+      timestamp,
+      reactions: [],
+      createdAt: new Date().toISOString(),
+      status: 'pending',
+      retries: 0,
+      workspaceId
+    };
+
+    // 1. Save locally first (IndexedDB outbox)
+    try {
+      await db.outbox.add(localMessage);
+    } catch (dbErr) {
+      console.warn('Failed to save to IndexedDB outbox:', dbErr);
+    }
+
+    // 2. Show immediately in UI as pending (red)
+    setChatMessages(prev => ({
+      ...prev,
+      [workspaceId]: [...(prev[workspaceId] || []), localMessage]
+    }));
+
+    // 3. Try sending right away if online
+    if (navigator.onLine) {
+      await trySync(localMessage);
+    }
+  };
+
+  // Action: Retry Chat Message manually
+  const retryChatMessage = async (workspaceId, messageId) => {
+    if (!workspaceId || !user?.id) return;
+
+    const currentMsgs = chatMessages[workspaceId] || [];
+    const pendingMsg = currentMsgs.find(m => m.id === messageId);
+    if (!pendingMsg) return;
+
+    const updatedMsg = { ...pendingMsg, status: 'pending', retries: 0 };
+
+    try {
+      await db.outbox.update(messageId, { status: 'pending', retries: 0 });
+    } catch (dbErr) {
+      console.warn('Failed to reset outbox retry status in IndexedDB:', dbErr);
+    }
+
+    setChatMessages(prev => {
+      const workspaceMsgs = prev[workspaceId] || [];
+      return {
+        ...prev,
+        [workspaceId]: workspaceMsgs.map(m =>
+          m.id === messageId ? { ...m, status: 'pending', retries: 0 } : m
+        )
+      };
+    });
+
+    await trySync(updatedMsg);
   };
 
   // Action: Toggle Chat Message Reaction
@@ -2972,6 +3108,21 @@ export function WorkspaceProvider({ children }) {
     }
   };
 
+  useEffect(() => {
+    const handleOnline = async () => {
+      try {
+        const pending = await db.outbox.where('status').equals('pending').toArray();
+        for (const msg of pending) {
+          await trySync(msg);
+        }
+      } catch (e) {
+        console.error('Error in handleOnline sync:', e);
+      }
+    };
+    window.addEventListener('online', handleOnline);
+    return () => window.removeEventListener('online', handleOnline);
+  }, [user?.id, chatMessages, isSupabaseConfigured]);
+
   const currentUserRole = useMemo(() => {
     if (!activeWorkspaceId || !user?.id || !workspaceMembers[activeWorkspaceId]) {
       return 'member';
@@ -3002,6 +3153,7 @@ export function WorkspaceProvider({ children }) {
         addTask,
         updateTasks,
         addChatMessage,
+        retryChatMessage,
         toggleChatMessageReaction,
         deleteChatMessage,
         editChatMessage,

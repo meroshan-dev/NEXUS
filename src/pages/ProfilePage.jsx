@@ -39,8 +39,8 @@ function SettingsCard({ title, description, children, delay = 0, danger, classNa
       style={{
         borderRadius: '16px',
         padding: '20px',
-        background: 'rgba(255,255,255,0.05)',
-        border: danger ? '1px solid rgba(239,68,68,0.25)' : '1px solid rgba(255,255,255,0.08)',
+        background: 'var(--glass-bg-light)',
+        border: danger ? '1px solid rgba(239,68,68,0.25)' : '1px solid var(--glass-border-light)',
         boxSizing: 'border-box',
       }}
     >
@@ -214,7 +214,7 @@ export default function ProfilePage() {
         alignItems: 'center',
         gap: '12px',
         padding: '10px 0',
-        borderBottom: '1px solid rgba(255,255,255,0.05)'
+        borderBottom: '1px solid var(--glass-bg-light)'
       }}
     >
       <div
@@ -223,14 +223,14 @@ export default function ProfilePage() {
           height: '34px',
           minWidth: '34px',
           borderRadius: '10px',
-          background: 'rgba(255,255,255,0.06)',
+          background: 'var(--bg-hover)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           flexShrink: 0
         }}
       >
-        <Icon style={{ width: '15px', height: '15px', opacity: 0.65, color: 'white', flexShrink: 0 }} />
+        <Icon style={{ width: '15px', height: '15px', opacity: 0.65, color: 'var(--text-primary)', flexShrink: 0 }} />
       </div>
       <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '2px' }}>
         <p
@@ -271,7 +271,7 @@ export default function ProfilePage() {
     display: 'block',
     textTransform: 'uppercase',
     letterSpacing: '0.06em',
-    color: 'white',
+    color: 'var(--text-primary)',
     fontWeight: 500,
   };
 
@@ -280,9 +280,9 @@ export default function ProfilePage() {
     boxSizing: 'border-box',
     padding: '10px 14px',
     borderRadius: '12px',
-    background: 'rgba(255,255,255,0.06)',
-    border: '1px solid rgba(255,255,255,0.1)',
-    color: 'white',
+    background: 'var(--bg-hover)',
+    border: '1px solid var(--glass-border)',
+    color: 'var(--text-primary)',
     fontSize: '14px',
     outline: 'none',
   };
@@ -324,8 +324,8 @@ export default function ProfilePage() {
             className="glass-card"
             style={{
               borderRadius: '16px',
-              background: 'rgba(255,255,255,0.05)',
-              border: '1px solid rgba(255,255,255,0.08)',
+              background: 'var(--glass-bg-light)',
+              border: '1px solid var(--glass-border-light)',
               boxSizing: 'border-box',
               display: 'flex',
               flexDirection: 'column',
@@ -339,7 +339,7 @@ export default function ProfilePage() {
                 alignItems: 'center',
                 gap: '16px',
                 padding: '24px',
-                borderBottom: '1px solid rgba(255,255,255,0.08)',
+                borderBottom: '1px solid var(--glass-border-light)',
               }}
             >
               <div className="relative" style={{ flexShrink: 0 }}>
@@ -428,7 +428,7 @@ export default function ProfilePage() {
                     readOnly
                     style={{
                       ...inputStyle,
-                      background: 'rgba(255,255,255,0.03)',
+                      background: 'var(--bg-secondary)',
                       cursor: 'not-allowed',
                       opacity: 0.6,
                       paddingRight: '36px',
@@ -442,7 +442,7 @@ export default function ProfilePage() {
                       top: '50%',
                       transform: 'translateY(-50%)',
                       opacity: 0.4,
-                      color: 'white',
+                      color: 'var(--text-primary)',
                       width: '14px',
                       height: '14px',
                     }}
@@ -453,7 +453,7 @@ export default function ProfilePage() {
               <div style={{ display: 'flex', flexDirection: 'column' }}>
                 <label style={labelStyle}>Role</label>
                 <div className="relative">
-                  <Briefcase size={14} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', opacity: 0.4, color: 'white', pointerEvents: 'none', zIndex: 1 }} />
+                  <Briefcase size={14} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', opacity: 0.4, color: 'var(--text-primary)', pointerEvents: 'none', zIndex: 1 }} />
                   <select
                     value={profile.role}
                     disabled={!editing}
@@ -469,10 +469,10 @@ export default function ProfilePage() {
                     }}
                     onChange={(e) => setProfile({ ...profile, role: e.target.value })}
                   >
-                    <option value="Owner" style={{ background: '#1a1a2e', color: 'white' }}>Owner</option>
-                    <option value="Admin" style={{ background: '#1a1a2e', color: 'white' }}>Admin</option>
-                    <option value="Member" style={{ background: '#1a1a2e', color: 'white' }}>Member</option>
-                    <option value="Viewer" style={{ background: '#1a1a2e', color: 'white' }}>Viewer</option>
+                    <option value="Owner" style={{ background: 'var(--bg-elevated)', color: 'var(--text-primary)' }}>Owner</option>
+                    <option value="Admin" style={{ background: 'var(--bg-elevated)', color: 'var(--text-primary)' }}>Admin</option>
+                    <option value="Member" style={{ background: 'var(--bg-elevated)', color: 'var(--text-primary)' }}>Member</option>
+                    <option value="Viewer" style={{ background: 'var(--bg-elevated)', color: 'var(--text-primary)' }}>Viewer</option>
                   </select>
                   <ChevronDown
                     size={14}
@@ -482,7 +482,7 @@ export default function ProfilePage() {
                       top: '50%',
                       transform: 'translateY(-50%)',
                       opacity: 0.5,
-                      color: 'white',
+                      color: 'var(--text-primary)',
                       pointerEvents: 'none',
                     }}
                   />
@@ -492,7 +492,7 @@ export default function ProfilePage() {
               <div style={{ display: 'flex', flexDirection: 'column' }}>
                 <label style={labelStyle}>Location</label>
                 <div className="relative">
-                  <MapPin size={14} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', opacity: 0.4, color: 'white' }} />
+                  <MapPin size={14} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', opacity: 0.4, color: 'var(--text-primary)' }} />
                   <input
                     type="text"
                     value={profile.location}
@@ -583,7 +583,7 @@ export default function ProfilePage() {
 
             <SettingsCard className="danger-zone-card" title="Danger zone" description="Irreversible options" delay={0.14} danger>
               <div style={{ display: 'flex', flexDirection: 'column' }}>
-                <div className="danger-zone-row" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', padding: '10px 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                <div className="danger-zone-row" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', padding: '10px 0', borderBottom: '1px solid var(--glass-bg-light)' }}>
                   <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '2px' }}>
                     <p
                       style={{
@@ -624,9 +624,9 @@ export default function ProfilePage() {
                       gap: '6px',
                       padding: '8px 16px',
                       borderRadius: '10px',
-                      background: 'rgba(255,255,255,0.08)',
-                      border: '1px solid rgba(255,255,255,0.12)',
-                      color: 'white',
+                      background: 'var(--glass-border-light)',
+                      border: '1px solid var(--glass-border)',
+                      color: 'var(--text-primary)',
                       fontSize: '13px',
                       fontWeight: 500,
                       cursor: 'pointer',

@@ -247,7 +247,7 @@ export default function DashboardPage() {
   const TaskRow = ({ t }) => {
     const badge = statusStyles[t.status] || statusStyles['TO DO'];
     return (
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 0', borderBottom: '1px solid rgba(255,255,255,0.05)', overflow: 'hidden' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 0', borderBottom: '1px solid var(--glass-bg-light)', overflow: 'hidden' }}>
         <div style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
           <p style={{ fontSize: '14px', fontWeight: 500, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.title}</p>
           <span style={{ fontSize: '11px', opacity: 0.45, color: 'var(--text-secondary)', display: 'block', marginTop: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -426,7 +426,7 @@ export default function DashboardPage() {
         <form onSubmit={handleCreate} style={{ display: 'flex', flexDirection: 'column', gap: '16px', width: '100%', boxSizing: 'border-box' }}>
           {/* Workspace name */}
           <div style={{ width: '100%', boxSizing: 'border-box' }}>
-            <label style={{ fontSize: '12px', fontWeight: 500, opacity: 0.6, marginBottom: '6px', marginTop: 0, display: 'block', color: 'white' }}>
+            <label style={{ fontSize: '12px', fontWeight: 500, opacity: 0.6, marginBottom: '6px', marginTop: 0, display: 'block', color: 'var(--text-primary)' }}>
               Workspace name
             </label>
             <input
@@ -440,7 +440,7 @@ export default function DashboardPage() {
 
           {/* Description */}
           <div style={{ width: '100%', boxSizing: 'border-box' }}>
-            <label style={{ fontSize: '12px', fontWeight: 500, opacity: 0.6, marginBottom: '6px', marginTop: 0, display: 'block', color: 'white' }}>
+            <label style={{ fontSize: '12px', fontWeight: 500, opacity: 0.6, marginBottom: '6px', marginTop: 0, display: 'block', color: 'var(--text-primary)' }}>
               Description
             </label>
             <textarea
@@ -457,7 +457,7 @@ export default function DashboardPage() {
 
           {/* Theme color */}
           <div style={{ width: '100%', boxSizing: 'border-box' }}>
-            <label style={{ fontSize: '12px', fontWeight: 500, opacity: 0.6, marginBottom: '6px', marginTop: 0, display: 'block', color: 'white' }}>
+            <label style={{ fontSize: '12px', fontWeight: 500, opacity: 0.6, marginBottom: '6px', marginTop: 0, display: 'block', color: 'var(--text-primary)' }}>
               Theme color
             </label>
             <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginTop: '8px' }}>
@@ -473,7 +473,7 @@ export default function DashboardPage() {
                     cursor: 'pointer',
                     flexShrink: 0,
                     background: c,
-                    border: '1px solid rgba(255,255,255,0.1)',
+                    border: '1px solid var(--glass-border)',
                     boxShadow: newWs.color === c ? `0 0 0 1.5px #06060e, 0 0 0 3px ${c}, 0 0 12px ${c}50` : 'none',
                     transform: newWs.color === c ? 'scale(1.05)' : undefined,
                     transition: 'all 0.2s ease',
@@ -493,9 +493,9 @@ export default function DashboardPage() {
                 flex: 1,
                 padding: '10px',
                 borderRadius: '12px',
-                background: 'rgba(255,255,255,0.06)',
-                border: '1px solid rgba(255,255,255,0.1)',
-                color: 'white',
+                background: 'var(--bg-hover)',
+                border: '1px solid var(--glass-border)',
+                color: 'var(--text-primary)',
                 cursor: 'pointer',
                 fontSize: '14px',
                 fontWeight: 500,
@@ -511,7 +511,7 @@ export default function DashboardPage() {
                 borderRadius: '12px',
                 background: '#6366f1',
                 border: 'none',
-                color: 'white',
+                color: 'var(--text-primary)',
                 fontWeight: 600,
                 cursor: 'pointer',
                 fontSize: '14px',
@@ -527,7 +527,7 @@ export default function DashboardPage() {
         <form onSubmit={handleJoin} style={{ display: 'flex', flexDirection: 'column', gap: '16px', width: '100%', boxSizing: 'border-box' }}>
           {/* Invite code */}
           <div style={{ width: '100%', boxSizing: 'border-box' }}>
-            <label style={{ fontSize: '12px', fontWeight: 500, opacity: 0.6, marginBottom: '6px', marginTop: 0, display: 'block', color: 'white' }}>
+            <label style={{ fontSize: '12px', fontWeight: 500, opacity: 0.6, marginBottom: '6px', marginTop: 0, display: 'block', color: 'var(--text-primary)' }}>
               Invite code
             </label>
             <input
@@ -571,9 +571,9 @@ export default function DashboardPage() {
                 flex: 1,
                 padding: '10px',
                 borderRadius: '12px',
-                background: 'rgba(255,255,255,0.06)',
-                border: '1px solid rgba(255,255,255,0.1)',
-                color: 'white',
+                background: 'var(--bg-hover)',
+                border: '1px solid var(--glass-border)',
+                color: 'var(--text-primary)',
                 cursor: 'pointer',
                 fontSize: '14px',
                 fontWeight: 500,
@@ -590,7 +590,7 @@ export default function DashboardPage() {
                 borderRadius: '12px',
                 background: '#6366f1',
                 border: 'none',
-                color: 'white',
+                color: 'var(--text-primary)',
                 fontWeight: 600,
                 cursor: joinLoading ? 'not-allowed' : 'pointer',
                 fontSize: '14px',

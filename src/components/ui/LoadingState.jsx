@@ -16,7 +16,7 @@ export default function LoadingState() {
           width: '40px',
           height: '40px',
           borderRadius: '50%',
-          border: '2px solid rgba(255,255,255,0.08)',
+          border: '2px solid var(--glass-border-light)',
           borderTopColor: 'rgba(139,92,246,0.8)',
           animation: 'loadSpin 0.8s linear infinite',
           boxShadow: '0 0 16px rgba(139,92,246,0.3)',

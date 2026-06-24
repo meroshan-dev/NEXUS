@@ -154,7 +154,7 @@ export default function TasksPage() {
 
       {/* Tabs list and Create Task button row */}
       <div className="tasks-top-bar" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '20px 24px', gap: '16px', boxSizing: 'border-box', width: '100%' }}>
-        <div className="filter-tabs" style={{ display: 'flex', gap: '4px', padding: '4px', background: 'rgba(255,255,255,0.05)', backdropFilter: 'blur(16px) saturate(160%)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '10px', width: 'fit-content', flexShrink: 1, minWidth: 0 }}>
+        <div className="filter-tabs" style={{ display: 'flex', gap: '4px', padding: '4px', background: 'var(--glass-bg-light)', backdropFilter: 'blur(16px) saturate(160%)', border: '1px solid var(--glass-border)', borderRadius: '10px', width: 'fit-content', flexShrink: 1, minWidth: 0 }}>
           {[
             { id: 'all', label: 'All Tasks' },
             { id: 'my', label: 'My Tasks' },
@@ -173,9 +173,9 @@ export default function TasksPage() {
                   whiteSpace: 'nowrap',
                   cursor: 'pointer',
                   opacity: active ? 1 : 0.6,
-                  background: active ? 'rgba(255,255,255,0.12)' : 'transparent',
+                  background: active ? 'var(--glass-border)' : 'transparent',
                   backdropFilter: active ? 'blur(10px)' : 'none',
-                  border: active ? '1px solid rgba(255,255,255,0.15)' : '1px solid transparent',
+                  border: active ? '1px solid var(--glass-border)' : '1px solid transparent',
                   fontWeight: active ? 500 : 400,
                   transition: 'all 0.2s',
                   outline: 'none',
@@ -203,7 +203,7 @@ export default function TasksPage() {
               borderRadius: '10px',
               background: 'rgba(99,102,241,0.85)',
               backdropFilter: 'blur(10px)',
-              border: '1px solid rgba(255,255,255,0.15)',
+              border: '1px solid var(--glass-border)',
               boxShadow: '0 4px 16px rgba(99,102,241,0.3)'
             }}
           >
@@ -289,8 +289,8 @@ export default function TasksPage() {
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
-                          border: '1px solid rgba(255,255,255,0.08)',
-                          background: 'rgba(255,255,255,0.04)',
+                          border: '1px solid var(--glass-border-light)',
+                          background: 'var(--bg-primary)',
                           outline: 'none',
                         }}
                       >
@@ -310,11 +310,11 @@ export default function TasksPage() {
                           minHeight: '320px',
                           borderRadius: '16px',
                           padding: '12px',
-                          background: snapshot.isDraggingOver ? cfg.accent : 'rgba(255,255,255,0.04)',
+                          background: snapshot.isDraggingOver ? cfg.accent : 'var(--bg-primary)',
                           backdropFilter: 'blur(20px) saturate(160%)',
                           WebkitBackdropFilter: 'blur(20px) saturate(160%)',
-                          border: snapshot.isDraggingOver ? `1px dashed ${cfg.dotColor}55` : '1px solid rgba(255,255,255,0.08)',
-                          boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.06)',
+                          border: snapshot.isDraggingOver ? `1px dashed ${cfg.dotColor}55` : '1px solid var(--glass-border-light)',
+                          boxShadow: 'inset 0 1px 0 var(--bg-hover)',
                           overflow: 'hidden',
                           display: 'flex',
                           flexDirection: 'column',
@@ -367,7 +367,7 @@ export default function TasksPage() {
                                       </p>
                                     )}
 
-                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', paddingTop: '8px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', paddingTop: '8px', borderTop: '1px solid var(--bg-hover)' }}>
                                       <div className="flex items-center gap-2 min-w-0">
                                         {assignee && (
                                           <Avatar
@@ -453,7 +453,7 @@ export default function TasksPage() {
           >
             {/* Header */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', margin: 0 }}>
-              <h2 style={{ fontSize: '18px', fontWeight: 600, color: 'white', margin: 0, flex: 1 }}>
+              <h2 style={{ fontSize: '18px', fontWeight: 600, color: 'var(--text-primary)', margin: 0, flex: 1 }}>
                 {isOwner ? "Edit Task" : "Task Details"}
               </h2>
               <button
@@ -468,7 +468,7 @@ export default function TasksPage() {
                   justifyContent: 'center',
                   background: 'transparent',
                   border: 'none',
-                  color: 'rgba(255,255,255,0.4)',
+                  color: 'var(--text-tertiary)',
                   cursor: 'pointer',
                   flexShrink: 0,
                   padding: 0,
@@ -543,19 +543,19 @@ export default function TasksPage() {
                               alignItems: 'start',
                               padding: '10px',
                               borderRadius: '8px',
-                              border: '1px solid rgba(255,255,255,0.08)',
-                              backgroundColor: 'rgba(255,255,255,0.03)'
+                              border: '1px solid var(--glass-border-light)',
+                              backgroundColor: 'var(--bg-secondary)'
                             }}
                           >
                             <Avatar name={commenter.name} initials={commenter.initials} color={commenter.color} size="xs" />
                             <div style={{ minWidth: 0, flex: 1 }}>
                               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: '8px' }}>
-                                <span style={{ fontSize: '11px', fontWeight: 600, color: 'white' }}>{commenter.name}</span>
-                                <span style={{ fontSize: '9px', opacity: 0.4, color: 'white' }}>
+                                <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-primary)' }}>{commenter.name}</span>
+                                <span style={{ fontSize: '9px', opacity: 0.4, color: 'var(--text-primary)' }}>
                                   {new Date(comm.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                                 </span>
                               </div>
-                              <p style={{ fontSize: '11px', opacity: 0.7, margin: '4px 0 0 0', wordBreak: 'break-word', lineHeight: 1.4, color: 'white' }}>
+                              <p style={{ fontSize: '11px', opacity: 0.7, margin: '4px 0 0 0', wordBreak: 'break-word', lineHeight: 1.4, color: 'var(--text-primary)' }}>
                                 {comm.text}
                               </p>
                             </div>
@@ -616,16 +616,16 @@ export default function TasksPage() {
                         return <p style={{ fontSize: '12px', opacity: 0.4, margin: 0, fontStyle: 'italic', color: 'var(--text-primary)' }}>No logs recorded.</p>;
                       }
                       return (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', paddingLeft: '8px', borderLeft: '1px solid rgba(255,255,255,0.08)' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', paddingLeft: '8px', borderLeft: '1px solid var(--glass-border-light)' }}>
                           {taskHistory.map((act, idx) => {
                             const actorName = act.user_id === user?.id ? 'You' : (members.find(m => m.id === act.user_id)?.name || 'Someone');
                             return (
                               <div key={act.id || idx} style={{ fontSize: '11px', display: 'flex', justifyContent: 'space-between', alignItems: 'start', gap: '16px' }}>
-                                <span style={{ opacity: 0.7, color: 'white' }}>
+                                <span style={{ opacity: 0.7, color: 'var(--text-primary)' }}>
                                   <span style={{ fontWeight: 600 }}>{actorName}</span>{' '}
                                   {act.details}
                                 </span>
-                                <span style={{ fontSize: '9px', opacity: 0.4, shrink: 0, fontMedium: true, whiteSpace: 'nowrap', color: 'white' }}>
+                                <span style={{ fontSize: '9px', opacity: 0.4, shrink: 0, fontMedium: true, whiteSpace: 'nowrap', color: 'var(--text-primary)' }}>
                                   {new Date(act.created_at).toLocaleDateString()}
                                 </span>
                               </div>
@@ -809,7 +809,7 @@ export default function TasksPage() {
         >
           {/* Section 1 — Header */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', margin: 0 }}>
-            <h2 style={{ fontSize: '18px', fontWeight: 600, color: 'white', margin: 0, flex: 1 }}>Create task</h2>
+            <h2 style={{ fontSize: '18px', fontWeight: 600, color: 'var(--text-primary)', margin: 0, flex: 1 }}>Create task</h2>
             <button
               onClick={() => setShowCreate(false)}
               type="button"
@@ -822,7 +822,7 @@ export default function TasksPage() {
                 justifyContent: 'center',
                 background: 'transparent',
                 border: 'none',
-                color: 'rgba(255,255,255,0.4)',
+                color: 'var(--text-tertiary)',
                 cursor: 'pointer',
                 flexShrink: 0,
                 padding: 0,

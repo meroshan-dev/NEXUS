@@ -372,8 +372,8 @@ export default function FilesPage() {
               gap: '2px',
               padding: '3px',
               borderRadius: '10px',
-              background: 'rgba(255,255,255,0.06)',
-              border: '1px solid rgba(255,255,255,0.1)',
+              background: 'var(--bg-hover)',
+              border: '1px solid var(--glass-border)',
               flexShrink: 0
             }}
           >
@@ -391,11 +391,11 @@ export default function FilesPage() {
                     alignItems: 'center',
                     justifyContent: 'center',
                     opacity: isActive ? 1 : 0.6,
-                    background: isActive ? 'rgba(255,255,255,0.12)' : 'transparent',
+                    background: isActive ? 'var(--glass-border)' : 'transparent',
                     transition: 'all 0.2s',
                     border: 'none',
                     cursor: 'pointer',
-                    color: 'white',
+                    color: 'var(--text-primary)',
                     outline: 'none'
                   }}
                 >

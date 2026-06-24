@@ -85,7 +85,7 @@ export default function Modal({ isOpen, onClose, title, children, size = 'md', n
                       style={{
                         fontSize: '18px',
                         fontWeight: 600,
-                        color: 'white',
+                        color: 'var(--text-primary)',
                         margin: 0,
                         padding: 0,
                         overflow: 'hidden',
@@ -109,7 +109,7 @@ export default function Modal({ isOpen, onClose, title, children, size = 'md', n
                         justifyContent: 'center',
                         background: 'transparent',
                         border: 'none',
-                        color: 'rgba(255,255,255,0.4)',
+                        color: 'var(--text-tertiary)',
                         cursor: 'pointer',
                         flexShrink: 0,
                         marginLeft: '12px',
