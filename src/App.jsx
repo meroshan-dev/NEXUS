@@ -1,6 +1,10 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { useEffect } from 'react';
+import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
+import { App as CapacitorApp } from '@capacitor/app';
+import { Browser } from '@capacitor/browser';
+import { supabase } from './lib/supabase';
 import AppLayout from './components/layout/AppLayout';
 import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
@@ -38,6 +42,64 @@ import { WorkspaceProvider } from './context/WorkspaceContext';
 
 function AppRoutes() {
   const { user } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    let sub;
+    const initListener = async () => {
+      sub = CapacitorApp.addListener('appUrlOpen', async (event) => {
+        const urlStr = event.url;
+        if (urlStr.includes('login-callback')) {
+          await Browser.close();
+
+          // Try PKCE flow first (default for Supabase v2) — look for ?code=
+          const parsedUrl = new URL(urlStr.replace('com.roshan.nexus://', 'https://placeholder.app/'));
+          const code = parsedUrl.searchParams.get('code');
+
+          if (code) {
+            const { error } = await supabase.auth.exchangeCodeForSession(code);
+            if (!error) {
+              navigate('/dashboard', { replace: true });
+            } else {
+              console.error('Error exchanging code for session:', error);
+            }
+            return;
+          }
+
+          // Fallback: implicit flow (access_token/refresh_token in hash or query)
+          let hashOrQuery = '';
+          if (urlStr.includes('#')) {
+            hashOrQuery = urlStr.split('#')[1];
+          } else if (urlStr.includes('?')) {
+            hashOrQuery = urlStr.split('?')[1];
+          }
+          const params = new URLSearchParams(hashOrQuery);
+          const access_token = params.get('access_token');
+          const refresh_token = params.get('refresh_token');
+
+          if (access_token && refresh_token) {
+            const { error } = await supabase.auth.setSession({
+              access_token,
+              refresh_token,
+            });
+            if (!error) {
+              navigate('/dashboard', { replace: true });
+            } else {
+              console.error('Error setting session:', error);
+            }
+          }
+        }
+      });
+    };
+
+    initListener();
+
+    return () => {
+      if (sub) {
+        sub.then(s => s.remove()).catch(err => console.error('Error removing listener:', err));
+      }
+    };
+  }, [navigate]);
 
   return (
     <Routes>

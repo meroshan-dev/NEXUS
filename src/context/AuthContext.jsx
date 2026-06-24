@@ -1,6 +1,8 @@
 /* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useState, useEffect } from 'react';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
+import { Browser } from '@capacitor/browser';
+import { Capacitor } from '@capacitor/core';
 
 const AuthContext = createContext(null);
 
@@ -155,11 +157,24 @@ export function AuthProvider({ children }) {
 
   const signInWithGoogle = async () => {
     if (isSupabaseConfigured) {
+      const redirectUrl = Capacitor.isNativePlatform()
+        ? 'com.roshan.nexus://login-callback'
+        : window.location.origin + '/dashboard';
+
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
-        options: { redirectTo: window.location.origin + '/dashboard' },
+        options: {
+          redirectTo: redirectUrl,
+          skipBrowserRedirect: Capacitor.isNativePlatform(),
+        },
       });
+
       if (error) throw error;
+
+      if (Capacitor.isNativePlatform() && data?.url) {
+        await Browser.open({ url: data.url });
+      }
+
       return data;
     } else {
       const demoUser = {

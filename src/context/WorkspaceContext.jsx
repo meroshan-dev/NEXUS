@@ -5,11 +5,41 @@ import { db } from '../lib/db';
 import { Network } from '@capacitor/network';
 import { PushNotifications } from '@capacitor/push-notifications';
 import { Capacitor } from '@capacitor/core';
+import { Camera } from '@capacitor/camera';
 import { useAuth } from './AuthContext';
 
 const WorkspaceContext = createContext();
 
 const generateCallId = () => Math.random().toString(36).substring(2, 9);
+
+const requestMediaPermissions = async () => {
+  if (Capacitor.isNativePlatform()) {
+    try {
+      const cameraPermission = await Camera.requestPermissions({
+        permissions: ['camera'],
+      });
+      console.log('Camera permission:', cameraPermission);
+    } catch (err) {
+      console.error('Permission request error:', err);
+    }
+  }
+
+  // This triggers the actual mic/camera prompt and works on both web and native
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      audio: true,
+      video: true,
+    });
+    if (stream) {
+      stream.getTracks().forEach(track => track.stop());
+    }
+    return true;
+  } catch (err) {
+    console.error('getUserMedia failed:', err);
+    alert('Please allow microphone and camera access to join the huddle.');
+    return false;
+  }
+};
 
 export function WorkspaceProvider({ children }) {
   const { user } = useAuth();
@@ -332,6 +362,9 @@ export function WorkspaceProvider({ children }) {
     const ws = workspaces.find(w => w.id === workspaceId);
     if (!ws) return;
 
+    const hasPermission = await requestMediaPermissions();
+    if (!hasPermission) return;
+
     const callerDetails = {
       id: user.id,
       name: user.name || user.email?.split('@')[0] || 'User',
@@ -408,13 +441,16 @@ export function WorkspaceProvider({ children }) {
     logActivity(workspaceId, 'started_call', `started a huddle call`);
   };
 
-  const joinCall = (workspaceId) => {
+  const joinCall = async (workspaceId) => {
     if (!user) return;
     const callInfo = activeCalls[workspaceId];
     if (!callInfo) {
       console.warn('[Huddle] joinCall: no callInfo found for workspace', workspaceId);
       return;
     }
+
+    const hasPermission = await requestMediaPermissions();
+    if (!hasPermission) return;
 
     const participantDetails = {
       id: user.id,

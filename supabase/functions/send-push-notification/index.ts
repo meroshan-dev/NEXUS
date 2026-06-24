@@ -33,9 +33,25 @@ serve(async (req) => {
       });
     }
 
-    const serviceAccountJson = Deno.env.get('FIREBASE_SERVICE_ACCOUNT');
+    let serviceAccountJson = Deno.env.get('FIREBASE_SERVICE_ACCOUNT');
+    const base64Secret = Deno.env.get('FIREBASE_SERVICE_ACCOUNT_BASE64');
+
+    if (base64Secret) {
+      try {
+        console.log('FCM v1: Found FIREBASE_SERVICE_ACCOUNT_BASE64 secret, decoding...');
+        // Standard Deno/Web atob decodes base64 strings
+        serviceAccountJson = atob(base64Secret.trim());
+      } catch (decodeErr) {
+        console.error('Failed to decode FIREBASE_SERVICE_ACCOUNT_BASE64:', decodeErr);
+      }
+    }
+
+    // Temporary debug logs
+    console.log('Raw secret first 100 chars:', serviceAccountJson?.substring(0, 100));
+    console.log('Raw secret length:', serviceAccountJson?.length);
+
     if (!serviceAccountJson) {
-      console.log(`FCM send simulated (v1): Title: "${title}", Body: "${body}". (Please set FIREBASE_SERVICE_ACCOUNT in Supabase to send actual push notifications)`);
+      console.log(`FCM send simulated (v1): Title: "${title}", Body: "${body}". (Please set FIREBASE_SERVICE_ACCOUNT_BASE64 or FIREBASE_SERVICE_ACCOUNT in Supabase to send actual push notifications)`);
       return new Response(JSON.stringify({ success: true, message: 'Simulated send successfully' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 200

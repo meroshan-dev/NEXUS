@@ -5,7 +5,7 @@ import Sidebar from './Sidebar';
 import TopBar from './TopBar';
 import { X, LayoutDashboard, FolderKanban, User, Sparkles, PhoneCall, ChevronRight } from 'lucide-react';
 import { useWorkspace } from '../../context/WorkspaceContext';
-import DailyCallScreen from '../ui/DailyCallScreen';
+import JitsiCallScreen from '../ui/JitsiCallScreen';
 
 const SIDEBAR_FULL = 220;
 
@@ -510,9 +510,9 @@ export default function AppLayout() {
         )}
       </AnimatePresence>
 
-      {/* Global Active Call — Daily.co Prebuilt full-screen call */}
+      {/* Global Active Call — Jitsi Meet external API embedded call */}
       {activeCall && (
-        <DailyCallScreen
+        <JitsiCallScreen
           activeCall={activeCall}
           onLeave={handleLeaveCall}
         />
