@@ -159,7 +159,7 @@ export function AuthProvider({ children }) {
     if (isSupabaseConfigured) {
       const redirectUrl = Capacitor.isNativePlatform()
         ? 'com.roshan.nexus://login-callback'
-        : window.location.origin + '/dashboard';
+        : window.location.origin; // just the origin, let Supabase handle session from URL params
 
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
